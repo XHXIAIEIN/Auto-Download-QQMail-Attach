@@ -70,8 +70,8 @@ download_here = 'D:\\Downloads\\email'
 # iend:    下载多少封
 index,istart,iend=0,1,-1
 
-# 是否开启下载(用来测试用的)
-debug = 1
+# 是否开启Debug模式，只列出邮件列表，不下载任何东西(用来测试用的)
+debug = 0
 
 #......................................................
 # 配置Web Driver
