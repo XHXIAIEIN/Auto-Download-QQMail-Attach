@@ -24,11 +24,11 @@ token={'sid':'R6-CnEyUYkXOuAy', 'folderid':135, 'page':0 }
 # title['end']      到第end封邮件结束，-1为默认列表长度
 # title['step']     读取邮件次数超过step时结束，-1为默认列表长度
 #......................................................
-title={'index':0, 'start':1, 'end':-1, 'step':5}
+title={'index':0, 'start':1, 'end':-1, 'step':-1}
 
 
 # 附件下载到哪个文件夹（需提前新建文件夹，不然会报错）
-download_here='D:\\XHXIAIEIN\\Downloads\\psd'
+download_here='D:\\Downloads\\email'
 
 #......................................................
 # 用来测试的一些参数
