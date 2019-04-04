@@ -73,7 +73,7 @@ title={'index':0, 'start':1, 'end':-1, 'step':-1}
 
 
 # 附件下载到哪个文件夹（需提前新建文件夹，不然会报错）
-download_here='D:\\XHXIAIEIN\\Downloads\\psd'
+download_here='D:\\Downloads\\email'
 
 #......................................................
 # 用来测试的一些参数
