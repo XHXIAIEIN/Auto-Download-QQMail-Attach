@@ -56,7 +56,7 @@ print('登陆成功！')
 ### 4 新窗口打开文件夹
 从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**
   
-从浏览器的地址栏找到链接的几个参数: `sid` `folderid` `page`
+从浏览器的地址栏找到链接的几个参数: `sid` `folderid` `page`  
 https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_list?folderid={ B }%26page={ C }
   
   
