@@ -71,7 +71,6 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
 ### 5 修改脚本里面的自定义参数
 
 ---
----
   
 ## 特性
 1. 自定义文件下载路径夹
