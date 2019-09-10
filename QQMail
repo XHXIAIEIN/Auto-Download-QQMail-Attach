@@ -1,7 +1,5 @@
 # encoding:utf-8
 import os
-import urllib
-import _thread
 import time
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -25,7 +23,7 @@ token={'sid':'123456', 'folderid':156, 'page':0}
 # 附件下载到哪个文件夹。（如果文件夹不存在，会自动创建）
 # 注：路径需要以双斜杠 \\ 作为分隔，不是单斜杠 \
 #......................................................
-download_here='D:\\emal'
+download_here='D:\\Download\\email'
 
 
 #......................................................
@@ -36,11 +34,11 @@ DEBUG=0
 
 #......................................................
 # pageInfo['now']     目前在第几页，默认为0，即第1页。
-# pageInfo['max']     文件夹共有几页，在第0页时会自动读取。
+# pageInfo['max']     文件夹共有几页。
 # pageInfo['step']    希望下载至多少页
 # pageInfo['step']    希望下载至多少页
 #......................................................
-pageInfo={'now':0, 'max':0, 'step':15, 'isfilp':0, 'autofilp':True}
+pageInfo={'now':0, 'max':0, 'step':0, 'isfilp':0, 'autofilp':True}
 
 
 #......................................................
