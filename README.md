@@ -76,6 +76,58 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
 
 <br>
 
+### 6 下载完成后
+可以运行自动生成在下载目录中的 `_ren.bat` 的批处理脚本。它将会把本次下载的文件补充收件人邮箱作为名称前缀。
+
+> 注：如果目录中存在相同名称的文件，或者存在特殊符号的名称，可能会因为无法读取而被无视。需要手动进行重命名。
+
+<br>
+
+### 7 附加脚本：将含有关键词的文件移动到指定文件夹。
+
+```
+import os
+import shutil
+import fnmatch
+
+def find_key(key,path):
+    for n in os.listdir(os.getcwd()):
+        if fnmatch.fnmatch(n, key):
+            print('{}：{}'.format(key,n))
+            shutil.move(n,path)
+
+def checkfile():
+    all_md5 = {}
+    filedir = os.walk(os.getcwd())
+    for i in filedir:
+        for tlie in i[2]:
+            if md5sum(tlie) in all_md5.values():
+                print('- {}'.format(tlie))
+                shutil.move(tlie,'md5')
+                #os.remove(tlie)
+            else:
+                all_md5[tlie] = md5sum(tlie)
+
+if __name__ == '__main__':
+    # 新建文件夹
+    # 提前新建好需要分类的文件夹
+    os.mkdir('psd')
+    os.mkdir('图片')
+    os.mkdir('反馈')
+    os.mkdir('VIP')
+
+    # 匹配关键词
+    # 文件格式来过滤：比如将.jpg的文件移动到‘图片’文件夹。
+    find_key('*.psd','psd')
+    find_key('*.PSD','psd')
+    find_key('*.jpg','图片')
+    find_key('*.png','图片')
+    
+    # 关键词过滤：比如将含有‘issues’的文件名移动到'反馈'目录
+    find_key('*issues*.*','反馈')
+    find_key('*会员*.*','VIP')
+```
+
 ---
   
 ## 特性
