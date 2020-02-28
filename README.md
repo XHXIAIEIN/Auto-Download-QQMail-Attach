@@ -26,21 +26,21 @@
 
 > Win: <br>
 > 注1：根据自己Chrome当前的版本号，下载对应WebDriver版本。以后Chrome更新了，也需要重新下载最新的版本。否则会报错。
-> 
+>   
 > 注2：**如何查看Chrome当前版本号**：右上角 - 帮助 - 关于Google Chrome 
-> 
+>   
 > 注3：**如何安装**：  
 > 下载好之后，把`chromedriver.exe`放到随意一个文件夹，然后复制当前这个文件夹的路径。通常我喜欢把这类工具专门放到一个叫bin的文件夹里。比如D:\Program\bin
-> 
-> 按下Win键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。
-> 右下角有个「环境变量」的按钮，打开。
-> 在下面的「系统变量」列表里，找到「Path」的一行，双击编辑。
+>   
+> 按下Win键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。  
+> 右下角有个「环境变量」的按钮，打开。  
+> 在下面的「系统变量」列表里，找到「Path」的一行，双击编辑。  
 > 右上角有「新建」的按钮，点新建。它会在列表后面新建一行空的，就把刚才的路径粘贴进去就可以了。
->  
+>    
 > --------------------------------
-> 
+>   
 >  Mac： <br>
->  直接用brew安装。  
+>  直接用brew安装。    
 >  ``` brew cask install chromedriver```   
 >  ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
 
@@ -110,9 +110,9 @@ chrome.find_element_by_id("login_button").click()
 print('登陆成功！')
 ```
 <br>
-
+  
 如果觉得让机器帮你填账号密码不安全。不嫌麻烦也可以先运行下面这段脚本来手动登陆一次。
-
+  
 ``` python
 from selenium import webdriver
 
@@ -126,14 +126,11 @@ chrome.get(url)
 print('登陆成功！')
 ```
 
-> 注1：MAC运行时，如果提示 `chromedriver' executable needs to be in PATH. `
-> 需要将这里的代码稍微修改一下，手动补充路径：
+> 注1：MAC运行时，如果提示 `chromedriver' executable needs to be in PATH. `  
+> 需要将这里的代码稍微修改一下，手动补充路径：  
 > ``` chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)``` 
-> 
+>   
 > 注2：通过运行脚本启动的浏览器窗口，只能同时启动一个。若重复启动脚本将会打开空页面，需要关闭上一个窗口重新运行脚本。
-
-
----
 
 <br>
 
