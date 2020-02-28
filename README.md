@@ -8,7 +8,7 @@
 
 于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
   
-<br>
+  
 
 ## 如何安装
 
@@ -19,16 +19,16 @@
 > - [x] 1. Install Now
 > - [x] 2. Disable path length limit
 
-<br>
+  
 
 - **WebDriver for Chrome**  
   https://sites.google.com/a/chromium.org/chromedriver/downloads
 
-> - [] Mac系统：  
+> Mac系统：  
 > 直接用brew安装。 ``` brew cask install chromedriver```   
 > ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
 >   
-> - [] Win系统:   
+> Win系统:   
 > 注1：根据自己Chrome当前的版本号，下载对应WebDriver版本。以后Chrome更新了，也需要重新下载最新的版本。否则会报错。
 >   
 > 注2：**如何查看Chrome当前版本号**：右上角 - 帮助 - 关于Google Chrome 
@@ -40,7 +40,7 @@
 >    
 > --------------------------------
 
-<br>
+  
 
 - **Nodejs**  
   https://nodejs.org/zh-cn/
@@ -53,11 +53,11 @@
 python -m pip install --upgrade pip
 pip install selenium
 ```
-<br>
+  
 
 繁琐的前置工作完成了。接着可以正式开始咯。
 
-<br>
+  
  
 ## 如何使用
 
@@ -68,7 +68,7 @@ pip install selenium
 
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
 
-<br>
+  
 
 ### 第一次使用
 
@@ -103,7 +103,7 @@ chrome.find_element_by_id("login_button").click()
 
 print('登陆成功！')
 ```
-<br>
+  
   
 如果觉得让机器帮你填账号密码不安全。不嫌麻烦也可以先运行下面这段脚本来手动登陆一次。
   
@@ -120,31 +120,31 @@ chrome.get(url)
 print('登陆成功！')
 ```
 
-<br>
+  
 
 > 注1：MAC运行时，如果提示** chromedriver' executable needs to be in PATH. **
 > 需要将这里的代码稍微修改一下，手动补充路径：  
 > ``` chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)``` 
 
-<br>
+  
 
 > 注2：通过运行脚本启动的浏览器窗口，只能同时启动一个。若重复启动脚本将会打开空页面，需要关闭上一个窗口重新运行脚本。
 
-<br>
+  
 
 登陆进邮箱主页后，需要做几件事
 
-<br>  
+  
 
 ### 1 调整每页显示邮件数量 
 邮箱默认只显示25条邮件，需要在邮箱设置里，调整每页显示**100**封邮件。这样效率更高。
 
-<br>  
+  
 
 ### 2 邮箱文件夹
 把你想要下载的邮件**移动到**文件夹里，方便整理区分。
   
-<br>
+  
   
 ### 3 新窗口打开文件夹（重要）
 从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**
@@ -153,7 +153,7 @@ print('登陆成功！')
 ```
 https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_list?folderid={ B }%26page={ C }
 ```
-<br>
+  
   
 ### 4 修改脚本里面的自定义参数，然后启动脚本
 
@@ -191,14 +191,14 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
 对了，其实邮件发送的时间也有收集，但是拿到的是时间戳的方式`` timestamp ``因为我暂时不需要知道发信时间，所以脚本中我还没有处理这个。
 
 
-<br>
+  
 
 ### 6 下载完成后
 可以运行自动生成在下载目录中的 `_ren.bat` 的批处理脚本。它将会把本次下载的文件补充收件人邮箱作为名称前缀。
 
 > 注：如果目录中存在相同名称的文件，或者存在特殊符号的名称，可能会因为无法读取而被无视。需要手动进行重命名。
 
-<br>
+  
 
 ### 7 附加脚本：将含有关键词的文件移动到指定文件夹。
 
@@ -254,7 +254,7 @@ if __name__ == '__main__':
 3. 如果邮件中没有包含附件，会自动打星标。
 4. 脚本结束后会生成一个批处理程序，运行后会自动为附件重命名。命名规则是在文件名前面添加'发件人邮箱' 
   
-<br>
+  
 
 ## 可能出现的问题
 
@@ -273,7 +273,7 @@ if __name__ == '__main__':
 5. 如果开车的速度过快，会被系统拦下车。提示：【您请求的频率太快，请稍后再试】  
    （没写完。临时解决方案：根据控制台输出的记录，从暂停的地方重新下载）
   
-<br>
+  
   
 ## 踩坑历史
 1. 附件收藏中的"全部附件"，并不是想象中真的把全部附件整合在一起，还是会漏掉一些，关键是还不知道漏了哪些。
