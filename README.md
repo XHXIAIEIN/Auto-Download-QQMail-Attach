@@ -125,8 +125,11 @@ print('登陆成功！')
    
    <br>   
    
-> 注1：MAC运行时，如果提示** chromedriver' executable needs to be in PATH. **
-> 需要将这里的代码稍微修改一下，手动补充路径：  
+> 注1：MAC用户运行脚本时，如果提示以下错误信息：  
+>> FileNotFoundError: [Errno 2] No such file or directory: 'chromedriver'
+>> selenium.common.exceptions.WebDriverException: Message: 'chromedriver' executable needs to be in PATH. 
+>   
+> 需要将下面部分的代码稍微修改一下，手动补充路径：  
 > ``` chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)``` 
    
    <br>   
