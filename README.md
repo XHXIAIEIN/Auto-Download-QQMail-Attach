@@ -21,7 +21,7 @@
 
 <br>
 
-- **WebDriver for Chrome**
+- **WebDriver for Chrome**  
   https://sites.google.com/a/chromium.org/chromedriver/downloads
 
 > Win: <br>
@@ -29,7 +29,7 @@
 > 
 > 注2：**如何查看Chrome当前版本号**：右上角 - 帮助 - 关于Google Chrome 
 > 
-> 注3：**如何安装**：
+> 注3：**如何安装**：  
 > 下载好之后，把`chromedriver.exe`放到随意一个文件夹，然后复制当前这个文件夹的路径。通常我喜欢把这类工具专门放到一个叫bin的文件夹里。比如D:\Program\bin
 > 
 > 按下Win键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。
@@ -40,19 +40,19 @@
 > --------------------------------
 > 
 >  Mac： <br>
->  直接用brew安装。
->  ``` brew cask install chromedriver``` 
+>  直接用brew安装。  
+>  ``` brew cask install chromedriver```   
 >  ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
 
 <br>
 
-- **Nodejs**
+- **Nodejs**  
   https://nodejs.org/zh-cn/
 
-> 下载最新的版本即可。跟着引导安装点下一步。
+> 下载最新的版本即可。跟着引导安装点下一步。  
 > NodeJs安装完成后，按下Win + R，输入 cmd。然后按Ctrl + Shift + 回车键。以管理员权限进入命令行。接着输入下方的两条指令：
 
-- **selenium**
+- **selenium**  
 ```
 python -m pip install --upgrade pip
 pip install selenium
