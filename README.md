@@ -7,8 +7,6 @@
 网上搜了下资料，基本都是通过POP3来下载，但是这个邮箱并不是自己的，只是临时注册用来接收邮箱的小号，而对方也不希望开通手机认证。
 
 于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
-
----
   
 <br>
 
@@ -26,7 +24,7 @@
 - **WebDriver for Chrome**
   https://sites.google.com/a/chromium.org/chromedriver/downloads
 
-> Win:
+> Win: <br>
 > 注1：根据自己Chrome当前的版本号，下载对应WebDriver版本。以后Chrome更新了，也需要重新下载最新的版本。否则会报错。
 > 
 > 注2：**如何查看Chrome当前版本号**：右上角 - 帮助 - 关于Google Chrome 
@@ -41,7 +39,7 @@
 >  
 > --------------------------------
 > 
->  Mac：
+>  Mac： <br>
 >  直接用brew安装。
 >  ``` brew cask install chromedriver``` 
 >  ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
@@ -61,9 +59,9 @@ pip install selenium
 ```
 <br>
 
+
 繁琐的前置工作完成了。接着可以正式开始咯。
 
----
 
 <br>
  
