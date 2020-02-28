@@ -8,7 +8,7 @@
 
 于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
   
-  
+    
 
 ## 如何安装
 
@@ -19,7 +19,7 @@
 > - [x] 1. Install Now
 > - [x] 2. Disable path length limit
 
-  
+    
 
 - **WebDriver for Chrome**  
   https://sites.google.com/a/chromium.org/chromedriver/downloads
@@ -34,13 +34,13 @@
 > 注2：**如何查看Chrome当前版本号**：右上角 - 帮助 - 关于Google Chrome 
 >   
 > 注3：**如何安装**：  
-> 下载好之后，把`chromedriver.exe`放到随意一个文件夹，然后复制当前这个文件夹的路径。通常我喜欢把这类工具专门放到一个叫bin的文件夹里。比如D:\Program\bin
+> 下载好之后，把`chromedriver.exe`放到随意一个文件夹，然后复制当前这个文件夹的路径。通常我喜欢把这类工具专门放到一个叫bin的文件夹里。比如` D:\Program\bin`
 >   
 > 按下Win键，输入 path ，列表会看到一个「编辑系统环境变量」，按下回车就能打开它。打开右下角「环境变量」，在下面「系统变量」列表里，找到「Path」的一行，双击编辑。右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
 >    
 > --------------------------------
 
-  
+    
 
 - **Nodejs**  
   https://nodejs.org/zh-cn/
