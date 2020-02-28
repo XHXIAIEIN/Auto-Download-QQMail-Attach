@@ -24,7 +24,11 @@
 - **WebDriver for Chrome**  
   https://sites.google.com/a/chromium.org/chromedriver/downloads
 
-> Win系统: <br>
+> - [] Mac系统：  
+> 直接用brew安装。 ``` brew cask install chromedriver```   
+> ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
+>   
+> - [] Win系统:   
 > 注1：根据自己Chrome当前的版本号，下载对应WebDriver版本。以后Chrome更新了，也需要重新下载最新的版本。否则会报错。
 >   
 > 注2：**如何查看Chrome当前版本号**：右上角 - 帮助 - 关于Google Chrome 
@@ -35,10 +39,6 @@
 > 按下Win键，输入 path ，列表会看到一个「编辑系统环境变量」，按下回车就能打开它。打开右下角「环境变量」，在下面「系统变量」列表里，找到「Path」的一行，双击编辑。右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
 >    
 > --------------------------------
->   
->  Mac系统： <br>
->  直接用brew安装。 ``` brew cask install chromedriver```   
->  ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
 
 <br>
 
