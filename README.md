@@ -27,7 +27,9 @@
 > Mac系统：  
 > 直接用brew安装。 ``` brew cask install chromedriver```   
 > ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
->   
+   
+   <br>   
+   
 > Win系统:   
 > 注1：根据自己Chrome当前的版本号，下载对应WebDriver版本。以后Chrome更新了，也需要重新下载最新的版本。否则会报错。
 >   
@@ -104,8 +106,9 @@ chrome.find_element_by_id("login_button").click()
 
 print('登陆成功！')
 ```
-  
-  
+   
+   <br>   
+   
 如果觉得让机器帮你填账号密码不安全。不嫌麻烦也可以先运行下面这段脚本来手动登陆一次。
   
 ``` python
