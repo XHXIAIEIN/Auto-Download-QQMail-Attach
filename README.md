@@ -6,9 +6,10 @@
 
 网上搜了下资料，基本都是通过POP3来下载，但是这个邮箱并不是自己的，只是临时注册用来接收邮箱的小号，而对方也不希望开通手机认证。
 
-于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
+于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~  
+
   
-    
+  
 
 ## 如何安装
 
@@ -19,7 +20,7 @@
 > - [x] 1. Install Now
 > - [x] 2. Disable path length limit
 
-    
+  
 
 - **WebDriver for Chrome**  
   https://sites.google.com/a/chromium.org/chromedriver/downloads
@@ -40,7 +41,7 @@
 >    
 > --------------------------------
 
-    
+  
 
 - **Nodejs**  
   https://nodejs.org/zh-cn/
@@ -54,11 +55,11 @@ python -m pip install --upgrade pip
 pip install selenium
 ```
   
-
-繁琐的前置工作完成了。接着可以正式开始咯。
-
   
- 
+
+繁琐的前置工作完成了。接着可以正式开始咯。  
+  
+  
 ## 如何使用
 
 前面已经安装了Python，会发现开始菜单列表新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】
@@ -68,6 +69,7 @@ pip install selenium
 
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
 
+  
   
 
 ### 第一次使用
