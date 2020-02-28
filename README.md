@@ -62,7 +62,7 @@ pip install selenium
    
 ## 如何使用
 
-前面已经安装了Python，会发现开始菜单列表新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】
+已经安装了Python，会发现开始菜单新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】
 
 然后把下方的代码复制粘贴到IDLE中，将文件保存在任意位置，随便取个名比如QQmail.py。
 另外建议不要放在桌面，因为脚本会生成一个文件夹用来储存浏览器缓存，可能有些占位置。
