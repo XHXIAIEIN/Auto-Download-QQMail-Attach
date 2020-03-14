@@ -249,7 +249,7 @@ def print_title_table():
 # 打印附件列表
 def print_files_table():
 
-     os.system('cls')
+    os.system('cls')
 
     # 没有附件列表
     if bool(data_email_nofilelist):
@@ -354,8 +354,7 @@ def get_folder_info():
     config["PAGES"]["max"] = eval(test_class_Valid_get("right")[1].find_elements_by_tag_name("script")[0+config["PAGES"]["isNotFistPage"]].get_attribute('innerHTML').strip('document.write(').strip(');'))
     if token['page'] > Page_Task["start"] > 0: return
     os.system("cls")
-    p1("{} ({}/{})".format(data_folders_dict[str(token["folderid"])],config["PAGES"]["index"], config["PAGES"]["max"]))
-
+    
 # 获取文件夹的邮件列表
 def get_email_title():
     data1,data2=[],[]
