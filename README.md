@@ -10,14 +10,37 @@
 
 https://zhuanlan.zhihu.com/p/51543237
    
+支持Mac和Windows系统。
    <br>   
    
 ## 如何安装
 
+### MAC
+如果你是MAC用户。操作相对简单一些：
+ - 1. **安装Homebrew**
+      https://brew.sh/index_zh-cn
+      
+      简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
+      ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
+   
+   <br>   
+     
+- 2. **安装 python3 + selenium + chromedriver**
+     简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
+     ```
+     brew install chromedriver
+     brew install selenium
+     brew install prettytable
+     ```
+   
+   <br>   
+     
+### Windows
+
 - **Python 3**   
   https://www.python.org/
 
-> 下载完成后跟着引导安装就可以了。点页面中那两个带着小盾牌图标的大按钮。
+> 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
 > - [x] 1. Install Now
 > - [x] 2. Disable path length limit
    
@@ -33,28 +56,39 @@ https://zhuanlan.zhihu.com/p/51543237
    <br>   
    
 > Win系统:   
-> 注1：根据自己Chrome当前的版本号，下载对应WebDriver版本。以后Chrome更新了，也需要重新下载最新的版本。否则会报错。
+>  注1：根据自己Chrome当前的版本号，下载对应版本号的chromedriver。
+>  比如你浏览器版本号是是80.0，就下载80.0版本。
+>  以后有更新，也是需要重新下载对应版本的chromedriver。否则会报错。
 >   
-> 注2：**如何查看Chrome当前版本号**：右上角 - 帮助 - 关于Google Chrome 
+> 注2：**如何查看Chrome当前版本号**：
+> 右上角 - 设置 - 关于Google Chrome 
 >   
 > 注3：**如何安装**：  
-> 下载好之后，把`chromedriver.exe`放到随意一个文件夹，然后复制当前这个文件夹的路径。通常我喜欢把这类工具专门放到一个叫bin的文件夹里。比如` D:\Program\bin`
+> 下载好之后，把`chromedriver.exe`放到随意一个文件夹，然后复制当前这个文件夹的路径。
+> 通常我喜欢把这类工具专门放到一个叫bin的文件夹里。比如` D:\Program\bin`
 >   
-> 按下Win键，输入 path ，列表会看到一个「编辑系统环境变量」，按下回车就能打开它。打开右下角「环境变量」，在下面「系统变量」列表里，找到「Path」的一行，双击编辑。右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
->    
+> 按下Win键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。
+> 打开右下角「环境变量」，在下面「系统变量」列表里，找到「Path」的一行，双击编辑。
+> 右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
    
    <br>   
    
 - **Nodejs**  
   https://nodejs.org/zh-cn/
 
-> 下载最新的版本即可。跟着引导安装点下一步。  
-> NodeJs安装完成后，按下Win + R，输入 cmd。然后按Ctrl + Shift + 回车键。以管理员权限进入命令行。接着输入下方的两条指令：
+> 下载最新版即可，跟着引导安装，一直点下一步。
+   
+   <br>   
+  
+- **PIP**  
+> NodeJs安装完成后，按下Win + R，输入 cmd。然后按Ctrl + Shift + 回车键。
+> 以管理员权限进入命令行。接着输入下方的两条指令：
 
 - **selenium**  
 ```
 python -m pip install --upgrade pip
 pip install selenium
+pip install prettytable
 ```
    
    <br>   
@@ -72,71 +106,10 @@ pip install selenium
 
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
    
+
    <br>   
    
-### 第一次使用
-
-初次启用脚本需手动登陆，勾选**下次自动登陆**（记住密码）以后再启用脚本时就可以实现自动登陆直接进入邮箱主页了。
-
-这里也提供一个自动登录的脚本，只需要第一次使用它就可以了。后面不需要。
-
-``` python
-from selenium import webdriver
-
-options = webdriver.ChromeOptions()
-options.add_argument("user-data-dir=selenium")
-chrome = webdriver.Chrome(options=options)
-
-#......................................................
-# 填你自己的QQ账号，放心填没其他人看得到
-#......................................................
-QQNUMBER="123456789"
-PASSWORD="abc987654321"
-
-
-chrome.get("https://mail.qq.com/")
-chrome.switch_to.default_content()
-chrome.find_element_by_id("qqLoginTab").click()
-chrome.switch_to.frame(chrome.find_element_by_id("login_frame"))
-chrome.find_element_by_id("u").clear()
-chrome.find_element_by_id("u").send_keys(QQNUMBER)
-chrome.find_element_by_id("p").clear()
-chrome.find_element_by_id("p").send_keys(PASSWORD)
-chrome.find_element_by_id("p_low_login_enable").click()
-chrome.find_element_by_id("login_button").click()
-
-print('登陆成功！')
-```
-   
-   <br>   
-   
-如果觉得让机器帮你填账号密码不安全。不嫌麻烦也可以先运行下面这段脚本来手动登陆一次。
-  
-``` python
-from selenium import webdriver
-
-options = webdriver.ChromeOptions()
-options.add_argument("user-data-dir=selenium")
-chrome = webdriver.Chrome(options=options)
-
-url = 'https://mail.qq.com/'
-chrome.get(url)
-
-print('登陆成功！')
-```
-   
-   <br>   
-   
-> 注1：MAC用户运行脚本时，如果提示以下错误信息：  
-> FileNotFoundError: [Errno 2] No such file or directory: 'chromedriver'
-> selenium.common.exceptions.WebDriverException: Message: 'chromedriver' executable needs to be in PATH. 
->   
-> 是因为chromedriver没有的路劲没有被读取到。你可以手动补充路径：  
-> ``` chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)``` 
-   
-   <br>   
-   
-> 注2：通过运行脚本启动的浏览器窗口，只能同时启动一个。若重复启动脚本将会打开空页面，需要关闭上一个窗口重新运行脚本。
+> 注：通过运行脚本启动的浏览器窗口，只能同时启动一个。若重复启动脚本将会打开空页面，需要关闭上一个窗口重新运行脚本。
    
    <br>   
    
@@ -145,7 +118,7 @@ print('登陆成功！')
    <br>   
    
 ### 1 调整每页显示邮件数量 
-邮箱默认只显示25条邮件，需要在邮箱设置里，调整每页显示**100**封邮件。这样效率更高。
+邮箱默认只显示25条邮件，需要在邮箱设置里，调整每页显示**100**封邮件。脚本中也提供了一个自动设置邮件显示数量的开关，默认是关闭的，有需要可以在DEBUG分类下手动开启。
    
    <br>   
    
@@ -155,13 +128,12 @@ print('登陆成功！')
    <br>   
    
 ### 3 新窗口打开文件夹（重要）
-从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**
-  
-从浏览器的地址栏找到链接的几个参数: `sid` `folderid` `page`  
+从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的几个参数: `sid` `folderid` `page`  
 ```
 https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_list?folderid={ B }%26page={ C }
 ```
-   
+脚本中也提供了将文件夹列表输出到控制台的选项，可以在DEBUG分栏里手动开启can_print_folder_table  
+
    <br>   
    
 ### 4 修改脚本里面的自定义参数，然后启动脚本
@@ -178,7 +150,7 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
 浏览器下载的文件会自动保存在这里。  
 注：路径需要以 \\ 作为分隔。如：
  ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ```
-   
+如果你是MAC，则需要 '\\' 作为分隔符。
    <br>   
    
 3. 文件夹ID.
@@ -220,7 +192,7 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
    
    <br>   
    
-### 6 下载完成后
+### 6 下载完成后（已移除）
 可以运行自动生成在下载目录中的 `_ren.bat` 的批处理脚本。它将会把本次下载的文件补充收件人邮箱作为名称前缀。
 
 > 注：如果目录中存在相同名称的文件，或者存在特殊符号的名称，可能会因为无法读取而被无视。需要手动进行重命名。
@@ -298,14 +270,24 @@ if __name__ == '__main__':
 3. 如果开车的速度过快，会被系统拦下车。提示：【您请求的频率太快，请稍后再试】
 （已修复。当出现提示窗口时，脚本自动会等待10秒，并自动反复刷新，直到恢复暂停的地方继续下载）
 
-4. 本地重命名的批处理脚本，如果附件有重复的文件，后面的相同的文件不会被重命名。
-（没想好。临时解决方案：根据控制台输出的记录，搜索文件名，找到发件人昵称或者邮箱，手动重命名）
+4. 如果电脑打开了QQ，登陆页面会出现手机扫码登陆的提示，导致自动填写账号失败。
+（已修复。自动检测是否出现扫码提示，并切换到账号密码登陆。）
 
-   <br>   
+5. 收件人含有特殊符号，导致脚本奔溃。
+（事实上，我并没有对字符串做处理，只是将他们输出在控制台而已。报错是因为编码问题，你可以将打印到控制台中的方法全部禁用掉，直接下载附件就行）
+
+6. 本地重命名的批处理脚本，如果附件有重复的文件，后面的相同的文件不会被重命名。
+（没想好。临时解决方案：根据控制台输出的记录，搜索文件名，找到发件人昵称或者邮箱，手动重命名）  
+  
+  <br>   
    
 ## 踩坑历史
 1. 附件收藏中的"全部附件"，并不是想象中真的把全部附件整合在一起，还是会漏掉一些，关键是还不知道漏了哪些。
   （解决方案：换成进入邮件主题下载附件）
    
-   <br>   
+   
+2. 在下载过程中，中途收到了新的邮件，列表顺序会出现错误。
+ （不要下载收件箱的邮件，建议将他们移动到文件夹里下载，并关闭该文件夹的收件规则，下载期间的别乱动。）  
+  
+  <br>   
    
