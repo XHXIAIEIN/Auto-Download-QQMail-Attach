@@ -49,16 +49,11 @@ https://zhuanlan.zhihu.com/p/51543237
 - **WebDriver for Chrome**  
   https://sites.google.com/a/chromium.org/chromedriver/downloads
 
-> Mac系统：  
-> 直接用brew安装。 ``` brew cask install chromedriver```   
-> ~~都用MAC写代码了，还不知道什么是brew？~~ 好吧，请点这里了解：https://brew.sh/index_zh-cn
-   
    <br>   
-   
-> Win系统:   
->  注1：根据自己Chrome当前的版本号，下载对应版本号的chromedriver。
->  比如你浏览器版本号是是80.0，就下载80.0版本。
->  以后有更新，也是需要重新下载对应版本的chromedriver。否则会报错。
+     
+> 注1：根据自己Chrome当前的版本号，下载对应版本号的chromedriver。
+> 比如你浏览器版本号是是80.0，就下载80.0版本。
+> 以后有更新，也是需要重新下载对应版本的chromedriver。否则会报错。
 >   
 > 注2：**如何查看Chrome当前版本号**：
 > 右上角 - 设置 - 关于Google Chrome 
