@@ -1,3 +1,6 @@
+支持Mac和Windows系统。
+https://zhuanlan.zhihu.com/p/51543237
+
 ## 批量下载QQ邮箱附件，下载完后修改文件重命名
 
 因为工作原因，需要处理QQ邮箱上来自各地网友的投稿附件。数量比较多（上千份），如果手动一个一个下载非常麻烦。。。
@@ -8,9 +11,7 @@
 
 于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
 
-https://zhuanlan.zhihu.com/p/51543237
-   
-支持Mac和Windows系统。
+
    <br>   
    
 ## 如何安装
