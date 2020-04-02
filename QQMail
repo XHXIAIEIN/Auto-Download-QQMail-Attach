@@ -509,7 +509,7 @@ def open_email():
             attach.update({'filebyte': int(a.get_attribute('filebyte'))})
             attach.update({'filedown': "https5://mail.qq.com" + a.get_attribute('down')})
             attach.update({'viewmode': a.get_attribute('viewmode')})
-            attach.update({'index': int(a.get_attribute('idx') or 0)+1})
+            attach.update({'index': int(a.get_attribute('idx') or 0)})
             attach.update({'ti': email['index']})
             attach.update({'tn': email['name']})
             attach.update({'tt': email['title']})
