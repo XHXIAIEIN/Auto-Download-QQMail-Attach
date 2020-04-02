@@ -1,243 +1,564 @@
-# encoding:utf-8
-import os
-import time
+# -*- coding: UTF-8 -*-
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
+import time,os
+import prettytable as pt
 
-#......................................................
-# 自定义参数
-#......................................................
-# 先登陆邮箱，找到你想处理的文件夹，右键新窗口打开，在浏览器地址栏可以看到以下地址:
-# https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_list?folderid={ B }%26page={ C }
-#
-# 需要自定义的参数已在上方链接以 A B C 标记出，然后自己替换下面的参数
-#
-# A - token['sid']         这串密钥会定时更新，每次使用时需要重新填写。
-# B - token['folderid']    文件夹ID
-# C - token['page']        邮件列表页数(初始页为0)。如果要下载第2页的邮件，就改为1。
-#
-#......................................................
-token={'sid':'abcdecg', 'folderid':123, 'page':0}
+#===============================================================================
+# 使用说明。
+#===============================================================================
+
+#...............................................................................
+#  1.WebDriver for Chrome
+#...............................................................................
+#  使用前检查Chrome版本是否有更新。如果与chromedriver版本号不相同，请更新chromedriver。
+#  https://sites.google.com/a/chromium.org/chromedriver/downloads
+#...............................................................................
+
+#...............................................................................
+#  2.需要安装几个工具库。
+#...............................................................................
+#  Windows用户，安装NodeJs后，在CMD输入以下安装指令：
+#  python -m pip install --upgrade pip
+#  pip install selenium
+#  pip install prettytable
+#...............................................................................
+#  MAC用户，安装brew后，在终端输入以下指令：
+#  brew install chromedriver
+#  brew install selenium
+#  brew install prettytable
+#...............................................................................
+
+# 注意，MAC用户需要手动修改下面几个参数。
+# 它们都已经标识出来，分别在DOWNLOAD_FOLDER以及配置Web Driver，查找 MAC 关键词即可快速跳转。
 
 
-#......................................................
+'''
+#===============================================================================
+#  自定义参数
+#===============================================================================
+'''
+
+#...............................................................................
+#  QQ账号 （放心填，没人能看到）
+#...............................................................................
+QQNUMBER="13246798"
+PASSWORD="abd123abc1234"
+
+
+#...............................................................................
 # 附件下载到哪个文件夹。（如果文件夹不存在，会自动创建）
-# 注：路径需要以双斜杠 \\ 作为分隔，不是单斜杠 \
-#......................................................
-download_here='d:\\QQMail\\'
+# 注1：在当前脚本的文件夹创建目录，直接写名称，如： "QQMail"
+# 注2：Win用户文件夹路径需要以 '\\' 作为分隔符。如："d:\\email\\download"; Mac用户用'/'分隔
+#...............................................................................
+
+# Windows
+DOWNLOAD_FOLDER='D:\\Downloads\\2020'
+
+# MAC
+# DOWNLOAD_FOLDER='~/Downloads/2020'
 
 
-#......................................................
-# Debug 模式 （0: 关闭 | 1: 开启）
-# 开启DEBUG模式后，只输出列表数据，不下载任何附件。
-#......................................................
-DEBUG=0
-
-#................................................... ...
-# title['index']    第index封邮件，默认为1，不可修改。
-# title['start']    从第start封邮件开始，默认为1
-# title['end']      到第end封邮件结束，默认为-1
-# title['step']     读取邮件次数超过step时结束，默认为-1
-#......................................................
-title={'index':1, 'start':1, 'step':-1}
+#...............................................................................
+#  邮箱文件夹ID
+#  展开左侧面板[我的文件夹]列表，找到你想下载的文件夹，右键-新窗口打开。在浏览器地址栏找到folderid
+#...............................................................................
+FOLDER_ID = 1     # 文件夹ID。注：首页收件箱的folderid = 1
 
 
-#......................................................
-# pageInfo['now']     目前在第几页，默认为0，即第1页。
-# pageInfo['max']     文件夹共有几页，在第0页时会自动读取。
-# pageInfo['step']    希望下载至多少页
-# pageInfo['step']    希望下载至多少页
-#......................................................
-pageInfo={'now':0, 'max':0, 'step':0, 'isfilp':0, 'autofilp':True}
+#...............................................................................
+# 指定下载计划
+#  start: 从列表第n个开始（包含n，即列表第一个就是n）
+#  end:   在列表第n个结束。（包含n，即列表最后一个就是n。）
+#  step:  从开始时计算，累计到第n个结束。（即列表最终有n个。若index大于end或title_max，提前结束step。）
+#...............................................................................
+
+# 邮件列表
+Title_Task = {'start':1,'step':-1,'end':-1}
+
+# 页数。
+Pages_Task = {'start': 1,'step':-1,'end':-1, 'autoNext': True}
 
 
-#......................................................
-# TODO 还没花时间写完的功能
-#......................................................
-# for name in title:
-#   for key in ignore_keys:
-#     if key in name:
-#......................................................
-# 关键词屏蔽（黑名单）
-# ignore_keys 全局关键词，无论在哪里出现都跳过
-# ignore_tile_keys 从邮件标题搜索
-# ignore_user_keys 从发信人昵称搜索
-# ignore_file_keys 从附件文件名搜索
-#......................................................
-ignore_keys = []
-ignore_tile_keys=[]
-ignore_user_keys=[]
-ignore_file_keys=[]
+#...............................................................................
+# 邮件主题，关键词过滤
+#...............................................................................
+
+# 白名单关键词。只搜索邮件主题中包含任意一个关键词的邮件。
+title_whitelist_keys = ['']
+
+# 黑名单关键词。忽略邮件主题中包含任意一个关键词的邮件。
+title_blacklist_keys = ['']
 
 
-#......................................................
-# 用来测试的其他参数
-#......................................................
 
-# 用来计数测试用的，总感觉有时会漏掉一些文件。
-test={'fileindex': 0, 'filecount': 0, 'downloadtimes': 0}
+#...............................................................................
+#  DEBU
+#...............................................................................
 
-# readmail  邮件列表：包含邮件id(value)、时间戳(totime)、发件人邮箱(fa)、发件人昵称(fn)
-# filemail  附件列表：包含邮箱、邮件主题、发件人昵称、附件名
-# foolmail  没有附件：包含发件人昵称
-readmail,filemail,foolmail=[],[],[]
+# 按文件夹顺序的索引序号替换文件夹ID。0是默认收件箱
+FOLDER_INDEX = -1
 
-# 邮箱地址
-url_qqmail='https://mail.qq.com/'
-url_folder=url_qqmail+'cgi-bin/mail_list?sid={}&folderid={}&page={}'.format(token['sid'],token['folderid'],token['page'])
+# 是否自动设置每页显示100封邮件
+can_set_mail_max = False
 
-#......................................................
-# 检查下载路径是否存在
-#......................................................
-if not os.path.exists(download_here):
-    print("文件夹不存在。正在自动创建文件夹....")
-    os.mkdir(download_here)
+# 是否只登陆到邮箱主页，不做任何事
+just_login_mail = False
 
-#......................................................
-# 配置Web Driver
-#......................................................
-options=webdriver.ChromeOptions()
-prefs={"download.default_directory":download_here}
-options.add_argument('blink-settings=imagesEnabled=false')
-options.add_argument('--disable-plugins')
-options.add_argument('--disable-gpu')
-options.add_argument('--no-sandbox')
-options.add_argument("user-data-dir=selenium")
+# 是否只打印主题列表，不打开邮件
+just_print_mail = False
+
+# 是否下载附件
+can_download_file = True
+
+#是否将不含附件的主题设置为星标
+is_star_nofile = True
+
+#是否在控制台输出数据
+can_print_folder_table = True
+can_print_title_table = True
+can_print_files_table = True
+
+
+#...............................................................................
+#  配置Web Driver
+#...............................................................................
+
+options = webdriver.ChromeOptions()
+prefs={"download.default_directory":DOWNLOAD_FOLDER}
 options.add_experimental_option("prefs",prefs)
-options.add_argument("--window-size=720,800")
-options.add_argument('--ignore-certificate-errors')
-chrome=webdriver.Chrome(options=options)
+options.add_argument("--user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36 Edg/80.0.361.66'")
+options.add_argument("--blink-settings=imagesEnabled=false")
+options.add_argument("--window-size=800,1000")
 
-# 启动Web Driver
-print(" ")
-print(" Chrome启动")
-chrome.get(url_qqmail)
-chrome.implicitly_wait(2)
+# Windows
+options.add_argument("--user-data-dir=selenium")
+chrome = webdriver.Chrome(options=options)
 
-#......................................................
-# 获取页面信息
-#......................................................
+# MAC
+# options.add_argument("--user-data-dir selenium")
+# chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)
 
-while pageInfo['autofilp']:
-  chrome.get(url_folder)
-  element = chrome.find_element_by_id("mainFrame")
-  chrome.switch_to.frame(element)
 
-  if pageInfo['isfilp']==0:
-    pageInfo['now']=token['page']+1
-    pageInfo['max']=eval(chrome.find_elements_by_class_name("right")[1].find_elements_by_tag_name('script')[0+pageInfo['isfilp']].get_attribute('innerHTML').strip('document.write(').strip(');'))
-    print(" ---- 进入文件夹: ",chrome.find_element_by_xpath('//*[@id="qqmail_mailcontainer"]/div[1]').text.strip('管理"我的文件夹"').strip())
 
-  print("当前是第{}/{}页".format(pageInfo['now'],pageInfo['max']))
+'''
+#===============================================================================
+#  END
+#===============================================================================
+'''
 
-  #翻页规则
-  can_filp_1 = pageInfo['now'] < pageInfo['max']
-  can_filp_2 = pageInfo['now'] < pageInfo['step']
+#...............................................................................
+#  GLOBAL VAR
+#...............................................................................
 
-  # 获取邮件列表
-  elements=chrome.find_elements_by_css_selector('input[name="mailid"]')
+config = {"TOKEN":{'sid':"",  'folderid':0, 'page':0},
+          "PAGES":{'index':0, 'max': 0, 'step':0, 'iscanNext':False, 'isNotFistPage':0},
+          "TITLE":{'index':0, 'max': 0, 'step':0},
+          "PTASK":"","TTASK":""}
 
-  for e in elements[1:]:
-    try:
-      if title['index'] >= title['start']:
-        # check = (false, true)[num == -1]
-        check_step = (title['index']-title['start'] < title['step'],True)[title['step'] == -1]
 
-        if check_step:
-          sender={}
-          sender.update({'timestamp': e.get_attribute('totime')})
-          sender.update({'name': e.get_attribute('fn')})
-          sender.update({'email': e.get_attribute('fa')})
-          sender.update({'id': e.get_attribute('value')})
-          sender.update({'index': title['index']})
-          readmail.append(sender)
-          print(' ├─{} {}'.format(title['index'],sender['name']))
-          time.sleep(0.002)
+data_folders_list = []
+data_folders_dict = []
 
-      title['index']+=1
-    except Exception as e:
-      break
+data_title_blacklist = []
+data_title_whitelist = []
 
-  if can_filp_2:
-    pageInfo['isfilp']=1
-    pageInfo['now']+=1
-    url_folder=url_qqmail+'cgi-bin/mail_list?sid={}&folderid={}&page={}'.format(token['sid'],token['folderid'],pageInfo['now']-1)
-  else:
-    pageInfo['autofilp']=False
+data_email_titlelist = []
 
-#......................................................
-# 开始处理附件
-#......................................................
+data_email_fileslist = []
+data_email_nofilelist = []
 
-time.sleep(0.125)
-#os.system('cls')
-print("\n")
-print(" ---------------------------------------")
-print(' 邮件主题({})'.format(title['index']-1))
-print(" ---------------------------------------")
-print(" ")
-print(" 开始处理附件")
+count_download_email = {"count":0, "lastMailID": ""}
 
-# 获取每封邮件的附件列表
-for key in readmail:
-  time.sleep(0.125)
-  url=url_qqmail+'cgi-bin/frame_html?sid={}&url=/cgi-bin/readmail?mailid={}'.format(token['sid'],key['id'])
-  chrome.get(url)
+#...............................................................................
+# Tool
+#...............................................................................
 
-  try:
-    chrome.switch_to.default_content()
-    chrome.find_element_by_id("mainFrame")
-  except Exception as e:
-    print("您请求的频率太快，请稍后再试")
-    os.system('pause')
+def p1(text):
+    try:print(text)
+    except: print("控制台打印了一些内容，但因为字符中含有某些特殊符号，无法显示。")
+
+def get_url(url):
     chrome.get(url)
+    chrome.implicitly_wait(3)
+    chrome.set_script_timeout(3)
 
-  chrome.switch_to.default_content()
-  chrome.switch_to.frame(chrome.find_element_by_id("mainFrame"))
-  elements=chrome.find_elements_by_class_name("name_big")
+# 检查页面元素是否存在
+def test_id_Valid(name):
+    try:  chrome.find_element_by_id(name); chrome.execute_script("window.stop()"); return True
+    except: return False
 
-  isFool=len(elements)<=0  #没有附件
-  print(' ├─{} {} {}'.format(key['index'],key['name'],(key['email'], '(没有附件)')[isFool]))
+# 检查页面元素是否存在
+def test_class_Valid(name):
+    try:e=chrome.find_elements_by_class_name(name);chrome.execute_script("window.stop()"); return len(e) > 0 
+    except: return False
 
-  if isFool:
-      foolmail.append(key['name'])
-      mark_star=chrome.find_element_by_id("img_star")
-      if mark_star.get_attribute("class") == 'qm_ico_flagoff':
-          mark_star.send_keys(Keys.SPACE)
-      continue
+# 检查页面元素是否存在。如果存在则返回元素
+def test_id_Valid_get(name):
+    try: e=chrome.find_element_by_id(name); chrome.execute_script("window.stop()"); return e
+    except:return False
 
-  for f in elements:
-      attach={}
-      attach.update({'title': chrome.find_element_by_id("subject").text})
-      attach.update({'name': key['name']})
-      attach.update({'email': key['email']})
-      attach.update({'filename': f.find_element_by_css_selector('span:nth-child(1)').text})
-      filemail.append(attach)
-      test['filecount']+=1
-      print(" │  ├─{}".format(attach['filename']))
+def test_class_Valid_get(name):
+    try:e=chrome.find_elements_by_class_name(name); chrome.execute_script("window.stop()"); return e
+    except:return False
 
-  if DEBUG != 1:
-      os.chdir(download_here)
-      cmd=open("_ren.bat","a")
-      cmd.seek(0)
-      cmd.truncate()
-      cmd.write("@echo off")
-      cmd.write("\n")
+def test_frame_Valid(name):
+    try: e=test_id_Valid_get(name); chrome.switch_to.frame(e); return e
+    except:return False
 
-      for key in filemail:
-        cmd.write('ren "{}" "{}-{}"'.format(key['filename'], key['email'], key['filename']))
-        cmd.write("\n")
+# 检查列表是否为空
+def test_list_Valid(i):
+    return bool(i) and i != ['']
 
-      cmd.write("del _ren.bat")
-      cmd.close()
+# 如果字符串中含有某个关键词，返回True
+def check_key_in_name(str, key):
+    return all([i in str for i in key])
 
-  if DEBUG != 1:
-    elements=chrome.find_elements_by_link_text('下载')
-    for e in elements:
-        e.click()
-        test['downloadtimes']+=1
-        time.sleep(0.625)
+# 反转字典, value to key
+def swapDict(d):
+    result = {}
+    for k, v in d.items():
+        for _k in v:
+            result.setdefault(_k, {})
+            result[_k][k] = d[k][_k]
+    return result
 
-    time.sleep(0.542)
+# 时间戳转换时间
+def timeStamp(t):
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(t/1000)))
 
-print(' └─Emailecount:{}    Foolcount:{}    filecount:{}    downloadtimes:{}'.format(len(readmail), len(foolmail), test['filecount'],test['downloadtimes']))
+
+#...............................................................................
+#  LOGIN
+#...............................................................................
+
+# 更新token
+def update_token():
+    token = config['TOKEN']
+    token["sid"]      =  chrome.current_url.split("sid=")[1].split("&")[0]
+    token["folderid"] =  data_folders_list[FOLDER_INDEX]["id"] if FOLDER_INDEX > 0 else 0 if FOLDER_INDEX == 0 else FOLDER_ID if FOLDER_ID > 0 else 0
+    token["page"]     =  0
+    #p1(token["sid"])
+
+# 自动登录
+def auto_login():
+    p1("尝试自动登录")
+    chrome.switch_to.default_content()
+    chrome.find_element_by_id("qqLoginTab").click()
+    test_frame_Valid("login_frame")
+    if test_id_Valid("switcher_plogin"): chrome.find_element_by_id("switcher_plogin").click()
+    chrome.find_element_by_id("u").clear()
+    chrome.find_element_by_id("u").send_keys(QQNUMBER)
+    chrome.find_element_by_id("p").clear()
+    chrome.find_element_by_id("p").send_keys(PASSWORD)
+    chrome.find_element_by_id("p_low_login_enable").click()
+    chrome.find_element_by_id("login_button").click()
+    if test_id_Valid("mainFrameContainer"): p1("登录成功")
+
+# 修改邮箱每页显示数量
+def set_email_max():
+  p1("修改邮件每页显示数量")
+  get_url("https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={}&url=/cgi-bin/setting1?fun=list".format(config['TOKEN']["sid"]))
+  test_frame_Valid("mainFrame")
+  e = test_class_Valid_get("btn_select_limiting")[1]
+  e.click(e)
+  e.send_keys(Keys.DOWN); time.sleep(0.1)
+  e.send_keys(Keys.DOWN); time.sleep(0.1)
+  e.send_keys(Keys.ENTER); time.sleep(0.2)
+  test_frame_Valid("mainFrame")
+  chrome.execute_script("document.getElementById('sendbtn').click();") # 舒服了。。乖乖得写总是点不了保存按钮。
+  time.sleep(0.2)
+
+#...............................................................................
+#  GET FOLDER LIST
+#...............................................................................
+
+# 获取文件夹列表
+def get_folder_list():
+    if not test_id_Valid("leftPanel") and not test_id_Valid("folders"): error_load_folder()
+    n,d=0,[]
+    elements = iter(chrome.find_element_by_id("personalfolders").find_elements_by_tag_name("li"))
+    for item in elements:
+        n += 1
+        a = item.find_elements_by_tag_name("a")[0]
+        aid = a.get_attribute('id').split('_')[1]
+        atl = a.get_attribute('title')
+        data_folders_list.append({'index':n, 'id': int(aid), 'name': atl})
+        d.append([aid,atl])
+    global data_folders_dict
+    data_folders_dict = dict(d)
+    print_folder_table()
+
+#...............................................................................
+# GET EMAIL LIST
+#...............................................................................
+
+# 进入文件夹
+def open_next_page():
+    token = config['TOKEN']
+    get_url("https://mail.qq.com/cgi-bin/mail_list?folderid={}&page={}&sid={}&nocheckframe=true".format(token['folderid'],token['page'],token['sid']))
+    get_folder_info()
+    get_email_title()
+
+# 获取文件夹页数信息
+def get_folder_info():
+    test_frame_Valid("mainFrame")
+    token = config['TOKEN']
+    token['page'] += 1
+    config["PAGES"]["step"] += 1
+    config["PAGES"]["isNotFistPage"] = 1 if token['page'] != 1 else 0
+    config["PAGES"]["iscanNext"] = test_id_Valid("nextpage")
+    config["PAGES"]["index"] = token['page']
+    config["PAGES"]["max"] = eval(test_class_Valid_get("right")[1].find_elements_by_tag_name("script")[0+config["PAGES"]["isNotFistPage"]].get_attribute('innerHTML').strip('document.write(').strip(');'))
+    if token['page'] > Pages_Task["start"] > 0: return
+    os.system("cls")
+    #p1("{} ({}/{})".format(data_folders_dict[token["folderid"]],config["PAGES"]["index"], config["PAGES"]["max"]))
+
+# 获取文件夹的邮件列表
+def get_email_title():
+    data1,data2=[],[]
+
+    # 基础信息
+    elements=iter(chrome.find_elements_by_css_selector('input[name="mailid"]'))
+    for index,e in enumerate(elements):
+      if index < 1: continue
+      config["TITLE"]["max"] += 1
+      mail={}
+      mail.update({"page":"{}".format(config["PAGES"]["step"])})
+      mail.update({"index":"{:03d}".format(config["TITLE"]["max"])})
+      mail.update({"email":e.get_attribute("fa")})
+      mail.update({"name":e.get_attribute("fn")})
+      mail.update({'timestamp':e.get_attribute("totime")})
+      mail.update({"mailid":e.get_attribute("value")})
+      data1.append(mail)
+
+    # 邮件标题
+    elements = iter(test_class_Valid_get("tt"))
+    for e in elements: data2.append({"title": e.get_attribute('innerHTML').replace('&nbsp;','')})
+
+    # 合并两个list
+    # 在这里处理白名单、黑名单。以及 TASK TITLE
+    for a,b in zip(data1, data2):
+        a.update(b)
+        if test_list_Valid(title_blacklist_keys) and check_key_in_name(a['title'],title_blacklist_keys): data_title_blacklist.append(a)
+        elif test_list_Valid(title_whitelist_keys) and not check_key_in_name(a['title'],title_whitelist_keys): data_title_whitelist.append(a)
+        else:
+          if int(a['index']) > Title_Task["end"] > 0:break
+          if config["TITLE"]["step"] >= Title_Task["step"] > 0:break
+          if Title_Task["start"] > int(a['index']) > 0 : continue
+          config["TITLE"]["step"]+=1
+          data_email_titlelist.append(a)
+
+    # 检查翻页
+    open_next_page() if check_page_can_next() else check_task_end_type()
+
+#...............................................................................
+# NEXT PAGE
+#...............................................................................
+
+#检查是否需要翻页
+def check_page_can_next():
+    if not Pages_Task['autoNext'] or not config["PAGES"]["iscanNext"]: return False
+    if config['TOKEN']['page'] > Pages_Task["end"] > 0: config['PTASK']='e';return False
+    if config["PAGES"]["step"] > Pages_Task["step"] > 0: config['PTASK']='s';return False
+    if config['TITLE']['index'] > Title_Task["end"] > 0: config['TTASK']='e';return False
+    if config['TITLE']['step'] >= Title_Task["step"] > 0: config['TTASK']='s';return False
+    return True
+
+#检查时以哪种方式结束翻页的
+def check_task_end_type():
+  p,t = config['PTASK'],config['TTASK']
+  tp,tt,cp,cd = Pages_Task,Title_Task,config["PAGES"],config["TITLE"]
+  if not tp['autoNext'] and (tp["step"] > 0 or tt["step"] > 0 or tp["end"] > 0 or tt["end"]) > 0: stop_by_page_next()
+  tp["start"] = tp["start"] if tp["start"] > 0 else 1
+  tt["start"] = tt["start"] if tt["start"] > 0 else 1
+  tp["end"] = tp["end"] if tp["end"] > 0 else cp["max"]
+  tt["end"] = tt["end"] if tt["end"] > 0 else len(data_email_titlelist)
+  tp["step"] = tp["step"] if tp["step"] > 0 else cp["step"]
+  tt["step"] = tt["step"] if tt["step"] > 0 else cd["step"]
+  stop_by_title_end() if t == 'e' else stop_by_title_step()
+  stop_by_page_end() if p == 'e' else stop_by_page_step()
+  if can_print_title_table : print_title_table()
+
+#...............................................................................
+#  GET EMAIL FILES
+#...............................................................................
+
+def open_email():
+
+    titlelist = data_email_titlelist.__iter__()
+    max = len(data_email_titlelist)
+    check_download_Valid()
+    while True:
+        if count_download_email["count"] >= max: download_end(); break
+        email = next(titlelist)
+        count_download_email["count"] += 1
+        get_url("https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={}&url=/cgi-bin/readmail?t=readmail%26mailid={}%26mode=pre".format(config['TOKEN']["sid"],email['mailid']))
+        test_frame_Valid("mainFrame")
+        
+        if test_id_Valid("msg_txt"):
+            p1("{} 正在队列中等待...请稍等15秒".format(email['index']))
+            wait = 0
+            while test_id_Valid("msg_txt"):
+                t1 = 10 - wait*2
+                t = t1 if t1 > 0 else 0.1
+                time.sleep(t)
+                chrome.refresh()
+                test_frame_Valid("mainFrame")
+                if not test_id_Valid("msg_txt"): break
+                else: wait+=1
+            test_frame_Valid("mainFrame")
+            p1("等待结束，任务继续。")
+
+        elements=test_class_Valid_get("ico_big")
+        elements2=test_class_Valid_get("down_big")
+
+        if len(elements) <= 0:
+            p1("{} 没有邮件".format(email['index']))
+            data_email_nofilelist.append(email)
+            if is_star_nofile:
+                mark_star=test_id_Valid_get("img_star")
+                if mark_star.get_attribute("class") == 'qm_ico_flagoff': mark_star.send_keys(Keys.SPACE)
+            continue
+        
+        for f in elements:
+            a = f.find_elements_by_tag_name('a')[0]
+            attach={}
+            attach.update({'filename': a.get_attribute('filename')})
+            attach.update({'filebyte': int(a.get_attribute('filebyte'))})
+            attach.update({'filedown': "https5://mail.qq.com" + a.get_attribute('down')})
+            attach.update({'viewmode': a.get_attribute('viewmode')})
+            attach.update({'index': int(a.get_attribute('idx') or 0)})
+            attach.update({'ti': email['index']})
+            attach.update({'tn': email['name']})
+            attach.update({'tt': email['title']})
+            attach.update({'page': email['page']})
+            data_email_fileslist.append(attach)
+            p1("{} {}({})".format(email['index'],attach['filename'],attach['filebyte']))
+            if not can_download_file: continue
+            downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
+            ActionChains(chrome).click(downlnk).perform()
+
+        if can_print_files_table : print_files_table()
+
+#...............................................................................
+# Download EMAIL FILES
+#...............................................................................
+
+def check_download_Valid():
+    if not os.path.exists(DOWNLOAD_FOLDER):
+        p1("文件夹不存在。正在自动创建文件夹....")
+        os.mkdir(DOWNLOAD_FOLDER)
+
+
+#...............................................................................
+# Print ERROR
+#...............................................................................
+
+def error_qlogin(): p1("登录失败。请登录QQ客户端后重试")
+def error_load_page(): p1("打开文件夹失败。")
+def error_load_title(): p1("获取邮件列表失败。")
+def error_load_folder(): p1("获取文件夹列表失败。")
+def error_seting_email(): p1("修改失败。")
+def stop_by_title_step(): p1("[TITLE STEP]从第{}封邮件开始，读取{}封邮件后结束。".format(Title_Task['start'],Title_Task['step']))
+def stop_by_page_step(): p1("[PAGES STEP]从第{}页开始，读取{}页后结束。".format(Pages_Task['start'],Pages_Task['step']))
+def stop_by_page_next(): p1("[PAGES NEXT]由于关闭了自动翻页，提前结束。")
+def stop_by_page_end(): p1("[Task PAGE]从第{}页开始，在第{}页结束。".format(Pages_Task['start'],Pages_Task['end']))
+def stop_by_title_end(): p1("[Task TITLE]从第{}封邮件开始，在第{}封邮件结束。".format(Title_Task['start'],Title_Task['end']))
+
+def download_end(): p1("结束了。{}/{}".format(count_download_email["count"], len(data_email_titlelist)))
+
+
+#...............................................................................
+# Print TABLE
+#...............................................................................
+
+# 打印文件夹表格
+def print_folder_table():
+    if not can_print_folder_table: return
+    tb0 = pt.PrettyTable()
+    tb0.field_names = ["", "id", "文件夹"]
+    tb0.align = "l"
+    tb0.reversesort=True
+    for a in data_folders_list: tb0.add_row(["%02d"%a['index'], a['id'], a['name']])
+    p1(tb0)
+
+
+# 打印邮件标题表格
+def print_title_table():
+
+    # 黑名单
+    if bool(data_title_blacklist):
+        tb1 = pt.PrettyTable()
+        tb1.field_names = ["序","发件人","包含了黑名单关键词的主题","邮箱","时间","页"]
+        tb1.align = "l"
+        for a in (data_title_blacklist): tb1.add_row([a['index'],a['name'],a['title'],a['email'],timeStamp(int(a['timestamp'])),a['page']])
+        tb1.add_column('',list(range(1, len(data_title_blacklist)+1)))
+        p1(tb1); p1("设置了黑名单关键词，以上{}封邮件不包含在最终列表中。\n\n".format(len(data_title_blacklist)))
+
+    # 白名单
+    if bool(data_title_whitelist):
+        tb2 = pt.PrettyTable()
+        tb2.field_names = ["序","发件人","没有包含白名单关键词的主题","邮箱","时间","页"]
+        tb2.align = "l"
+        for a in (data_title_whitelist): tb2.add_row([a['index'],a['name'],a['title'],a['email'],timeStamp(int(a['timestamp'])),a['page']])
+        tb2.add_column('',list(range(1, len(data_title_whitelist)+1)))
+        p1(tb2); p1("设置了白名单关键词，以上{}封邮件不包含在最终列表中。\n\n".format(len(data_title_whitelist)))
+
+    # 最终列表
+    if bool(data_email_titlelist):
+        tb = pt.PrettyTable()
+        tb.field_names = ["序","发件人","主题","邮箱","时间","页"]
+        tb.align = "l"
+        for a in (data_email_titlelist): tb.add_row([a['index'],a['name'],a['title'],a['email'],timeStamp(int(a['timestamp'])),a['page']])
+        tb.add_column('',list(range(1, len(data_email_titlelist)+1)))
+        p1(tb);p1("最终列表共有{}封邮件。\n".format(len(data_email_titlelist)))
+  
+
+# 打印附件列表
+def print_files_table():
+
+    os.system('cls')
+
+    # 没有附件列表
+    if bool(data_email_nofilelist):
+        tb1 = pt.PrettyTable()
+        tb1.field_names = ["序","发件人","没有附件的主题","邮箱","时间","页"]
+        tb1.align = "l"
+        for a in (data_email_nofilelist): tb1.add_row([a['index'],a['name'],a['title'],a['email'],timeStamp(int(a['timestamp'])),a['page']])
+        tb1.add_column('',list(range(1, len(data_email_nofilelist)+1)))
+        p1(tb1); p1("有{}封邮件没有附件的主题，已标记为星标邮件。\n\n".format(len(data_email_nofilelist)))
+
+    # 附件列表
+    if bool(data_email_fileslist):
+        tb = pt.PrettyTable()
+        tb.field_names = ["标序","附序","发件人","文件名","主题","大小","类型","页"]
+        tb.align = "l"
+        for a in (data_email_fileslist): tb.add_row([a['ti'],a['index'],a['tn'],a['filename'],a['tt'],a['filebyte'],a['viewmode'],a['page']])
+        tb.add_column('',list(range(1, len(data_email_fileslist)+1)))
+        p1(tb);p1("附件列表，共{}个文件。\n".format(len(data_email_fileslist)))
+
+#...............................................................................
+#  Main
+#...............................................................................
+
+if __name__ == '__main__':
+    get_url("https://mail.qq.com/")
+    os.system('cls')
+
+    # 检查是否已经登陆
+    if test_id_Valid("login_frame"): auto_login()
+
+    #获取文件夹列表
+    if not bool(data_folders_list): get_folder_list()
+    if not bool(config['TOKEN']["sid"]): update_token()
+
+    # 是否更改邮箱每页显示数量
+    if can_set_mail_max: set_email_max()
+
+    #进入目标文件夹
+    if not just_login_mail:
+      open_next_page()
+      if not just_print_mail: open_email()
+      
