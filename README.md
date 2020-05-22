@@ -37,18 +37,19 @@ https://zhuanlan.zhihu.com/p/51543237
    <br>   
      
 ### Windows
+Windows用户稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
 
-- **Python 3**   
-  https://www.python.org/
+  - **Python 3**   
+    https://www.python.org/
 
-> 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
-> - [x] 1. Install Now
-> - [x] 2. Disable path length limit
+  > 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
+  > - [x] 1. Install Now
+  > - [x] 2. Disable path length limit
    
    <br>   
    
-- **WebDriver for Chrome**  
-  https://sites.google.com/a/chromium.org/chromedriver/downloads
+  - **WebDriver for Chrome**  
+    https://sites.google.com/a/chromium.org/chromedriver/downloads
 
    <br>   
      
