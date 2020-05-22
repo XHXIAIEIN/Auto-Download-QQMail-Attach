@@ -21,7 +21,7 @@ https://zhuanlan.zhihu.com/p/51543237
  - 1. **安装Homebrew**
       https://brew.sh/index_zh-cn
       
-      简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
+      简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
       ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
    
    <br>   
@@ -37,7 +37,7 @@ https://zhuanlan.zhihu.com/p/51543237
    <br>   
      
 ### Windows
-Windows用户稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
+Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
 
   - **Python 3**   
     https://www.python.org/
