@@ -10,13 +10,12 @@ https://zhuanlan.zhihu.com/p/51543237
 网上搜了下资料，基本都是通过POP3来下载，但是这个邮箱并不是自己的，只是临时注册用来接收邮箱的小号，而对方也不希望开通手机认证。
 
 于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
+  
 
-
-   <br>   
-   
 ## 如何安装
 
 ### MAC
+
 如果你是MAC用户。操作相对简单一些：
  - 1. **安装Homebrew**
       https://brew.sh/index_zh-cn
@@ -24,7 +23,7 @@ https://zhuanlan.zhihu.com/p/51543237
       简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
       ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
    
-   <br>   
+<br>   
      
 - 2. **安装 python3 + selenium + chromedriver**
      简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
@@ -34,7 +33,7 @@ https://zhuanlan.zhihu.com/p/51543237
      brew install prettytable
      ```
    
-   <br>   
+<br>   
      
 ### Windows
 Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
@@ -46,12 +45,12 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
   > - [x] 1. Install Now
   > - [x] 2. Disable path length limit
    
-   <br>   
+<br>   
    
   - **WebDriver for Chrome**  
     https://sites.google.com/a/chromium.org/chromedriver/downloads
 
-   <br>   
+<br>   
      
 > 注1：根据自己Chrome当前的版本号，下载对应版本号的chromedriver。
 > 比如你浏览器版本号是是80.0，就下载80.0版本。
@@ -68,7 +67,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
 > 打开右下角「环境变量」，在下面「系统变量」列表里，找到「Path」的一行，双击编辑。
 > 右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
    
-   <br>   
+<br>   
    
 - **Nodejs**  
   https://nodejs.org/zh-cn/
@@ -88,11 +87,11 @@ pip install selenium
 pip install prettytable
 ```
    
-   <br>   
+<br>   
    
 繁琐的前置工作完成了。接着可以正式开始咯。  
    
-   <br>   
+<br>   
    
 ## 如何使用
 
@@ -104,34 +103,34 @@ pip install prettytable
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
    
 
-   <br>   
+<br>   
    
 > 注：通过运行脚本启动的浏览器窗口，只能同时启动一个。若重复启动脚本将会打开空页面，需要关闭上一个窗口重新运行脚本。
    
-   <br>   
+<br>   
    
 登陆进邮箱主页后，需要做几件事
    
-   <br>   
+<br>   
    
 ### 1 调整每页显示邮件数量 
 邮箱默认只显示25条邮件，需要在邮箱设置里，调整每页显示**100**封邮件。脚本中也提供了一个自动设置邮件显示数量的开关，默认是关闭的，有需要可以在DEBUG分类下手动开启。
    
-   <br>   
+<br>   
    
 ### 2 邮箱文件夹
 把你想要下载的邮件**移动到**文件夹里，方便整理区分。
    
-   <br>   
+<br>   
    
 ### 3 新窗口打开文件夹（重要）
-从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的几个参数: `sid` `folderid` `page`  
+从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的文件夹ID参数:  `folderid`
 ```
-https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_list?folderid={ B }%26page={ C }
+https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_list?folderid={ A }%26page={ x }
 ```
 脚本中也提供了将文件夹列表输出到控制台的选项，可以在DEBUG分栏里手动开启can_print_folder_table  
 
-   <br>   
+<br>   
    
 ### 4 修改脚本里面的自定义参数，然后启动脚本
 
@@ -145,17 +144,17 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
    
 2. 附件下载路径.
 浏览器下载的文件会自动保存在这里。  
-注：路径需要以 \\ 作为分隔。如：
- ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ```
-如果你是MAC，则需要 '\\' 作为分隔符。
-   <br>   
+注：路径需要以 \\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ```
+如果你是MAC，则需要 \\ 作为分隔符。
+ 
+ <br>   
    
 3. 文件夹ID.
 其实脚本在打开邮件时，会把你所有的文件夹打印在控制台。你可以从记录看到对应的文件夹ID。
 或者在左边面板我的文件夹，右键新窗口打开，也可以在浏览器地址栏找到folderid
   ``` FOLDER_ID ```
    
-   <br>   
+<br>   
    
 4. 计划任务
   Title_Task，就是处理文件夹里面的邮件计划。
@@ -168,7 +167,7 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
   ``` Title_Task = {'start':1,'step':-1,'end':-1} ```
   ``` Page_Task = {'start': 1,'step':1,'end':-1, 'autoNext': True} ```
    
-   <br>   
+<br>   
    
 5. 邮件主题关键词过滤
   title_whitelist_keys，白名单关键词。
@@ -177,7 +176,7 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
   ``` title_whitelist_keys = ['反馈','2020'] ，这样就只处理邮件主题中包含这两个关键词的邮件```
   ``` title_blacklist_keys = [''] ```
    
-   <br>   
+<br>   
    
 6.Debug模式
 如果你不想要下载附件，只想以纯文本的方式收集一下发信人的情况。
@@ -186,17 +185,10 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ A }&url=/cgi-bin/mail_
   ``` can_set_mail_max=True ```
 
 
+<br>   
+    
    
-   <br>   
-   
-### 6 下载完成后（已移除）
-可以运行自动生成在下载目录中的 `_ren.bat` 的批处理脚本。它将会把本次下载的文件补充收件人邮箱作为名称前缀。
-
-> 注：如果目录中存在相同名称的文件，或者存在特殊符号的名称，可能会因为无法读取而被无视。需要手动进行重命名。
-   
-   <br>   
-   
-### 7 附加脚本：将含有关键词的文件移动到指定文件夹。
+### 6 附加脚本：将含有关键词的文件移动到指定文件夹。
 
 ```
 import os
@@ -246,6 +238,8 @@ if __name__ == '__main__':
 ## 特性
 - 自定义附件的下载路径
 - 自动翻页
+- 填写账号密码，自动登录。
+- 若自动登录失败，可手动登录，再根据SID密钥记住登录。
 - 自定义邮件标题的白名单或黑名单关键词，过滤某些邮件名。
 - 自定义从第几封邮件开始，第几封邮件结束，处理多少封邮件后结束。
 - 自定义从文件夹第几页开始，到第几页结束，只处理多少页的任务计划。
@@ -258,8 +252,9 @@ if __name__ == '__main__':
 - 如果浏览器请求速度过快，脚本会自动刷新页面，等待恢复正常
 
   
-  <br>   
+<br>   
    
+
 ## 可能出现的问题
 
 1. 如果网络不稳定。附件的预览图如果没有加载出来，脚本可能会卡住。 <br> 
@@ -274,21 +269,25 @@ if __name__ == '__main__':
 4. 如果电脑打开了QQ，登陆页面会出现手机扫码登陆的提示，导致自动填写账号失败。 <br> 
 （已修复。自动检测是否出现扫码提示，并切换到账号密码登陆。）
 
-5. 收件人含有特殊符号，导致脚本奔溃。 <br> 
+5. 因不明原因，有几率在登录阶段需要安全验证，滑动拼图滑块。导致无法自动登录
+（已修复。解决方案有些麻烦。需手动登录，并在脚本处手动关闭[拦截浏览器显示图片]配置，登陆后需手动记录SID密钥。关闭脚本再次运行脚本，即可自动登录。）
+
+6 收件人含有特殊符号，导致脚本奔溃。 <br> 
 （事实上，我并没有对字符串做处理，只是将他们输出在控制台而已。报错是因为编码问题，你可以将打印到控制台中的方法全部禁用掉，直接下载附件就行）
 
-6. 本地重命名的批处理脚本，如果附件有重复的文件，后面的相同的文件不会被重命名。 <br> 
+7. 本地重命名的批处理脚本，如果附件有重复的文件，后面的相同的文件不会被重命名。 <br> 
 （没想好。临时解决方案：根据输出的记录，搜索文件名，找到发件人昵称或者邮箱，手动重命名）
   
-  <br>   
+
+<br>   
    
+
 ## 踩坑历史
 1. 附件收藏中的"全部附件"，并不是想象中真的把全部附件整合在一起，还是会漏掉一些，关键是还不知道漏了哪些。
   （解决方案：换成进入邮件主题下载附件）
    
-   
 2. 在下载过程中，中途收到了新的邮件，列表顺序会出现错误。
- （不要下载收件箱的邮件，建议将他们移动到文件夹里下载，并关闭该文件夹的收件规则，下载期间的别乱动。）  
+ （不要下载收件箱的邮件，建议将他们移动到文件夹里下载，并关闭该文件夹的收件规则。）  
   
-  <br>   
+<br>   
    
