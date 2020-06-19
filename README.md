@@ -69,7 +69,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
    
 <br>   
    
-- **Nodejs**  
+- **Nodejs**   <br>
   https://nodejs.org/zh-cn/
 
 > 下载最新版即可，跟着引导安装，一直点下一步。
@@ -77,7 +77,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
    <br>   
   
 - **PIP**  
-> NodeJs安装完成后，按下Win + R，输入 cmd。然后按Ctrl + Shift + 回车键。
+> NodeJs安装完成后，按下Win + R，输入 cmd。然后按Ctrl + Shift + 回车键。 <br>
 > 以管理员权限进入命令行。接着输入下方的两条指令：
 
 - **selenium**  
@@ -95,11 +95,11 @@ pip install prettytable
    
 ## 如何使用
 
-已经安装了Python，会发现开始菜单新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】
-
-然后把下方的代码复制粘贴到IDLE中，将文件保存在任意位置，随便取个名比如QQmail.py。
-另外建议不要放在桌面，因为脚本会生成一个文件夹用来储存浏览器缓存，可能有些占位置。
-
+已经安装了Python，会发现开始菜单新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】 <br>
+ <br>
+然后把下方的代码复制粘贴到IDLE中，将文件保存在任意位置，随便取个名比如QQmail.py。 <br>
+另外建议不要放在桌面，因为脚本会生成一个文件夹用来储存浏览器缓存，可能有些占位置。 <br>
+ <br>
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
    
 
@@ -136,53 +136,51 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_
 
 主要有几个参数需要修改：
 
-1. 邮箱登录账号(QQ) .
-请放心填，没人能偷看你屏幕。。 
+1. 邮箱登录账号(QQ) . <br>
+请放心填，没人能偷看你屏幕。。  <br>
 ``QQNUMBER`` 和 ``PASSWORD`` 
    
    <br>   
    
-2. 附件下载路径.
-浏览器下载的文件会自动保存在这里。  
-注：路径需要以 \\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ```
+2. 附件下载路径. <br>
+浏览器下载的文件会自动保存在这里。   <br>
+注：路径需要以 \\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ``` <br>
 如果你是MAC，则需要 \\ 作为分隔符。
  
  <br>   
    
-3. 文件夹ID.
-其实脚本在打开邮件时，会把你所有的文件夹打印在控制台。你可以从记录看到对应的文件夹ID。
+3. 文件夹ID. <br>
+其实脚本在打开邮件时，会把你所有的文件夹打印在控制台。你可以从记录看到对应的文件夹ID。 <br>
 或者在左边面板我的文件夹，右键新窗口打开，也可以在浏览器地址栏找到folderid
-  ``` FOLDER_ID ```
    
 <br>   
    
-4. 计划任务
-  Title_Task，就是处理文件夹里面的邮件计划。
-  Pages_Task，就是处理文件夹里面的翻页。
-  
-  start，表示从第几个开始。默认是1
-  steps，表示执行多少次。比如从第1个开始，往后数第10个后结束，也就是10次。
-  end, 表示到第几个结束。比如从第1个开始，到第50个结束。
-  end和steps不同的地方是，end代表着结束的终点，而steps则是开始后累计的过程。
-  ``` Title_Task = {'start':1,'step':-1,'end':-1} ```
+4. 计划任务 <br>
+  Title_Task，就是处理文件夹里面的邮件计划。 <br>
+  Pages_Task，就是处理文件夹里面的翻页。 <br>
+   <br>
+  start，表示从第几个开始。默认是1 <br>
+  steps，表示执行多少次。比如从第1个开始，往后数第10个后结束，也就是10次。 <br>
+  end, 表示到第几个结束。比如从第1个开始，到第50个结束。 <br>
+  end和steps不同的地方是，end代表着结束的终点，而steps则是开始后累计的过程。 <br>
+  ``` Title_Task = {'start':1,'step':-1,'end':-1} ``` <br>
   ``` Page_Task = {'start': 1,'step':1,'end':-1, 'autoNext': True} ```
    
 <br>   
    
-5. 邮件主题关键词过滤
-  title_whitelist_keys，白名单关键词。
-  title_blacklist_keys，黑名单关键词。
-  
-  ``` title_whitelist_keys = ['反馈','2020'] ，这样就只处理邮件主题中包含这两个关键词的邮件```
+5. 邮件主题关键词过滤 <br>
+  title_whitelist_keys，白名单关键词。 <br>
+  title_blacklist_keys，黑名单关键词。 <br>
+   <br>
+  ``` title_whitelist_keys = ['反馈','2020'] ，这样就只处理邮件主题中包含这两个关键词的邮件``` <br>
   ``` title_blacklist_keys = [''] ```
    
 <br>   
    
-6.Debug模式
-如果你不想要下载附件，只想以纯文本的方式收集一下发信人的情况。
-发件人的名字，发件人的邮箱，邮箱里有多少附件。
-这些都会在控制台里输出。
-  ``` can_set_mail_max=True ```
+6.Debug模式 <br>
+如果你不想要下载附件，只想以纯文本的方式收集一下发信人的情况。 <br>
+发件人的名字，发件人的邮箱，邮箱里有多少附件。 <br>
+这些都会在控制台里输出。 ``` can_set_mail_max=True ```
 
 
 <br>   
