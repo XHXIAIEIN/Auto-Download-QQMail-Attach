@@ -680,7 +680,7 @@ if __name__ == '__main__':
     os.system('cls')
 
     # 检查是否已经登陆
-    if not test_id_Valid("login_frame") and not test_sid_Valid(): auto_login()
+    if not test_id_Valid("login_frame") and test_sid_Valid(): auto_login()
 
     #获取文件夹列表
     if not bool(data_folders_list): get_folder_list()
