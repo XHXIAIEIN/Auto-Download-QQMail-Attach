@@ -97,11 +97,12 @@ pip install prettytable
 
 已经安装了Python，会发现开始菜单新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】 <br>
  <br>
-然后把下方的代码复制粘贴到IDLE中，将文件保存在任意位置，随便取个名比如QQmail.py。 <br>
+然后把[QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File/blob/master/QQMail)里的代码复制粘贴到IDLE中，将文件保存在任意位置，随便取个名比如QQmail.py。 <br>
 另外建议不要放在桌面，因为脚本会生成一个文件夹用来储存浏览器缓存，可能有些占位置。 <br>
  <br>
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
    
+
 
 <br>   
    
