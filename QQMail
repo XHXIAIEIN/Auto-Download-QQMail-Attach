@@ -3,7 +3,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 import prettytable as pt
-import time,os,asyncio
+import time,os,codecs
+
 
 #===============================================================================
 # * 声明
@@ -48,17 +49,18 @@ import time,os,asyncio
 #  QQ账号 （放心填，没人能看到）
 #...............................................................................
 
-QQNUMBER="123456789"
-PASSWORD="123456789"
+QQNUMBER="132465798"
+PASSWORD="132465798"
 
 #...............................................................................
 #  邮箱文件夹ID
 #...............................................................................
 #  展开左侧面板[我的文件夹]列表，找到你想下载的文件夹，右键-新窗口打开。
 #  在浏览器地址栏找到folderid 
-#  mail.qq.com/cgi-bin/frame_html?t=frame_html&sid=x&url=/cgi-bin/mail_list?folderid={ ??? }%26page=0
+#  mail.qq.com/cgi-bin/frame_html?t=frame_html&sid=x&url=/cgi-bin/mail_list?folderid={ A }%26page=0
 #...............................................................................
-FOLDER_ID = 197
+
+FOLDER_ID = 186
 
 #...............................................................................
 # 附件下载到哪个文件夹。
@@ -75,6 +77,7 @@ FOLDER_ID = 197
 #...............................................................................
 
 DOWNLOAD_FOLDER='D:\\Downloads\\'
+
 
 #...............................................................................
 # 配置 Web Driver
@@ -99,6 +102,7 @@ chrome = webdriver.Chrome(options=options)
 # options.add_argument("--user-data-dir selenium")
 # chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)
 
+
 #...............................................................................
 #  若自动登陆失败，可尝试手动登录。
 #...............................................................................
@@ -107,7 +111,7 @@ chrome = webdriver.Chrome(options=options)
 #  登陆时出现了验证码滑块以及手机验证。但浏览器已经禁止显示图片。
 #  
 #  解决方案1：
-#  临时注释掉上方 “[禁止网页显示图片]” 的声明。
+#  临时注释掉上方的 “[禁止网页显示图片]” 声明。
 #  options.add_argument("--blink-settings=imagesEnabled=false")
 #  禁用后，再次启动脚本，手动登陆并勾选记住密码，下次自动登陆。
 #  登陆成功后，下次运行脚本就可以直接进入邮箱主页了。
@@ -118,8 +122,20 @@ chrome = webdriver.Chrome(options=options)
 #  手动登陆后，从浏览器地址栏中找到这个参数: sid 
 #  mail.qq.com/cgi-bin/frame_html?sid={ xxxxxx }&r={ 这个可以无视 }
 #  这串随机字符偶尔也会以符号作为结尾，复制的时候需要注意。
+#
+#
+#  解决方案3：
+#  可以利用Cookies登陆。
+#  如果你某个浏览器已经可以不需要填写密码自动登陆。
+#  按下F12，打开 DevTools 窗口。上面切换到 Application 标签，左边找到 Cookies 
+#  展开，打开第一个 https://mail.qq.com，找到 pcache 字段
+#  复制 pcache 以及它后面的值。以相同的方式复制到另一个浏览器就可以自动登陆了。
+#  步骤1：添加 Cookies 的方式是双击空白处，即可添加新字段，填入 pcache
+#  步骤2：将它的值粘贴进入。
+#  步骤3：刷新页面，就自动进入主页了。
 #...............................................................................
 URLTEMP_SID = ""
+
 
 #...............................................................................
 #  如果懒得找文件夹ID，也可以用索引序号[替换]文件夹ID。
@@ -128,41 +144,61 @@ URLTEMP_SID = ""
 #...............................................................................
 FOLDER_INDEX = -1   # 首页收件箱的索引序号是0
 
+
 #...............................................................................
 #  高级选项
 #...............................................................................
 
 # 等待页面加载元素时长。
-implicitly_wait_time = 0.08
+# 减小数值可加快处理速度，但更容易翻车。你也可以尝试0.1，真的很快乐。
+implicitly_wait_time = 0.25
 
-# 只登陆到邮箱主页，不做任何事
+# 是否自动设置【每页显示100封邮件】以及【邮件列表视图为标准模式】
+can_setting_mail = False
+
+# 是否只登陆到邮箱主页，不做任何事
 just_login_mail = False
 
-# 只打印主题列表，不打开邮件
+# 是否只打印主题列表，不打开邮件
 just_print_mail = False
 
-# 只打印附件列表，不下载附件
+# 是否只打印附件列表，不下载附件
 just_print_file = False
 
-# 是否将不含附件的主题设置为星标
-can_star_nofile = True
+#是否将不含附件的主题设置为星标
+is_star_nofile = True
 
-# 是否在控制台输出数据
-can_print_folder_table = True
-can_print_title_table = True
-can_print_files_table = True
+#是否将不含附件的主题，导出eml文件
+is_dleml_nofile = False
 
-# 是否将不含附件的主题，导出eml文件
-can_dleml_nofile = False
+#是否在控制台输出数据
+can_print_folder_table = False
+can_print_title_table = False
+can_print_files_table = False
 
-# 下载结束后跳转到首页
-can_ended_jump_home = True
+#下载结束后跳转到首页
+is_ended_jump_home = True
 
 #生成附件列表csv文件
-can_export_filelist_csv = False
+is_export_filelist_csv = False
 
 #生成邮件列表csv文件
-can_export_titlelist_csv = True
+is_export_titlelist_csv = True
+
+
+#...............................................................................
+# 指定下载计划。
+#...............................................................................
+#  start: 从列表第n个开始。（包含n，即列表第一个就是n。）默认值：1
+#  end:   在列表第n个结束。（包含n，即列表最后一个是n。）默认值：-1
+#  step:  从开始计算，累计n个结束。（即列表最终有n个。若index大于end或max，提前结束step。）默认值：-1
+#...............................................................................
+
+# 邮件列表
+Title_Task = { 'start':1, 'step':-1, 'end':-1 }
+
+# 翻页规则
+Pages_Task = { 'start':1, 'step':-1, 'end':-1, 'autoNext': True }
 
 
 #...............................................................................
@@ -178,19 +214,6 @@ title_whitelist_keys = ['']
 title_blacklist_keys = ['发信方已撤回邮件']
 
 
-#...............................................................................
-# 指定下载计划。
-#  start: 从列表第n个开始。（包含n，即列表第一个就是n。）默认值：1
-#  end:   在列表第n个结束。（包含n，即列表最后一个是n。）默认值：-1
-#  step:  从开始计算，累计n个结束。（即列表最终有n个。若index大于end或max，提前结束step。）默认值：-1
-#...............................................................................
-
-# 邮件列表
-Title_Task = { 'start':1, 'step':-1, 'end':-1 }
-
-# 翻页规则
-Pages_Task = { 'start':1, 'step':-1, 'end':-1, 'autoNext': True }
-
 
 '''
 #===============================================================================
@@ -202,13 +225,13 @@ Pages_Task = { 'start':1, 'step':-1, 'end':-1, 'autoNext': True }
 # GLOBAL VAR
 #...............................................................................
 
+count_download_email = {"count":0, "lastMailID": ""}
 config = {}
 config['PTASK'] = ''
 config['TTASK'] = ''
 config['TOKEN'] = {'sid':"",  'folderid':0, 'page':0}
 config['PAGES'] = {'index':0, 'max': 0, 'step':0, 'iscanNext':False, 'isNotFistPage':0}
 config['TITLE'] = {'index':0, 'max': 0, 'step':0, 'isFileDownload': False}
-count_download_email = {"count":0, "lastMailID": ""}
 
 #...............................................................................
 # Data
@@ -306,6 +329,7 @@ def check_download_Valid():
       print_folder_exists();
       os.mkdir(DOWNLOAD_FOLDER)
 
+
 # 反转字典, value to key
 def swapDict(d):
     result = {}
@@ -325,35 +349,67 @@ def ptable_to_csv(table, filename):
       for d in data: f.write('{}\n'.format(','.join(d)))
 
 #...............................................................................
-# function
+#  LOGIN
 #...............................................................................
-
-# 检查id元素是否存在
-def test_id_Valid(name):
-    try: return chrome.find_element_by_id(name)
-    except: pass; # print("无法获id元素: {} \n".format(name))
-
-# 检查class元素是否存在。如果指定了min，则检查class元素的数量。
-def test_class_Valid(name, min=0):
-    try: return len(chrome.find_elements_by_class_name(name)) > min
-    except: pass; #print("无法获取class元素: {} \n".format(name))
-
-# 检查iframe框架是否存在，如果存在将焦点跳转到该iframe
-def test_frame_Valid(name):
-  try: 
-    e = test_id_Valid(name)
-    chrome.switch_to.frame(e)
-    return e
-  except:
-    print("无法获取iframe元素: {} \n".format(name))
-
 
 # 更新token
 def update_token():
-  token = {}
-  token["sid"]      =  URLTEMP_SID if bool(URLTEMP_SID) else chrome.current_url.split("sid=")[1].split("&")[0]
-  token["folderid"] =  FOLDER_ID
-  token["page"]     =  0
+    token = config['TOKEN']
+    token["sid"]      =  URLTEMP_SID if bool(URLTEMP_SID) else chrome.current_url.split("sid=")[1].split("&")[0]
+    token["folderid"] =  data_folders_list[FOLDER_INDEX]["id"] if FOLDER_INDEX > 0 else 0 if FOLDER_INDEX == 0 else FOLDER_ID if FOLDER_ID > 0 else 0
+    token["page"]     =  0
+
+# 自动登录
+def auto_login():
+    p1("尝试自动登录")
+    chrome.switch_to.default_content()
+    test_frame_Valid("login_frame")
+    if test_class_Valid('face', 1): test_id_Valid("switcher_plogin").click()
+    test_id_Valid("u").clear()
+    test_id_Valid("u").send_keys(QQNUMBER)
+    test_id_Valid("p").clear()
+    test_id_Valid("p").send_keys(PASSWORD)
+    test_id_Valid("p_low_login_enable").click()
+    test_id_Valid("login_button").click()
+    if test_id_Valid("mainFrameContainer"): p1("登录成功")
+
+    time.sleep(2)
+
+    if test_id_Valid("tcaptcha_iframe"):
+      trigger_once = True
+      while bool(test_id_Valid("tcaptcha_iframe")):
+        if trigger_once: print("等待用户手动完成拼图认证..."); trigger_once = False;
+        time.sleep(3)
+
+    if test_id_Valid("login_frame"):
+      trigger_once = True
+      while bool(test_id_Valid("login_frame")):
+        if trigger_once: print("等待用户完成登陆验证..."); trigger_once = False;
+        time.sleep(3)
+
+    if test_id_Valid("mainFrame"): 
+      update_token()
+      print("登陆完成！")
+
+
+# 修改邮箱每页显示数量100
+def setting_email():
+  p1("修改邮箱设置：[邮件列表每页显示数量]和[邮件列表视图]")
+  get_url("https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={}&url=/cgi-bin/setting1?fun=list".format(config['TOKEN']["sid"]))
+  test_frame_Valid("mainFrame")
+  # 修改邮箱每页显示数量100
+  e = test_class_Valid_get("btn_select_limiting")[1]
+  e.click()
+  e.send_keys(Keys.DOWN); time.sleep(0.1)
+  e.send_keys(Keys.DOWN); time.sleep(0.1)
+  e.send_keys(Keys.ENTER); time.sleep(0.2)
+  # 修改邮箱邮件列表视图为标准模式，而不是会话模式
+  test_frame_Valid("mainFrame");
+  ActionChains(chrome).click(test_id_Valid_get("listmode1")).perform()
+  # 保存
+  test_frame_Valid("mainFrame");
+  chrome.execute_script("document.getElementById('sendbtn').click();") # 舒服了。。乖乖得写总是点不了保存按钮。
+
 
 #...............................................................................
 #  GET FOLDER LIST
@@ -386,7 +442,6 @@ def open_next_page():
     get_folder_info()
     get_email_title()
 
-
 # 获取文件夹页数信息
 def get_folder_info():
     test_frame_Valid("mainFrame")
@@ -399,6 +454,7 @@ def get_folder_info():
     config["PAGES"]["max"] = eval(test_class_Valid_get("right")[1].find_elements_by_tag_name("script")[0+config["PAGES"]["isNotFistPage"]].get_attribute('innerHTML').strip('document.write(').strip(');'))
     if token['page'] > Pages_Task["start"] > 0: return
     os.system("cls")
+
 
 # 获取文件夹的邮件列表
 def get_email_title():
@@ -436,7 +492,6 @@ def get_email_title():
 
     # 检查翻页
     open_next_page() if check_page_can_next() else check_task_end_type()
-
 
 #...............................................................................
 # NEXT PAGE
@@ -499,12 +554,12 @@ def open_email():
             data_email_nofilelist.append(email)
 
             #下载eml文件
-            if can_dleml_nofile:
+            if is_dleml_nofile:
               ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform(); 
               ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform();
 
             #设置为星标
-            if can_star_nofile:
+            if is_star_nofile:
               mark_star=test_id_Valid_get("img_star");
               if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE); continue
          
@@ -536,7 +591,6 @@ def open_email():
 
         p1("")
       except:check_frame_timeout(email['index'])
-
 
 # 检测“您请求的频率太快，请稍后再试”
 def check_frame_timeout(index):
@@ -578,7 +632,6 @@ def stop_by_title_end(): p1("[Task TITLE]从第{}封邮件开始，在第{}封�
 
 def print_folder_exists(): p1("文件夹不存在。正在自动创建文件夹....")
 def print_download_end(): p1("结束了。{}/{}".format(count_download_email["count"], len(data_email_titlelist)))
-
 
 #...............................................................................
 # Print TABLE
@@ -630,6 +683,7 @@ def print_files_table():
         for a in (data_email_fileslist): tb.add_row([a['ti'],a['page'],a['tn'],a['filename'],a['tt'],a['email'],a['filebyte'],a['viewmode'],timeStamp(int(a['timestamp'])),a['index']])
         p1(tb);p1("当前的附件列表，已统计{}个文件。\n".format(len(data_email_fileslist)))
 
+
 #...............................................................................
 # Ended Event
 #...............................................................................
@@ -641,88 +695,43 @@ def download_end():
   print_download_end()
 
 #...............................................................................
-# Ended Event
+#  Main
 #...............................................................................
 
-def download_end():
-  if can_print_files_table: print_files_table()
-  if can_export_filelist_csv: ptable_to_csv(table_email_fileslist, DOWNLOAD_FOLDER+ r"_导出附件列表_" + now + r".csv")
-  if can_ended_jump_home: get_url("https://mail.qq.com/")
-  print_download_end()
+if __name__ == '__main__':
 
-#...............................................................................
-# login
-#...............................................................................
+    now = time.strftime("%Y%m%d_%H%M%S",time.localtime(time.time()))
 
-# 更新token
-def update_token():
-    token = config['TOKEN']
-    token["sid"]      =  URLTEMP_SID if bool(URLTEMP_SID) else chrome.current_url.split("sid=")[1].split("&")[0]
-    token["folderid"] =  data_folders_list[FOLDER_INDEX]["id"] if FOLDER_INDEX > 0 else 0 if FOLDER_INDEX == 0 else FOLDER_ID if FOLDER_ID > 0 else 0
-    token["page"]     =  0
-
-async def auto_login():
-  test_frame_Valid("login_frame")
-  if test_class_Valid('face', 1): test_id_Valid("switcher_plogin").click()
-  test_id_Valid("u").clear()
-  test_id_Valid("u").send_keys(QQNUMBER)
-  test_id_Valid("p").clear()
-  test_id_Valid("p").send_keys(PASSWORD)
-  test_id_Valid("p_low_login_enable").click()
-  test_id_Valid("login_button").click()
-
-  await asyncio.sleep(2)
-
-  if test_id_Valid("tcaptcha_iframe"):
-    trigger_once = True
-    while bool(test_id_Valid("tcaptcha_iframe")):
-      if trigger_once: print("等待用户手动完成拼图认证..."); trigger_once = False;
-      await asyncio.sleep(3)
-
-  if test_id_Valid("login_frame"):
-    trigger_once = True
-    while bool(test_id_Valid("login_frame")):
-      if trigger_once: print("等待用户完成登陆验证..."); trigger_once = False;
-      await asyncio.sleep(3)
-
-  if test_id_Valid("mainFrame"): 
-    update_token()
-    print("登陆完成！")
-
-#...............................................................................
-# main
-#...............................................................................
-
-async def main():
-  chrome.get("https://mail.qq.com")
-  chrome.implicitly_wait(2)
-
-  # 是否需要登陆
-  if not test_id_Valid("mainFrame"): await asyncio.create_task(auto_login())
-
-  print(f'sid: { chrome.current_url.split("sid=")[1].split("&")[0] }')
-
-  #获取文件夹列表
-  if not bool(data_folders_list): get_folder_list()
-  if not bool(config['TOKEN']["sid"]): update_token()
-
-  # 进入文件夹，获取邮件列表
-  if just_login_mail: 
-    p1("\nsid: \n{}".format(config['TOKEN']["sid"])); 
-    p1("\n如果要继续打开文件夹")
-    os.system("PAUSE")
+    get_url("https://mail.qq.com/")
     os.system('cls')
 
-  open_next_page()
+    # 检查是否已经登陆
+    if not test_id_Valid("login_frame") and test_sid_Valid(): auto_login()
 
-  # 打开邮件，获取附件列表
-  if just_print_mail:
-    if can_export_titlelist_csv: ptable_to_csv(table_email_titlelist, DOWNLOAD_FOLDER+ r"_导出邮件列表" + now + r".csv")
-    p1("如果要继续下载附件")
-    os.system("PAUSE")
-    os.system('cls')
+    print(f'sid: { chrome.current_url.split("sid=")[1].split("&")[0] }')
 
-  open_email()
+    #获取文件夹列表
+    if not bool(data_folders_list): get_folder_list()
+    if not bool(config['TOKEN']["sid"]): update_token()
 
-asyncio.run(main())
-print("运行结束")
+    # 是否更改邮箱每页显示数量、邮件列表视图
+    if can_setting_mail: setting_email()
+
+    # 进入文件夹，获取邮件列表
+    if just_login_mail: 
+      p1("\nsid: \n{}".format(config['TOKEN']["sid"])); 
+      p1("\n如果要继续打开文件夹")
+      os.system("PAUSE")
+      os.system('cls')
+
+    open_next_page()
+
+    # 打开邮件，获取附件列表
+    if just_print_mail:
+      if is_export_titlelist_csv: ptable_to_csv(table_email_titlelist, DOWNLOAD_FOLDER+ r"_导出邮件列表" + now + r".csv")
+      p1("如果要继续下载附件")
+      os.system("PAUSE")
+      os.system('cls')
+
+    open_email()
+    
