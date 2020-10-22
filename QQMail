@@ -296,10 +296,10 @@ def test_id_Valid(name):
     try: return chrome.find_element_by_id(name) != 'null'
     except: return False
 
-# 检查页面元素Class是否存在
-def test_class_Valid(name):
-    try:e=chrome.find_elements_by_class_name(name);chrome.execute_script("window.stop()"); return len(e) > 0 
-    except: return False
+# 检查class元素是否存在。如果指定了min，则检查class元素的数量。
+def test_class_Valid(name, min=0):
+    try: return len(chrome.find_elements_by_class_name(name)) > min
+    except: pass; #print("无法获取class元素: {} \n".format(name))
 
 # 检查页面元素ID是否存在。如果存在则返回元素
 def test_id_Valid_get(name):
@@ -556,10 +556,12 @@ def open_email():
 
       #附件列表
       if len(elements1) <= 0:
-
         p1("{} 没有邮件".format(email['index']))
         data_email_nofilelist.append(email)
 
+        if len(elements2) <= 0:
+          p1("{} 没有下载按钮，可能已过期".format(email['index']))
+          
         #下载eml文件
         if is_dleml_nofile:
           ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
@@ -568,36 +570,36 @@ def open_email():
         #设置为星标
         if is_star_nofile:
           mark_star=test_id_Valid_get("img_star");
-          if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE); continue
+          if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
 
-      else:
+        continue;
 
-        #整理附件信息，并下载附件
-        for f in elements1:
-          a = f.find_elements_by_tag_name('a')[0]
-          attach={}
-          attach.update({'filename': a.get_attribute('filename')})
-          attach.update({'filebyte': int(a.get_attribute('filebyte'))})
-          attach.update({'filedown': "https5://mail.qq.com" + a.get_attribute('down')})
-          attach.update({'viewmode': a.get_attribute('viewmode')})
-          attach.update({'index': int(a.get_attribute('idx') or 0)})
-          attach.update({'ti': email['index']})
-          attach.update({'tn': email['name']})
-          attach.update({'tt': email['title']})
-          attach.update({'page': email['page']})
-          attach.update({'email': email['email']})
-          attach.update({'timestamp': email['timestamp']})
-          data_email_fileslist.append(attach)
+      #整理附件信息，并下载附件
+      for f in elements1:
+        a = f.find_elements_by_tag_name('a')[0]
+        attach={}
+        attach.update({'filename': a.get_attribute('filename')})
+        attach.update({'filebyte': int(a.get_attribute('filebyte'))})
+        attach.update({'filedown': "https5://mail.qq.com" + a.get_attribute('down')})
+        attach.update({'viewmode': a.get_attribute('viewmode')})
+        attach.update({'index': int(a.get_attribute('idx') or 0)})
+        attach.update({'ti': email['index']})
+        attach.update({'tn': email['name']})
+        attach.update({'tt': email['title']})
+        attach.update({'page': email['page']})
+        attach.update({'email': email['email']})
+        attach.update({'timestamp': email['timestamp']})
+        data_email_fileslist.append(attach)
 
-          file_extension = attach['filename'].split(".")[-1].lower()
-          if re.findall(file_extension_blacklist, file_extension): print("{} 跳过 {} ".format(email['index'], file_extension)); continue; 
+        file_extension = attach['filename'].split(".")[-1].lower()
+        if re.findall(file_extension_blacklist, file_extension): print("{} 跳过 {} ".format(email['index'], file_extension)); continue; 
 
-          p1("{} {}".format(email['index'],attach['filename'],email['email']))
+        p1("{} {}".format(email['index'],attach['filename'],email['email']))
 
-          if just_print_file: continue
+        if just_print_file: continue
 
-          downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
-          ActionChains(chrome).click(downlnk).perform()
+        downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
+        ActionChains(chrome).click(downlnk).perform()
 
       p1("")
 
@@ -609,7 +611,7 @@ def check_frame_timeout(index):
   if pause:
     p1("\n{} 正在队列中等待...请稍等".format(index))
     wait = 0
-    while test_id_Valid("msg_txt"):
+    while test_id_Valid("msg_txt") or test_class_Valid("errorIcon"):
         if wait == 0: time.sleep(0.5)
         elif wait == 1: time.sleep(2)
         elif wait == 2: time.sleep(3)
@@ -618,7 +620,7 @@ def check_frame_timeout(index):
         else:time.sleep(1)
 
         test_frame_Valid("mainFrame")
-        if not test_id_Valid("msg_txt"): break
+        if not test_id_Valid("msg_txt") or test_class_Valid("errorIcon"): break
         else: wait+=1
     test_frame_Valid("mainFrame")
     pause = False
