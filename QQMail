@@ -173,8 +173,8 @@ is_dleml_nofile = False
 
 #是否在控制台输出数据
 can_print_folder_table = False
-can_print_title_table = True
-can_print_files_table = True
+can_print_title_table = False
+can_print_files_table = False
 
 #下载结束后跳转到首页
 is_ended_jump_home = True
@@ -184,8 +184,6 @@ is_export_titlelist_csv = True
 
 #生成附件列表csv文件
 is_export_filelist_csv = True
-
-
 
 #...............................................................................
 # 指定下载计划。
@@ -275,7 +273,7 @@ table_email_fileslist.field_names = ["标序","页","发件人","文件名","主
 table_email_fileslist.align = "l"
 
 #...............................................................................
-# Tool
+# Utility
 #...............................................................................
 
 def p1(text):
@@ -352,6 +350,19 @@ def ptable_to_csv(table, filename):
     for splitline in [line.split('|')] if len(splitline) > 1]
     with codecs.open(filename,'w','utf_8_sig') as f: 
       for d in data: f.write('{}\n'.format(','.join(d)))
+
+# 自定义队列
+class buffered:
+  def __init__(self,it):
+      self.it = iter(it)
+      self.buf = []
+  def __iter__(self): return self
+  def __next__(self):
+      if self.buf:
+          return self.buf.pop()
+      return next(self.it)
+  def push(self,item): self.buf.append(item)
+
 
 #...............................................................................
 #  LOGIN
@@ -533,88 +544,97 @@ def check_task_end_type():
 # 打开邮件
 def open_email():
 
-    titlelist = data_email_titlelist.__iter__()
+    titlelist = buffered(data_email_titlelist)
     max = len(data_email_titlelist)
     check_download_Valid()  #检查下载路径是否存在
 
     while True:
       if count_download_email["count"] >= max: download_end(); break
-
       email = next(titlelist)
-      count_download_email["count"] += 1
-      
-      time.sleep(random.uniform(0.1, 0.5))
-      chrome.get("https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={}&url=/cgi-bin/readmail?t=readmail%26mailid={}%26mode=pre".format(config['TOKEN']["sid"],email['mailid']))
-      chrome.implicitly_wait(2)
 
-      time.sleep(1)
-      test_frame_Valid("mainFrame")
-      check_frame_timeout(email['index']) # 您请求的频率太快，请稍后再试
+      try:
+        test_frame_Valid("mainFrame")
+        check_frame_timeout(email['index']) # 您请求的频率太快，请稍后再试
 
-      elements1=test_class_Valid_get("ico_big")
-      elements2=test_class_Valid_get("down_big")
+        chrome.get("https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={}&url=/cgi-bin/readmail?t=readmail%26mailid={}%26mode=pre".format(config['TOKEN']["sid"],email['mailid']))
+        chrome.implicitly_wait(1)
 
-      #附件列表
-      if len(elements1) <= 0:
-        p1("{} 没有邮件".format(email['index']))
-        data_email_nofilelist.append(email)
+        time.sleep(0.12)
+        test_frame_Valid("mainFrame")
+        check_frame_timeout(email['index']) # 您请求的频率太快，请稍后再试
 
-        #下载eml文件
-        if is_dleml_nofile:
-          ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
-          ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform()
+        #附件列表
+        elements1=test_class_Valid_get("ico_big")
+        if len(elements1) <= 0:
+          p1("{} 没有邮件".format(email['index']))
+          data_email_nofilelist.append(email)
 
-        #设置为星标
-        if is_star_nofile:
-          mark_star=test_id_Valid_get("img_star");
-          if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
+          #下载eml文件
+          if is_dleml_nofile:
+            ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
+            ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform()
 
-        continue;
+          #设置为星标
+          if is_star_nofile:
+            mark_star=test_id_Valid_get("img_star");
+            if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
 
-      #过期附件
-      if len(elements2) <= 0:
-        p1("{} 没有下载按钮，可能已过期".format(email['index']))
+          continue;
 
-        #下载eml文件
-        if is_dleml_nofile:
-          ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
-          ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform()
+        #下载按钮
+        elements2=test_class_Valid_get("down_big")
 
-        #设置为星标
-        if is_star_nofile:
-          mark_star=test_id_Valid_get("img_star");
-          if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
+        if len(elements2) <= 0:
+          p1("{} 没有下载按钮，可能已过期".format(email['index']))
 
-        continue;
+          #下载eml文件
+          if is_dleml_nofile:
+            ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
+            ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform()
 
-      #整理附件信息，并下载附件
-      for f in elements1:
-        a = f.find_elements_by_tag_name('a')[0]
-        attach={}
-        attach.update({'filename': a.get_attribute('filename')})
-        attach.update({'filebyte': int(a.get_attribute('filebyte'))})
-        attach.update({'filedown': "https5://mail.qq.com" + a.get_attribute('down')})
-        attach.update({'viewmode': a.get_attribute('viewmode')})
-        attach.update({'index': int(a.get_attribute('idx') or 0)})
-        attach.update({'ti': email['index']})
-        attach.update({'tn': email['name']})
-        attach.update({'tt': email['title']})
-        attach.update({'page': email['page']})
-        attach.update({'email': email['email']})
-        attach.update({'timestamp': email['timestamp']})
-        data_email_fileslist.append(attach)
+          #设置为星标
+          if is_star_nofile:
+            mark_star=test_id_Valid_get("img_star");
+            if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
 
-        file_extension = attach['filename'].split(".")[-1].lower()
-        if re.findall(file_extension_blacklist, file_extension): print("{} 跳过 {} ".format(email['index'], file_extension)); continue; 
+          continue;
 
-        p1("{} {}".format(email['index'],attach['filename'],email['email']))
 
-        if just_print_file: continue
+        #整理附件信息，并下载附件
+        for f in elements1:
+          a = f.find_elements_by_tag_name('a')[0]
+          attach={}
+          attach.update({'filename': a.get_attribute('filename')})
+          attach.update({'filebyte': int(a.get_attribute('filebyte'))})
+          attach.update({'filedown': "https5://mail.qq.com" + a.get_attribute('down')})
+          attach.update({'viewmode': a.get_attribute('viewmode')})
+          attach.update({'index': int(a.get_attribute('idx') or 0)})
+          attach.update({'ti': email['index']})
+          attach.update({'tn': email['name']})
+          attach.update({'tt': email['title']})
+          attach.update({'page': email['page']})
+          attach.update({'email': email['email']})
+          attach.update({'timestamp': email['timestamp']})
+          data_email_fileslist.append(attach)
 
-        downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
-        ActionChains(chrome).click(downlnk).perform()
+          file_extension = attach['filename'].split(".")[-1].lower()
+          if re.findall(file_extension_blacklist, file_extension): print("{} 跳过 {} ".format(email['index'], file_extension)); continue; 
 
-      p1("")
+          p1("{} {}".format(email['index'],attach['filename'],email['email']))
+
+          if just_print_file: continue
+
+          downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
+          ActionChains(chrome).click(downlnk).perform()
+
+        p1("")
+        count_download_email["count"] += 1
+      except:  
+        titlelist.push(email)
+        chrome.refresh();
+
+
+
 
 # 检测“您请求的频率太快，请稍后再试”
 def check_frame_timeout(index):
@@ -625,16 +645,13 @@ def check_frame_timeout(index):
     p1("\n{} 正在队列中等待...请稍等".format(index))
     wait = 0
     while test_id_Valid("msg_txt") or test_class_Valid("errorIcon"):
-        if wait == 0: time.sleep(0.5)
-        elif wait == 1: time.sleep(2)
-        elif wait == 2: time.sleep(3)
-        elif wait == 3: time.sleep(5);chrome.refresh()
-        elif wait%4 == 0: time.sleep(3);chrome.refresh()
-        else:time.sleep(1)
-
-        test_frame_Valid("mainFrame")
-        if not test_id_Valid("msg_txt") or test_class_Valid("errorIcon"): break
-        else: wait+=1
+      if wait == 0: time.sleep(0.5)
+      elif wait == 1: time.sleep(2)
+      elif wait == 2: time.sleep(3)
+      elif wait == 3: time.sleep(5);chrome.refresh()
+      elif wait%4 == 0: time.sleep(3);chrome.refresh()
+      else:time.sleep(1)
+      wait+=1
     test_frame_Valid("mainFrame")
     pause = False
     p1("{} 等待结束，任务继续。\n".format(index))
@@ -750,14 +767,17 @@ if __name__ == '__main__':
       os.system("PAUSE")
       os.system('cls')
 
-    open_next_page()
-
+    try: open_next_page()
+    except: chrome.refresh();open_next_page();
+    
     # 打开邮件，获取附件列表
     if just_print_mail:
-      if is_export_titlelist_csv: ptable_to_csv(table_email_titlelist, DOWNLOAD_FOLDER+ r"_导出邮件列表" + now + r".csv")
       p1("如果要继续下载附件")
       os.system("PAUSE")
       os.system('cls')
 
     open_email()
+
+    if is_export_titlelist_csv: ptable_to_csv(table_email_titlelist, DOWNLOAD_FOLDER+ r"_导出邮件列表" + now + r".csv")
     
+p1("运行结束。")
