@@ -559,9 +559,22 @@ def open_email():
         p1("{} 没有邮件".format(email['index']))
         data_email_nofilelist.append(email)
 
-        if len(elements2) <= 0:
-          p1("{} 没有下载按钮，可能已过期".format(email['index']))
-          
+        #下载eml文件
+        if is_dleml_nofile:
+          ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
+          ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform()
+
+        #设置为星标
+        if is_star_nofile:
+          mark_star=test_id_Valid_get("img_star");
+          if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
+
+        continue;
+
+      #过期附件
+      if len(elements2) <= 0:
+        p1("{} 没有下载按钮，可能已过期".format(email['index']))
+
         #下载eml文件
         if is_dleml_nofile:
           ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
