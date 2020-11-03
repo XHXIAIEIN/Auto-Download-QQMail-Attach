@@ -3,14 +3,14 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 import prettytable as pt
-import time,os,re,codecs,random
-
+import time,os,re,codecs,shutil,hashlib
+# 使用到一些第三方库。如果提示缺少xxx，请执行在控制台执行 pip install xxx
 
 #===============================================================================
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2020/10/22
+# 更新：2020/11/03
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File
 #===============================================================================
 
@@ -44,6 +44,9 @@ import time,os,re,codecs,random
 #  自定义参数
 #===============================================================================
 '''
+
+# 是否为MacOS用户。
+is_mac_user = False
 
 #...............................................................................
 #  QQ账号 （放心填，没人能看到）
@@ -90,18 +93,16 @@ options.add_argument("--window-size=900,1000")
 options.add_argument("--user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36 Edg/80.0.361.66'")
 options.add_argument("--blink-settings=imagesEnabled=false")  # 禁止网页显示图片
 
-#...............................................................................
-# MAC的用户，有2个地方需要修改。
-#...............................................................................
-
-# Windows
-options.add_argument("--user-data-dir=selenium")
-chrome = webdriver.Chrome(options=options)
-
-# MAC
-# options.add_argument("--user-data-dir selenium")
-# chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)
-
+try: 
+  if not is_mac_user:
+    options.add_argument("--user-data-dir=selenium")
+    chrome = webdriver.Chrome(options=options);
+  else:
+    options.add_argument("--user-data-dir selenium");
+    chrome = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)
+except: 
+  print('无法打开浏览器。检查是否已运行了另一个脚本。'); 
+  os.system("PAUSE");
 
 #...............................................................................
 #  若自动登陆失败，可尝试手动登录。
@@ -144,6 +145,36 @@ URLTEMP_SID = ""
 #...............................................................................
 FOLDER_INDEX = -1   # 首页收件箱的索引序号是0
 
+#...............................................................................
+#  重命名规则(未完成) 请手动搜索 can_rename_file 修改
+#...............................................................................
+# file_name1         附件原始的文件名(包含扩展名）例如: 简历.pdf
+# file_name2         附件原始的文件名(不包含扩展名）例如: 简历
+#...............................................................................
+# extension1         附件原始的扩展名(包含.) 例如:.jpg .txt .pdf
+# extension2         附件原始的扩展名(不包含.) 例如: jpg  txt  pdf
+#...............................................................................
+# file_count_index  该文件在本次下载程序中的顺序，即下载的第几个文件。
+# file_title_index  该文件在本邮件中附件顺序。(从0开始计数)
+#...............................................................................
+# sender_nameid     
+# sender_emailid    发信方的邮箱ID，如果使用的是QQ邮箱，即为去除@qq.com的结果。
+# sender_address    发信方的邮箱地址。例如：123456@qq.com
+#...............................................................................
+# title_count_index 本篇邮件在本次下载程序中的顺序。
+#...............................................................................
+# title_send_date  发送时间。例：10月30日 => 1030
+# title_send_month 发送日期。例：10月30日 => 10
+# title_send_day   发送日期。例：10月30日 => 30
+#...............................................................................
+# title_send_week     发送时间。例：星期二 => 星期二
+# title_send_time     发送时间。例：下午4 : 29 => 1629
+# title_send_hours    发送时间。例：下午4 : 29 => 16
+# title_send_minutes  发送时间。例：下午4 : 29 => 29
+#...............................................................................
+
+file_rename_rules = ''
+
 
 #...............................................................................
 #  高级选项
@@ -151,7 +182,16 @@ FOLDER_INDEX = -1   # 首页收件箱的索引序号是0
 
 # 等待页面加载元素时长。
 # 减小数值可加快处理速度，但更容易翻车。你也可以尝试0.1，真的很快乐。
-implicitly_wait_time = 0.25
+implicitly_wait_time = 0.1
+
+# 是否根据投稿时间顺序下载附件。即：从最后一页往前下载。
+can_reverse_list = False
+
+# 是否按投稿邮箱创建文件夹
+can_move_folder = False
+
+# 下载后是否重命名文件
+can_rename_file = True
 
 # 是否自动设置【每页显示100封邮件】以及【邮件列表视图为标准模式】
 can_setting_mail = False
@@ -172,9 +212,9 @@ is_star_nofile = True
 is_dleml_nofile = False
 
 #是否在控制台输出数据
-can_print_folder_table = False
-can_print_title_table = False
-can_print_files_table = False
+can_print_folder_table = True
+can_print_title_table = True
+can_print_files_table = True
 
 #下载结束后跳转到首页
 is_ended_jump_home = True
@@ -236,6 +276,8 @@ config['TOKEN'] = {'sid':"",  'folderid':0, 'page':0}
 config['PAGES'] = {'index':0, 'max': 0, 'step':0, 'iscanNext':False, 'isNotFistPage':0}
 config['TITLE'] = {'index':0, 'max': 0, 'step':0, 'isFileDownload': False}
 
+split_sign = os.sep
+
 #...............................................................................
 # Data
 #...............................................................................
@@ -269,7 +311,7 @@ table_email_nofilelist.field_names = ["序","发件人","没有附件的主题",
 table_email_nofilelist.align = "l"
 
 table_email_fileslist = pt.PrettyTable()
-table_email_fileslist.field_names = ["标序","页","发件人","文件名","主题","邮箱","大小","类型","时间","附序"]
+table_email_fileslist.field_names = ["序","页","发件人","文件名","主题","邮箱","大小","类型","时间","附序"]
 table_email_fileslist.align = "l"
 
 #...............................................................................
@@ -286,36 +328,36 @@ def get_url(url):
     chrome.implicitly_wait(implicitly_wait_time)
 
 # 检查SID是否存在，若存在则跳过自动填写账号密码登陆
-def test_sid_Valid():
+def test_sid_exists():
   return bool(URLTEMP_SID)
 
 # 检查页面元素是否存在
-def test_id_Valid(name):
+def test_id_exists(name):
     try: return chrome.find_element_by_id(name) != 'null'
     except: return False
 
 # 检查class元素是否存在。如果指定了min，则检查class元素的数量。
-def test_class_Valid(name, min=0):
+def test_class_exists(name, min=0):
     try: return len(chrome.find_elements_by_class_name(name)) > min
     except: pass; #print("无法获取class元素: {} \n".format(name))
 
 # 检查页面元素ID是否存在。如果存在则返回元素
-def test_id_Valid_get(name):
+def test_id_exists_get(name):
     try: e=chrome.find_element_by_id(name); chrome.execute_script("window.stop()"); return e
     except:return False
 
 # 检查页面元素Class是否存在。如果存在则返回元素
-def test_class_Valid_get(name):
+def test_class_exists_get(name):
     try:e=chrome.find_elements_by_class_name(name); chrome.execute_script("window.stop()"); return e
     except:return False
 
 # 检查iframe框架是否存在，如果存在将焦点跳转到该iframe
-def test_frame_Valid(name):
-    try: e=test_id_Valid_get(name); chrome.switch_to.frame(e); return e
+def test_frame_exists(name):
+    try: e=test_id_exists_get(name); chrome.switch_to.frame(e); return e
     except:return False
 
 # 检查列表是否为空
-def test_list_Valid(i):
+def test_list_exists(i):
     return bool(i) and i != ['']
 
 # 如果字符串中含有某个关键词，返回True
@@ -325,13 +367,6 @@ def check_key_in_name(str, key):
 # 时间戳转换时间
 def timeStamp(t):
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(t/1000)))
-
-# 检查文件夹路径是否存在(仅检查1层)
-def check_download_Valid():
-    if not os.path.exists(DOWNLOAD_FOLDER):
-      print_folder_exists();
-      os.mkdir(DOWNLOAD_FOLDER)
-
 
 # 反转字典, value to key
 def swapDict(d):
@@ -351,17 +386,54 @@ def ptable_to_csv(table, filename):
     with codecs.open(filename,'w','utf_8_sig') as f: 
       for d in data: f.write('{}\n'.format(','.join(d)))
 
-# 自定义队列
-class buffered:
+# 反向顺序下载
+class list_reverse:
   def __init__(self,it):
       self.it = iter(it)
       self.buf = []
-  def __iter__(self): return self
+  def __iter__(self): 
+    return self
   def __next__(self):
       if self.buf:
           return self.buf.pop()
       return next(self.it)
-  def push(self,item): self.buf.append(item)
+  def push(self,item): 
+    self.buf.append(item)
+
+#...............................................................................
+#  CHECK FILES DOWNLOAD
+#...............................................................................
+
+# 检查文件夹路径是否存在(仅检查1层)
+def check_download_exists(path = DOWNLOAD_FOLDER):
+    if not os.path.exists(path):
+      print_folder_exists();
+      os.mkdir(path)
+
+# 检测文件是否已经存在
+def check_file_exists(filename, filepath = DOWNLOAD_FOLDER):
+    if filename == '.DS_Store' or filename == 'thumbs.db' : return False
+    return os.path.isfile(os.path.join(filepath, filename))
+
+# 返回最后一个下载完成的文件路径
+def get_last_filepath():
+    files = list(filter(check_file_exists, os.listdir(DOWNLOAD_FOLDER)))
+    if len(files) == 0:
+      return ''
+    else:
+      files.sort(key=lambda fn: os.path.getmtime(DOWNLOAD_FOLDER + os.sep + fn))
+      return os.path.join(DOWNLOAD_FOLDER, files[-1])
+
+# 返回文件的md5
+def check_md5(filepath):
+  with open(filepath, "rb") as f: 
+    return hashlib.md5(f.read()).hexdigest()
+
+# 检查文件在文件夹中是否重复,若重复则删除。只保留最原始的一份.
+def remove_repeat_file(onlyname, copyfilepath, path = DOWNLOAD_FOLDER):
+  filelist = (file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file)))
+  for f in filelist:
+    if check_md5(copyfilepath) == check_md5(f) and os.path.basename(copyfilepath) != onlyname: print(f'重复文件 {copyfilepath}'); os.remove(copyfilepath) 
 
 
 #...............................................................................
@@ -379,31 +451,31 @@ def update_token():
 def auto_login():
     p1("尝试自动登录")
     chrome.switch_to.default_content()
-    test_frame_Valid("login_frame")
-    if test_class_Valid('face', 1): test_id_Valid("switcher_plogin").click()
-    test_id_Valid("u").clear()
-    test_id_Valid("u").send_keys(QQNUMBER)
-    test_id_Valid("p").clear()
-    test_id_Valid("p").send_keys(PASSWORD)
-    test_id_Valid("p_low_login_enable").click()
-    test_id_Valid("login_button").click()
-    if test_id_Valid("mainFrameContainer"): p1("登录成功")
+    test_frame_exists("login_frame")
+    if test_class_exists('face', 1): test_id_exists("switcher_plogin").click()
+    test_id_exists("u").clear()
+    test_id_exists("u").send_keys(QQNUMBER)
+    test_id_exists("p").clear()
+    test_id_exists("p").send_keys(PASSWORD)
+    test_id_exists("p_low_login_enable").click()
+    test_id_exists("login_button").click()
+    if test_id_exists("mainFrameContainer"): p1("登录成功")
 
     time.sleep(2)
 
-    if test_id_Valid("tcaptcha_iframe"):
+    if test_id_exists("tcaptcha_iframe"):
       trigger_once = True
-      while bool(test_id_Valid("tcaptcha_iframe")):
+      while bool(test_id_exists("tcaptcha_iframe")):
         if trigger_once: print("等待用户手动完成拼图认证..."); trigger_once = False;
         time.sleep(3)
 
-    if test_id_Valid("login_frame"):
+    if test_id_exists("login_frame"):
       trigger_once = True
-      while bool(test_id_Valid("login_frame")):
+      while bool(test_id_exists("login_frame")):
         if trigger_once: print("等待用户完成登陆验证..."); trigger_once = False;
         time.sleep(3)
 
-    if test_id_Valid("mainFrame"): 
+    if test_id_exists("mainFrame"): 
       update_token()
       print("登陆完成！")
 
@@ -412,18 +484,18 @@ def auto_login():
 def setting_email():
   p1("修改邮箱设置：[邮件列表每页显示数量]和[邮件列表视图]")
   get_url("https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={}&url=/cgi-bin/setting1?fun=list".format(config['TOKEN']["sid"]))
-  test_frame_Valid("mainFrame")
+  test_frame_exists("mainFrame")
   # 修改邮箱每页显示数量100
-  e = test_class_Valid_get("btn_select_limiting")[1]
+  e = test_class_exists_get("btn_select_limiting")[1]
   e.click()
   e.send_keys(Keys.DOWN); time.sleep(0.1)
   e.send_keys(Keys.DOWN); time.sleep(0.1)
   e.send_keys(Keys.ENTER); time.sleep(0.2)
   # 修改邮箱邮件列表视图为标准模式，而不是会话模式
-  test_frame_Valid("mainFrame");
-  ActionChains(chrome).click(test_id_Valid_get("listmode1")).perform()
+  test_frame_exists("mainFrame");
+  ActionChains(chrome).click(test_id_exists_get("listmode1")).perform()
   # 保存
-  test_frame_Valid("mainFrame");
+  test_frame_exists("mainFrame");
   chrome.execute_script("document.getElementById('sendbtn').click();") # 舒服了。。乖乖得写总是点不了保存按钮。
 
 
@@ -433,7 +505,7 @@ def setting_email():
 
 # 获取文件夹列表
 def get_folder_list():
-  if not test_id_Valid("leftPanel") and not test_id_Valid("folders"): error_load_folder()
+  if not test_id_exists("leftPanel") and not test_id_exists("folders"): error_load_folder()
   n,d=0,[]
   elements = iter(chrome.find_element_by_id("personalfolders").find_elements_by_tag_name("li"))
   for item in elements:
@@ -460,14 +532,14 @@ def open_next_page():
 
 # 获取文件夹页数信息
 def get_folder_info():
-    test_frame_Valid("mainFrame")
+    test_frame_exists("mainFrame")
     token = config['TOKEN']
     token['page'] += 1
     config["PAGES"]["step"] += 1
     config["PAGES"]["isNotFistPage"] = 1 if token['page'] != 1 else 0
-    config["PAGES"]["iscanNext"] = test_id_Valid("nextpage")
+    config["PAGES"]["iscanNext"] = test_id_exists("nextpage")
     config["PAGES"]["index"] = token['page']
-    config["PAGES"]["max"] = eval(test_class_Valid_get("right")[1].find_elements_by_tag_name("script")[0+config["PAGES"]["isNotFistPage"]].get_attribute('innerHTML').strip('document.write(').strip(');'))
+    config["PAGES"]["max"] = eval(test_class_exists_get("right")[1].find_elements_by_tag_name("script")[0+config["PAGES"]["isNotFistPage"]].get_attribute('innerHTML').strip('document.write(').strip(');'))
     if token['page'] > Pages_Task["start"] > 0: return
     os.system("cls")
 
@@ -490,15 +562,15 @@ def get_email_title():
       data1.append(mail)
 
     # 邮件标题
-    elements = iter(test_class_Valid_get("tt"))
+    elements = iter(test_class_exists_get("tt"))
     for e in elements: data2.append({"title": e.get_attribute('innerHTML').replace('&nbsp;','')})
 
     # 合并两个list
     # 在这里处理白名单、黑名单。以及 TASK TITLE
     for a,b in zip(data1, data2):
         a.update(b)
-        if test_list_Valid(title_blacklist_keys) and check_key_in_name(a['title'],title_blacklist_keys): data_title_blacklist.append(a)
-        elif test_list_Valid(title_whitelist_keys) and not check_key_in_name(a['title'],title_whitelist_keys): data_title_whitelist.append(a)
+        if test_list_exists(title_blacklist_keys) and check_key_in_name(a['title'],title_blacklist_keys): data_title_blacklist.append(a)
+        elif test_list_exists(title_whitelist_keys) and not check_key_in_name(a['title'],title_whitelist_keys): data_title_whitelist.append(a)
         else:
           if int(a['index']) > Title_Task["end"] > 0:break
           if config["TITLE"]["step"] >= Title_Task["step"] > 0:break
@@ -544,61 +616,69 @@ def check_task_end_type():
 # 打开邮件
 def open_email():
 
-    titlelist = buffered(data_email_titlelist)
+    titlelist = list_reverse(data_email_titlelist)
+
     max = len(data_email_titlelist)
-    check_download_Valid()  #检查下载路径是否存在
+    check_download_exists(DOWNLOAD_FOLDER)  #检查下载路径是否存在
 
     while True:
       if count_download_email["count"] >= max: download_end(); break
       email = next(titlelist)
 
+      emailpath = DOWNLOAD_FOLDER
+
+      # 创建文件夹，以发信人邮箱命名
+      if can_move_folder:
+        emailpath = DOWNLOAD_FOLDER + split_sign + email['email'] + split_sign
+        if not os.path.exists(emailpath): os.mkdir(emailpath)
+
       try:
-        test_frame_Valid("mainFrame")
+        test_frame_exists("mainFrame")
         check_frame_timeout(email['index']) # 您请求的频率太快，请稍后再试
 
         chrome.get("https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={}&url=/cgi-bin/readmail?t=readmail%26mailid={}%26mode=pre".format(config['TOKEN']["sid"],email['mailid']))
         chrome.implicitly_wait(1)
 
-        time.sleep(0.12)
-        test_frame_Valid("mainFrame")
+        time.sleep(0.08)
+        test_frame_exists("mainFrame")
         check_frame_timeout(email['index']) # 您请求的频率太快，请稍后再试
 
         #附件列表
-        elements1=test_class_Valid_get("ico_big")
+        elements1=test_class_exists_get("ico_big")
+
         if len(elements1) <= 0:
           p1("{} 没有邮件".format(email['index']))
           data_email_nofilelist.append(email)
 
           #下载eml文件
           if is_dleml_nofile:
-            ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
-            ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform()
+            ActionChains(chrome).click(test_id_exists_get("aSwitchOption")).perform()
+            ActionChains(chrome).click(test_id_exists_get("trOption").find_elements_by_tag_name("a")[2]).perform()
 
           #设置为星标
           if is_star_nofile:
-            mark_star=test_id_Valid_get("img_star");
-            if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
+            mark_star=test_id_exists_get("img_star");
+            if test_class_exists('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
 
           continue;
 
         #下载按钮
-        elements2=test_class_Valid_get("down_big")
+        elements2=test_class_exists_get("down_big")
 
         if len(elements2) <= 0:
           p1("{} 没有下载按钮，可能已过期".format(email['index']))
 
           #下载eml文件
           if is_dleml_nofile:
-            ActionChains(chrome).click(test_id_Valid_get("aSwitchOption")).perform()
-            ActionChains(chrome).click(test_id_Valid_get("trOption").find_elements_by_tag_name("a")[2]).perform()
+            ActionChains(chrome).click(test_id_exists_get("aSwitchOption")).perform()
+            ActionChains(chrome).click(test_id_exists_get("trOption").find_elements_by_tag_name("a")[2]).perform()
 
           #设置为星标
           if is_star_nofile:
-            mark_star=test_id_Valid_get("img_star");
-            if test_class_Valid('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
+            mark_star=test_id_exists_get("img_star");
+            if test_class_exists('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
 
           continue;
-
 
         #整理附件信息，并下载附件
         for f in elements1:
@@ -617,42 +697,84 @@ def open_email():
           attach.update({'timestamp': email['timestamp']})
           data_email_fileslist.append(attach)
 
+          # 过滤文件名
           file_extension = attach['filename'].split(".")[-1].lower()
-          if re.findall(file_extension_blacklist, file_extension): print("{} 跳过 {} ".format(email['index'], file_extension)); continue; 
-
+          if re.findall(file_extension_blacklist, file_extension): print("{} 跳过 {} ".format(email['index'], file_extension)); continue;
           p1("{} {}".format(email['index'],attach['filename'],email['email']))
 
           if just_print_file: continue
 
+          # 点击下载按钮
           downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
           ActionChains(chrome).click(downlnk).perform()
 
+          # 等待下载
+          while True:
+            filepath = get_last_filepath()
+            filename = os.path.basename(filepath)
+            filesize = os.path.getsize(filepath)
+            filetype = filepath.split('.')[-1]
+
+            rootpath = os.path.split(filepath)[0] + split_sign
+
+            if filepath != '' and filetype != 'crdownload' and filetype != 'tmp' and filesize == attach['filebyte']:
+
+                # 文件重命名规则
+                rule = { 
+                  'file_name1': attach['filename'], 
+                  'file_name2': attach['filename'].split(".")[0], 
+                  'extension1': attach['filename'].split(".")[1], 
+                  'extension2': attach['filename'].split(".")[-1], 
+                  'file_count_index': count_download_email["count"],
+                  'file_title_index': attach['index'], 
+                  'title_count_index': email['index'],
+                  'sender_nameid': email['name'],
+                  'sender_emailid': email['email'].split("@")[0],
+                  'sender_address': email['email'],
+                  'timestamp': email['timestamp'],
+                }
+
+                # 检测文件是否已存在
+                if check_file_exists(filename, emailpath):
+
+                  # 检测文件MD5是否相同
+                  if check_md5(filepath) == check_md5(os.path.join(emailpath, filename)) and filename != attach['filename']: 
+                    os.remove(filepath); break;
+
+                  # 是否需要移动到文件夹
+                  if can_move_folder: shutil.move(filepath, emailpath); break;
+                
+                if can_rename_file: 
+                  os.rename(filepath, rootpath + email['email'] + '_' + filename); break;
+
+                break
+            else:
+              time.sleep(1)
+
         p1("")
         count_download_email["count"] += 1
-      except:  
-        titlelist.push(email)
-        chrome.refresh();
-
-
-
+      except Exception as e:
+          p1(e)
+          titlelist.push(email)
+          chrome.refresh();
 
 # 检测“您请求的频率太快，请稍后再试”
 def check_frame_timeout(index):
 
-  pause = test_class_Valid("errorIcon") or test_id_Valid("msg_txt") or not test_id_Valid("contentDiv")
+  pause = test_class_exists("errorIcon") or test_id_exists("msg_txt") or not test_id_exists("contentDiv")
 
   if pause:
     p1("\n{} 正在队列中等待...请稍等".format(index))
     wait = 0
-    while test_id_Valid("msg_txt") or test_class_Valid("errorIcon"):
+    while test_id_exists("msg_txt") or test_class_exists("errorIcon"):
       if wait == 0: time.sleep(0.5)
       elif wait == 1: time.sleep(2)
       elif wait == 2: time.sleep(3)
-      elif wait == 3: time.sleep(5);chrome.refresh()
-      elif wait%4 == 0: time.sleep(3);chrome.refresh()
+      elif wait == 3: time.sleep(4);chrome.refresh()
+      elif wait%4 == 0: time.sleep(2);chrome.refresh()
       else:time.sleep(1)
       wait+=1
-    test_frame_Valid("mainFrame")
+    test_frame_exists("mainFrame")
     pause = False
     p1("{} 等待结束，任务继续。\n".format(index))
 
@@ -746,10 +868,13 @@ if __name__ == '__main__':
     now = time.strftime("%Y%m%d_%H%M%S",time.localtime(time.time()))
 
     get_url("https://mail.qq.com/")
+    ActionChains(chrome).send_keys(Keys.ESCAPE).perform()
+
     os.system('cls')
+    os.system('')
 
     # 检查是否已经登陆
-    if not test_id_Valid("login_frame") and test_sid_Valid(): auto_login()
+    if not test_id_exists("login_frame") and test_sid_exists(): auto_login()
 
     print(f'sid: { chrome.current_url.split("sid=")[1].split("&")[0] }')
 
@@ -769,6 +894,8 @@ if __name__ == '__main__':
 
     try: open_next_page()
     except: chrome.refresh();open_next_page();
+    
+    data_email_titlelist = data_email_titlelist[::-1] if can_reverse_list else data_email_titlelist
     
     # 打开邮件，获取附件列表
     if just_print_mail:
