@@ -4,7 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 import prettytable as pt
 import time,os,re,codecs,shutil,hashlib
-# 使用到一些第三方库。如果提示缺少xxx，请执行在控制台执行 pip install xxx
+# 使用到的工具库。如果提示缺少xxx，请执行在控制台执行 pip install xxx
 
 #===============================================================================
 # * 声明
