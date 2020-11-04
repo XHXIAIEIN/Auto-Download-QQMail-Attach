@@ -10,7 +10,7 @@ import time,os,re,codecs,shutil,hashlib
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2020/11/03
+# 更新：2020/11/04
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File
 #===============================================================================
 
@@ -63,7 +63,7 @@ PASSWORD="132465798"
 #  mail.qq.com/cgi-bin/frame_html?t=frame_html&sid=x&url=/cgi-bin/mail_list?folderid={ A }%26page=0
 #...............................................................................
 
-FOLDER_ID = 123
+FOLDER_ID = 199
 
 #...............................................................................
 # 附件下载到哪个文件夹。
@@ -146,7 +146,7 @@ URLTEMP_SID = ""
 FOLDER_INDEX = -1   # 首页收件箱的索引序号是0
 
 #...............................................................................
-#  重命名规则(未完成) 请手动搜索 can_rename_file 修改
+#  重命名规则(未完成) 请手动搜索 can_rename_file 的部分手动修改
 #...............................................................................
 # file_name1         附件原始的文件名(包含扩展名）例如: 简历.pdf
 # file_name2         附件原始的文件名(不包含扩展名）例如: 简历
@@ -166,11 +166,13 @@ FOLDER_INDEX = -1   # 首页收件箱的索引序号是0
 # title_send_date  发送时间。例：10月30日 => 1030
 # title_send_month 发送日期。例：10月30日 => 10
 # title_send_day   发送日期。例：10月30日 => 30
+# title_send_year  发送时间：年份。例：2020年 => 2020
 #...............................................................................
-# title_send_week     发送时间。例：星期二 => 星期二
-# title_send_time     发送时间。例：下午4 : 29 => 1629
-# title_send_hours    发送时间。例：下午4 : 29 => 16
-# title_send_minutes  发送时间。例：下午4 : 29 => 29
+# title_send_week     发送时间：星期。例：星期三 => Wed
+# title_send_ampm     发送时间：昼夜。例：上午/下午 => AM/PM
+# title_send_time     发送时间：时间。例：下午4 : 29 => 1629
+# title_send_hours    发送时间：小时。例：下午4 : 29 => 16
+# title_send_minutes  发送时间：分钟。例：下午4 : 29 => 29
 #...............................................................................
 
 file_rename_rules = ''
@@ -180,18 +182,20 @@ file_rename_rules = ''
 #  高级选项
 #...............................................................................
 
+split_sign = os.sep
+
 # 等待页面加载元素时长。
 # 减小数值可加快处理速度，但更容易翻车。你也可以尝试0.1，真的很快乐。
-implicitly_wait_time = 0.1
+implicitly_wait_time = 0.5
 
 # 是否根据投稿时间顺序下载附件。即：从最后一页往前下载。
 can_reverse_list = False
 
 # 是否按投稿邮箱创建文件夹
-can_move_folder = False
+can_move_folder = True
 
-# 下载后是否重命名文件
-can_rename_file = True
+# 是否重命名文件
+can_rename_file = False
 
 # 是否自动设置【每页显示100封邮件】以及【邮件列表视图为标准模式】
 can_setting_mail = False
@@ -275,8 +279,6 @@ config['TTASK'] = ''
 config['TOKEN'] = {'sid':"",  'folderid':0, 'page':0}
 config['PAGES'] = {'index':0, 'max': 0, 'step':0, 'iscanNext':False, 'isNotFistPage':0}
 config['TITLE'] = {'index':0, 'max': 0, 'step':0, 'isFileDownload': False}
-
-split_sign = os.sep
 
 #...............................................................................
 # Data
@@ -386,8 +388,8 @@ def ptable_to_csv(table, filename):
     with codecs.open(filename,'w','utf_8_sig') as f: 
       for d in data: f.write('{}\n'.format(','.join(d)))
 
-# 反向顺序下载
-class list_reverse:
+# 列表顺序
+class list_gen:
   def __init__(self,it):
       self.it = iter(it)
       self.buf = []
@@ -429,11 +431,13 @@ def check_md5(filepath):
   with open(filepath, "rb") as f: 
     return hashlib.md5(f.read()).hexdigest()
 
-# 检查文件在文件夹中是否重复,若重复则删除。只保留最原始的一份.
-def remove_repeat_file(onlyname, copyfilepath, path = DOWNLOAD_FOLDER):
+
+# 检查文件在文件夹中是否重复
+def check_repeat_file(filepath, path = DOWNLOAD_FOLDER):
   filelist = (file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file)))
-  for f in filelist:
-    if check_md5(copyfilepath) == check_md5(f) and os.path.basename(copyfilepath) != onlyname: print(f'重复文件 {copyfilepath}'); os.remove(copyfilepath) 
+  for f in filelist: 
+    if check_md5(filepath) == check_md5(os.path.join(path, f)): return True
+  return False
 
 
 #...............................................................................
@@ -616,7 +620,7 @@ def check_task_end_type():
 # 打开邮件
 def open_email():
 
-    titlelist = list_reverse(data_email_titlelist)
+    titlelist = list_gen(data_email_titlelist)
 
     max = len(data_email_titlelist)
     check_download_exists(DOWNLOAD_FOLDER)  #检查下载路径是否存在
@@ -626,6 +630,7 @@ def open_email():
       email = next(titlelist)
 
       emailpath = DOWNLOAD_FOLDER
+      star_email = False
 
       # 创建文件夹，以发信人邮箱命名
       if can_move_folder:
@@ -633,41 +638,24 @@ def open_email():
         if not os.path.exists(emailpath): os.mkdir(emailpath)
 
       try:
-        test_frame_exists("mainFrame")
-        check_frame_timeout(email['index']) # 您请求的频率太快，请稍后再试
 
         chrome.get("https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={}&url=/cgi-bin/readmail?t=readmail%26mailid={}%26mode=pre".format(config['TOKEN']["sid"],email['mailid']))
         chrome.implicitly_wait(1)
 
-        time.sleep(0.08)
         test_frame_exists("mainFrame")
         check_frame_timeout(email['index']) # 您请求的频率太快，请稍后再试
 
         #附件列表
-        elements1=test_class_exists_get("ico_big")
+        elements1 = test_class_exists_get("ico_big")
+        elements2 = test_class_exists_get("down_big")
 
         if len(elements1) <= 0:
-          p1("{} 没有邮件".format(email['index']))
-          data_email_nofilelist.append(email)
-
-          #下载eml文件
-          if is_dleml_nofile:
-            ActionChains(chrome).click(test_id_exists_get("aSwitchOption")).perform()
-            ActionChains(chrome).click(test_id_exists_get("trOption").find_elements_by_tag_name("a")[2]).perform()
-
-          #设置为星标
-          if is_star_nofile:
-            mark_star=test_id_exists_get("img_star");
-            if test_class_exists('qm_ico_flagoff'): mark_star.send_keys(Keys.SPACE);
-
-          continue;
-
-        #下载按钮
-        elements2=test_class_exists_get("down_big")
+          p1("{} 没有邮件".format(email['index'])); data_email_nofilelist.append(email); star_email = True
 
         if len(elements2) <= 0:
-          p1("{} 没有下载按钮，可能已过期".format(email['index']))
+          p1("{} 没有下载按钮，可能已过期".format(email['index'])); star_email = True
 
+        if star_email:
           #下载eml文件
           if is_dleml_nofile:
             ActionChains(chrome).click(test_id_exists_get("aSwitchOption")).perform()
@@ -704,6 +692,10 @@ def open_email():
 
           if just_print_file: continue
 
+          # 是否有下载按钮
+          if not bool(elements2[attach['index']].find_elements_by_link_text('下载')):
+            p1(f"{attach['filename']} 是过期文件。({email['email']}) \n"); continue
+
           # 点击下载按钮
           downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
           ActionChains(chrome).click(downlnk).perform()
@@ -712,14 +704,13 @@ def open_email():
           while True:
             filepath = get_last_filepath()
             filename = os.path.basename(filepath)
-            filesize = os.path.getsize(filepath)
             filetype = filepath.split('.')[-1]
-
             rootpath = os.path.split(filepath)[0] + split_sign
+            filetime = time.localtime(float(int(email['timestamp'])/1000))
 
-            if filepath != '' and filetype != 'crdownload' and filetype != 'tmp' and filesize == attach['filebyte']:
+            if filepath != '' and filetype != 'crdownload' and filetype != 'tmp':
 
-                # 文件重命名规则
+                # 重命名规则模板
                 rule = { 
                   'file_name1': attach['filename'], 
                   'file_name2': attach['filename'].split(".")[0], 
@@ -732,27 +723,39 @@ def open_email():
                   'sender_emailid': email['email'].split("@")[0],
                   'sender_address': email['email'],
                   'timestamp': email['timestamp'],
+                  'title_send_year': time.strftime("%Y", filetime),
+                  'title_send_date': time.strftime("%m%d", filetime),
+                  'title_send_month': time.strftime("%m", filetime),
+                  'title_send_day': time.strftime("%d", filetime),
+                  'title_send_week': time.strftime("%a", filetime),
+                  'title_send_ampm': time.strftime("%p", filetime),
+                  'title_send_time': time.strftime("%m%d", filetime),
+                  'title_send_hours':time.strftime("%H", filetime),
+                  'title_send_minutes': time.strftime("%M", filetime)
                 }
+              
+                # 是否允许重命名文件
+                if can_rename_file:
+                  # 命名规则
+                  newpath = rootpath + rule.get('sender_emailid') + '_' + filename
+                  os.rename(filepath, newpath);filename = filename = os.path.basename(newpath); filepath = newpath;
 
-                # 检测文件是否已存在
-                if check_file_exists(filename, emailpath):
-
-                  # 检测文件MD5是否相同
-                  if check_md5(filepath) == check_md5(os.path.join(emailpath, filename)) and filename != attach['filename']: 
-                    os.remove(filepath); break;
-
-                  # 是否需要移动到文件夹
-                  if can_move_folder: shutil.move(filepath, emailpath); break;
-                
-                if can_rename_file: 
-                  os.rename(filepath, rootpath + email['email'] + '_' + filename); break;
-
+                # 是否允许移动到文件夹
+                if can_move_folder:
+                    # 检测文件夹内是否已存在文件.
+                    if check_repeat_file(filepath, emailpath): 
+                      os.rename(filepath, rootpath + rule.get('sender_address') + rule.get('file_name1') + '_重复文件_' + rule.get('title_send_date') )  # 重复的文件
+                      # os.remove(filepath); 
+                      break;
+                    shutil.move(filepath, emailpath)
                 break
             else:
               time.sleep(1)
 
-        p1("")
-        count_download_email["count"] += 1
+          p1("")
+          count_download_email["count"] += 1
+      except IndexError:
+          p1(f"{email['email']} 存在过期文件。 \n")
       except Exception as e:
           p1(e)
           titlelist.push(email)
@@ -770,8 +773,8 @@ def check_frame_timeout(index):
       if wait == 0: time.sleep(0.5)
       elif wait == 1: time.sleep(2)
       elif wait == 2: time.sleep(3)
-      elif wait == 3: time.sleep(4);chrome.refresh()
-      elif wait%4 == 0: time.sleep(2);chrome.refresh()
+      elif wait == 3: time.sleep(5);chrome.refresh()
+      elif wait%4 == 0: time.sleep(3);chrome.refresh()
       else:time.sleep(1)
       wait+=1
     test_frame_exists("mainFrame")
@@ -894,6 +897,20 @@ if __name__ == '__main__':
 
     try: open_next_page()
     except: chrome.refresh();open_next_page();
+    
+    data_email_titlelist = data_email_titlelist[::-1] if can_reverse_list else data_email_titlelist
+    
+    # 打开邮件，获取附件列表
+    if just_print_mail:
+      p1("如果要继续下载附件")
+      os.system("PAUSE")
+      os.system('cls')
+
+    open_email()
+
+    if is_export_titlelist_csv: ptable_to_csv(table_email_titlelist, DOWNLOAD_FOLDER+ r"_导出邮件列表" + now + r".csv")
+    
+p1("运行结束。")chrome.refresh();open_next_page();
     
     data_email_titlelist = data_email_titlelist[::-1] if can_reverse_list else data_email_titlelist
     
