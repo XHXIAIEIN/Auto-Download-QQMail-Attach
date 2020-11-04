@@ -743,7 +743,7 @@ def open_email():
                 if can_move_folder:
                     # 检测文件夹内是否已存在文件.
                     if check_repeat_file(filepath, emailpath): 
-                      os.rename(filepath, rootpath + rule.get('sender_address') + rule.get('file_name1') + '_重复文件_' + rule.get('title_send_date') )  # 重复的文件
+                      os.rename(filepath, rootpath + rule.get('sender_address') + rule.get('file_name2') + '_重复文件_' + rule.get('title_send_date') + rule.get('extension1'))  # 重复的文件
                       # os.remove(filepath); 
                       break;
                     shutil.move(filepath, emailpath)
