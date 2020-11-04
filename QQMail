@@ -712,26 +712,25 @@ def open_email():
 
                 # 重命名规则模板
                 rule = { 
-                  'file_name1': attach['filename'], 
-                  'file_name2': attach['filename'].split(".")[0], 
-                  'extension1': attach['filename'].split(".")[1], 
-                  'extension2': attach['filename'].split(".")[-1], 
-                  'file_count_index': count_download_email["count"],
-                  'file_title_index': attach['index'], 
-                  'title_count_index': email['index'],
-                  'sender_nameid': email['name'],
-                  'sender_emailid': email['email'].split("@")[0],
-                  'sender_address': email['email'],
-                  'timestamp': email['timestamp'],
-                  'title_send_year': time.strftime("%Y", filetime),
-                  'title_send_date': time.strftime("%m%d", filetime),
-                  'title_send_month': time.strftime("%m", filetime),
-                  'title_send_day': time.strftime("%d", filetime),
-                  'title_send_week': time.strftime("%a", filetime),
-                  'title_send_ampm': time.strftime("%p", filetime),
-                  'title_send_time': time.strftime("%m%d", filetime),
-                  'title_send_hours':time.strftime("%H", filetime),
-                  'title_send_minutes': time.strftime("%M", filetime)
+                  'file_name1': attach['filename'],                       # file.jpg
+                  'file_name2': attach['filename'].split(".")[0],         # file
+                  'extension1': attach['filename'].split(".")[1],         # .jpg
+                  'extension2': attach['filename'].split(".")[-1],        # jpg
+                  'file_count_index': count_download_email["count"],      # 0 附
+                  'file_title_index': attach['index'],                    # 0 标附序
+                  'title_count_index': email['index'],                    # 0 标序
+                  'sender_nameid': email['name'],                         # 邮箱昵称
+                  'sender_address': email['email'],                       # 123456@qq.com
+                  'sender_emailid': email['email'].split("@")[0],         # 123456
+                  'title_send_year': time.strftime("%Y", filetime),       # 2020
+                  'title_send_date': time.strftime("%m%d", filetime),     # 1104
+                  'title_send_month': time.strftime("%m", filetime),      # 11
+                  'title_send_day': time.strftime("%d", filetime),        # 04
+                  'title_send_week': time.strftime("%a", filetime),       # Wed
+                  'title_send_ampm': time.strftime("%p", filetime),       # PM
+                  'title_send_time': time.strftime("%m%d", filetime),     # 1430
+                  'title_send_hours':time.strftime("%H", filetime),       # 14
+                  'title_send_minutes': time.strftime("%M", filetime)     # 30
                 }
               
                 # 是否允许重命名文件
