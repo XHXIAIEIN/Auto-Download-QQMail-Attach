@@ -10,7 +10,7 @@ import time,os,re,codecs,shutil,hashlib
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2020/11/04
+# 更新：2020/11/06
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File
 #===============================================================================
 
@@ -63,7 +63,7 @@ PASSWORD="132465798"
 #  mail.qq.com/cgi-bin/frame_html?t=frame_html&sid=x&url=/cgi-bin/mail_list?folderid={ A }%26page=0
 #...............................................................................
 
-FOLDER_ID = 199
+FOLDER_ID = 197
 
 #...............................................................................
 # 附件下载到哪个文件夹。
@@ -90,6 +90,7 @@ options = webdriver.ChromeOptions()
 prefs={"download.default_directory":DOWNLOAD_FOLDER}
 options.add_experimental_option("prefs",prefs)
 options.add_argument("--window-size=900,1000")
+options.add_argument('--safebrowsing-disable-download-protection')
 options.add_argument("--user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36 Edg/80.0.361.66'")
 options.add_argument("--blink-settings=imagesEnabled=false")  # 禁止网页显示图片
 
@@ -186,7 +187,7 @@ split_sign = os.sep
 
 # 等待页面加载元素时长。
 # 减小数值可加快处理速度，但更容易翻车。你也可以尝试0.1，真的很快乐。
-implicitly_wait_time = 0.5
+implicitly_wait_time = 0.25
 
 # 是否根据投稿时间顺序下载附件。即：从最后一页往前下载。
 can_reverse_list = False
@@ -238,7 +239,7 @@ is_export_filelist_csv = True
 #...............................................................................
 
 # 邮件列表
-Title_Task = { 'start':1, 'step':-1, 'end':-1 }
+Title_Task = { 'start':1, 'step':-1, 'end': -1 }
 
 # 翻页规则
 Pages_Task = { 'start':1, 'step':-1, 'end':-1, 'autoNext': True }
@@ -414,8 +415,10 @@ def check_download_exists(path = DOWNLOAD_FOLDER):
 
 # 检测文件是否已经存在
 def check_file_exists(filename, filepath = DOWNLOAD_FOLDER):
-    if filename == '.DS_Store' or filename == 'thumbs.db' : return False
+    filetype = filename.split(".")[-1]
+    if filename == '.DS_Store' or filename == 'thumbs.db' or filetype == 'tmp' or filetype == 'crdownload': return False
     return os.path.isfile(os.path.join(filepath, filename))
+
 
 # 返回最后一个下载完成的文件路径
 def get_last_filepath():
@@ -431,12 +434,11 @@ def check_md5(filepath):
   with open(filepath, "rb") as f: 
     return hashlib.md5(f.read()).hexdigest()
 
-
 # 检查文件在文件夹中是否重复
-def check_repeat_file(filepath, path = DOWNLOAD_FOLDER):
-  filelist = (file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file)))
+def check_repeat_file(filepath, root, fn):
+  filelist = (file for file in os.listdir(root) if os.path.isfile(os.path.join(root, file)))
   for f in filelist: 
-    if check_md5(filepath) == check_md5(os.path.join(path, f)): return True
+    if check_md5(filepath) == check_md5(os.path.join(root, f)) and f != fn: return True
   return False
 
 
@@ -591,24 +593,27 @@ def get_email_title():
 
 #检查是否需要翻页
 def check_page_can_next():
-    if not Pages_Task['autoNext'] or not config["PAGES"]["iscanNext"]: return False
-    if config['TOKEN']['page'] > Pages_Task["end"] > 0: config['PTASK']='e';return False
-    if config["PAGES"]["step"] > Pages_Task["step"] > 0: config['PTASK']='s';return False
-    if config['TITLE']['index'] > Title_Task["end"] > 0: config['TTASK']='e';return False
-    if config['TITLE']['step'] >= Title_Task["step"] > 0: config['TTASK']='s';return False
-    return True
+  if not Pages_Task['autoNext'] or not config["PAGES"]["iscanNext"]: return False
+  if config['TOKEN']['page'] > Pages_Task["end"] > 0: config['PTASK']='e';return False
+  # 标题规则
+  if config["TITLE"]["step"] >= Title_Task["step"] > 0: config['PTASK']='s';return False;
+  if config["TITLE"]["step"] >= Title_Task["end"] > 0: config['PTASK']='e';return False;
+  # 页面规则
+  if config["PAGES"]["step"] >= Pages_Task["end"] > 0: config['PTASK']='e';return False;
+  if config["PAGES"]["step"] >= Pages_Task["step"] > 0: config['PTASK']='s';return False; 
+  return True
 
 #检查时以哪种方式结束翻页的
 def check_task_end_type():
   p,t = config['PTASK'],config['TTASK']
-  tp,tt,cp,cd = Pages_Task,Title_Task,config["PAGES"],config["TITLE"]
+  tp,tt,cp,ct = Pages_Task,Title_Task,config["PAGES"],config["TITLE"]
   if not tp['autoNext'] and (tp["step"] > 0 or tt["step"] > 0 or tp["end"] > 0 or tt["end"]) > 0: stop_by_page_next()
   tp["start"] = tp["start"] if tp["start"] > 0 else 1
   tt["start"] = tt["start"] if tt["start"] > 0 else 1
   tp["end"] = tp["end"] if tp["end"] > 0 else cp["max"]
   tt["end"] = tt["end"] if tt["end"] > 0 else len(data_email_titlelist)
   tp["step"] = tp["step"] if tp["step"] > 0 else cp["step"]
-  tt["step"] = tt["step"] if tt["step"] > 0 else cd["step"]
+  tt["step"] = tt["step"] if tt["step"] > 0 else ct["step"]
   stop_by_page_end() if p == 'e' else stop_by_page_step()
   stop_by_title_end() if t == 'e' else stop_by_title_step()
   if can_print_title_table : print_title_table()
@@ -626,19 +631,13 @@ def open_email():
     check_download_exists(DOWNLOAD_FOLDER)  #检查下载路径是否存在
 
     while True:
-      if count_download_email["count"] >= max: download_end(); break
       email = next(titlelist)
+      if int(email['index']) > max: download_end(); break;
 
       emailpath = DOWNLOAD_FOLDER
       star_email = False
 
-      # 创建文件夹，以发信人邮箱命名
-      if can_move_folder:
-        emailpath = DOWNLOAD_FOLDER + split_sign + email['email'] + split_sign
-        if not os.path.exists(emailpath): os.mkdir(emailpath)
-
       try:
-
         chrome.get("https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={}&url=/cgi-bin/readmail?t=readmail%26mailid={}%26mode=pre".format(config['TOKEN']["sid"],email['mailid']))
         chrome.implicitly_wait(1)
 
@@ -688,35 +687,39 @@ def open_email():
           # 过滤文件名
           file_extension = attach['filename'].split(".")[-1].lower()
           if re.findall(file_extension_blacklist, file_extension): print("{} 跳过 {} ".format(email['index'], file_extension)); continue;
-          p1("{} {}".format(email['index'],attach['filename'],email['email']))
+          p1("{} {} {}".format(email['index'], attach['index'], attach['filename'],email['email']))
 
           if just_print_file: continue
 
+          # 下载按钮
+          downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
+
           # 是否有下载按钮
-          if not bool(elements2[attach['index']].find_elements_by_link_text('下载')):
+          if not bool(downlnk):
             p1(f"{attach['filename']} 是过期文件。({email['email']}) \n"); continue
 
-          # 点击下载按钮
-          downlnk = elements2[attach['index']].find_elements_by_link_text('下载')[0]
           ActionChains(chrome).click(downlnk).perform()
+
+          loopindex = 0
 
           # 等待下载
           while True:
             filepath = get_last_filepath()
-            filename = os.path.basename(filepath)
             filetype = filepath.split('.')[-1]
-            rootpath = os.path.split(filepath)[0] + split_sign
-            filetime = time.localtime(float(int(email['timestamp'])/1000))
 
             if filepath != '' and filetype != 'crdownload' and filetype != 'tmp':
+
+                filename = os.path.basename(filepath)
+                rootpath = os.path.split(filepath)[0] + split_sign
+                filetime = time.localtime(float(int(email['timestamp'])/1000))
 
                 # 重命名规则模板
                 rule = { 
                   'file_name1': attach['filename'],                       # file.jpg
                   'file_name2': attach['filename'].split(".")[0],         # file
-                  'extension1': attach['filename'].split(".")[1],         # .jpg
+                  'extension1': '.' + attach['filename'].split(".")[-1],  # .jpg
                   'extension2': attach['filename'].split(".")[-1],        # jpg
-                  'file_count_index': count_download_email["count"],      # 0 附
+                  'file_count_index': count_download_email["count"],      # 0 标附
                   'file_title_index': attach['index'],                    # 0 标附序
                   'title_count_index': email['index'],                    # 0 标序
                   'sender_nameid': email['name'],                         # 邮箱昵称
@@ -732,27 +735,40 @@ def open_email():
                   'title_send_hours':time.strftime("%H", filetime),       # 14
                   'title_send_minutes': time.strftime("%M", filetime)     # 30
                 }
-              
+
                 # 是否允许重命名文件
                 if can_rename_file:
                   # 命名规则
                   newpath = rootpath + rule.get('sender_emailid') + '_' + filename
-                  os.rename(filepath, newpath);filename = filename = os.path.basename(newpath); filepath = newpath;
+                  os.rename(filepath, newpath);
+                  filename = os.path.basename(newpath); 
+                  filepath = newpath;
 
                 # 是否允许移动到文件夹
                 if can_move_folder:
-                    # 检测文件夹内是否已存在文件.
-                    if check_repeat_file(filepath, emailpath): 
-                      os.rename(filepath, rootpath + rule.get('sender_address') + rule.get('file_name2') + '_重复文件_' + rule.get('title_send_date') + rule.get('extension1'))  # 重复的文件
-                      # os.remove(filepath); 
-                      break;
-                    shutil.move(filepath, emailpath)
-                break
-            else:
-              time.sleep(1)
+                  emailpath = DOWNLOAD_FOLDER + split_sign + email['email'] + '(' + time.strftime('%m.%d_%H’%M', filetime) + ')' + split_sign
+                  if not os.path.exists(emailpath): os.mkdir(emailpath)
+                  if check_repeat_file(filepath, emailpath, attach['filename']): 
+                    repeatpath = emailpath + split_sign + '重复文件'
+                    if not os.path.exists(repeatpath): os.mkdir(repeatpath)
+                    shutil.move(filepath, repeatpath)
+                  shutil.move(filepath, emailpath)
+                  break;
 
-          p1("")
-          count_download_email["count"] += 1
+                # 检测文件夹内是否已存在文件.
+                if check_repeat_file(filepath, DOWNLOAD_FOLDER, attach['filename']): 
+                  p1(f"[重复文件] {filename} 已存在于：{DOWNLOAD_FOLDER.split(split_sign)[-1]}")
+                  os.rename(filepath, rootpath + rule.get('sender_address') + '_重复文件_' + rule.get('file_name2') + '_' + rule.get('title_send_date') + rule.get('extension1'))
+                  break;
+
+                break;
+            else:
+              loopindex += 1
+              time.sleep(1)
+              if loopindex >= 300: 
+                p1(f"{filename} 下载超时，跳过自动整理。")
+                loopindex = 0
+                break
       except IndexError:
           p1(f"{email['email']} 存在过期文件。 \n")
       except Exception as e:
@@ -896,20 +912,6 @@ if __name__ == '__main__':
 
     try: open_next_page()
     except: chrome.refresh();open_next_page();
-    
-    data_email_titlelist = data_email_titlelist[::-1] if can_reverse_list else data_email_titlelist
-    
-    # 打开邮件，获取附件列表
-    if just_print_mail:
-      p1("如果要继续下载附件")
-      os.system("PAUSE")
-      os.system('cls')
-
-    open_email()
-
-    if is_export_titlelist_csv: ptable_to_csv(table_email_titlelist, DOWNLOAD_FOLDER+ r"_导出邮件列表" + now + r".csv")
-    
-p1("运行结束。")chrome.refresh();open_next_page();
     
     data_email_titlelist = data_email_titlelist[::-1] if can_reverse_list else data_email_titlelist
     
