@@ -11,6 +11,7 @@ https://zhuanlan.zhihu.com/p/51543237
 
 于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
   
+补充：后面发现了 helium，真的太方便啦~！！ 
 
 ## 如何安装
 
@@ -25,11 +26,12 @@ https://zhuanlan.zhihu.com/p/51543237
    
 <br>   
      
-- 2. **安装 python3 + selenium + chromedriver**
+- 2. **安装 python3 + selenium + helium + chromedriver**
      简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
      ```
      brew install chromedriver
      brew install selenium
+     brew install helium
      brew install prettytable
      ```
    
@@ -84,6 +86,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
 ```
 python -m pip install --upgrade pip
 pip install selenium
+pip install helium
 pip install prettytable
 ```
    
@@ -110,21 +113,14 @@ pip install prettytable
    
 <br>   
    
-登陆进邮箱主页后，需要做几件事
+登陆进邮箱主页后，需要做几件事   
    
-<br>   
-   
-### 1 调整每页显示邮件数量 
-邮箱默认只显示25条邮件，需要在邮箱设置里，调整每页显示**100**封邮件。脚本中也提供了一个自动设置邮件显示数量的开关，默认是关闭的，有需要可以在DEBUG分类下手动开启。
-   
-<br>   
-   
-### 2 邮箱文件夹
+### 1 邮箱文件夹
 把你想要下载的邮件**移动到**文件夹里，方便整理区分。
    
 <br>   
    
-### 3 新窗口打开文件夹（重要）
+### 2 新窗口打开文件夹（重要）
 从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的文件夹ID参数:  `folderid`
 ```
 https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_list?folderid={ A }%26page={ x }
@@ -133,39 +129,39 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_
 
 <br>   
    
-### 4 修改脚本里面的自定义参数，然后启动脚本
+### 3 修改脚本里面的自定义参数，然后启动脚本
 
 主要有几个参数需要修改：
 
-1. 邮箱登录账号(QQ) . ``QQNUMBER`` 和 ``PASSWORD``  <br>
+1. 邮箱登录账号(QQ) （必填）. ``QQNUMBER`` 和 ``PASSWORD``  <br>
 请放心填，没人能偷看你屏幕。。  <br>
 
    
    <br>   
    
-2. 附件下载路径. ``DOWNLOAD_FOLDER``  <br>
+2. 附件下载路径（必填）. ``DOWNLOAD_FOLDER``  <br>
 浏览器下载的文件会自动保存在这里。   <br>
 注：路径需要以 \\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ``` <br>
 如果你是MAC，则需要 \\ 作为分隔符。
  
  <br>   
    
-3. 文件夹ID.  ``FOLDER_ID`` <br>
+3. 文件夹ID（必填）.  ``FOLDER_ID`` <br>
 其实脚本在打开邮件时，会把你所有的文件夹打印在控制台。你可以从记录看到对应的文件夹ID。 <br>
 或者在左边面板我的文件夹，右键新窗口打开，也可以在浏览器地址栏找到folderid
    
 <br>   
    
 4. 计划任务 <br>
-  Title_Task，就是处理文件夹里面的邮件计划。 <br>
-  Pages_Task，就是处理文件夹里面的翻页。 <br>
+  Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。 <br>
+  Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。 <br>
    <br>
   start，表示从第几个开始。默认是1 <br>
   steps，表示执行多少次。比如从第1个开始，往后数第10个后结束，也就是10次。 <br>
   end, 表示到第几个结束。比如从第1个开始，到第50个结束。 <br>
   end和steps不同的地方是，end代表着结束的终点，而steps则是开始后累计的过程。 <br>
-  ``` Title_Task = {'start':1,'step':-1,'end':-1} ``` <br>
-  ``` Page_Task = {'start': 1,'step':1,'end':-1, 'autoNext': True} ```
+  ``` Title_Task = {'start':1,'step':0,'end':0} ``` <br>
+  ``` Page_Task = {'start': 1,'step':0,'end':0, 'autoNext': True} ```
    
 <br>   
    
@@ -178,11 +174,103 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_
    
 <br>   
    
-6.Debug模式 <br>
-如果你不想要下载附件，只想以纯文本的方式收集一下发信人的情况。 <br>
-发件人的名字，发件人的邮箱，邮箱里有多少附件。 <br>
-这些都会在控制台里输出。 ``` can_set_mail_max=True ```
+6. 附件类型词过滤 <br>
+  attach_blacklist_filetype，白名单关键词。 <br>
+  attach_whitelist_filetype，黑名单关键词。 <br>
+   <br>
+  ``` title_whitelist_keys = ['反馈','2020'] ，这样就只处理邮件主题中包含这两个关键词的邮件``` <br>
+  ``` title_blacklist_keys = [''] ```
+   
+<br> 
+   
+7. Config 高级参数<br>
+  脚本中还提供了一些高级选项，可以根据实际需要来开启或关闭。通常修改参数为 1 或 0
 
+```python
+
+# 浏览器禁用显示图片（浏览器首次运行前生效）
+can_disabled_images = 0
+
+
+#······························
+# 读取邮件
+
+# 是否倒序读取（从最后一页开始往前）
+can_reverse_list = 0
+
+#······························
+# 下载附件
+
+# 是否需要重命名附件
+can_rename_file = 0
+
+# 是否需要每封邮件创建文件夹
+can_move_folder = 1
+
+# 在下载前，检查本地文件是否已存在附件（根据文件名+文件大小）
+# 如果存在则跳过本次下载。
+ready_download_but_file_exists = 'skip' or 'continue'
+
+#······························
+# 星标 / 标签
+
+# 没有附件的邮件设为星标
+can_star_nofile = 1
+ 
+# 过期附件的邮件设为星标
+can_star_timeoutfile = 0
+ 
+# 没有附件添加标签
+can_tag_nofile = 1
+str_tag_nofile = '没有附件'
+ 
+# 过期附件添加标签
+can_tag_timeoutfile = 1
+str_tag_timeoutfile = '过期附件'
+
+#······························
+# 功能
+
+# 是否需要下载附件
+can_download_file = 1
+
+# 是否需要进入邮件正文
+can_load_email = 1
+
+# 是否需要获取邮件标题列表
+can_load_title = 1
+
+# 下载等待时长(单位：秒)。超过时长后则放弃后续操作，如移动文件夹或重命名。
+downloading_timeout = 300
+
+#······························
+# 控制台
+ 
+# 是否在控制台打印邮件信息
+can_print_title = 1
+can_print_attch = 1
+ 
+# 是否在控制台打印统计表格
+can_print_folder_table = 1
+can_print_title_table = 1
+
+
+#······························
+# 统计
+
+# 是否将数据导出为CSV文件
+can_export_titledata_to_csv = 1
+can_export_attchdata_to_csv = 1
+
+#······························
+# 高级选项
+
+# 是否需要设置 desired_capabilities 参数
+can_set_capabilities = 1
+config_timeout_pageLoad = 10000
+config_timeout_script = 1500
+
+```
 
 <br>   
     
