@@ -10,23 +10,29 @@ https://zhuanlan.zhihu.com/p/51543237
 网上搜了下资料，基本都是通过POP3来下载，但是这个邮箱并不是自己的，只是临时注册用来接收邮箱的小号，而对方也不希望开通手机认证。
 
 于是临时研究了一下 Python + selenium + Chrome 来模拟手动爬虫~
-  
-补充：后面发现了 helium，真的太方便啦~！！ 
+
+---
+新增：后面我发现了个好东西 helium，它把 selenium 封装得非常简单易用，调试起来超级方便！！具体的说明可以看这里：
+
+```
+API:                https://selenium-python-helium.readthedocs.io/en/latest/api.html
+Helium cheatsheet:  https://github.com/mherrmann/selenium-python-helium/blob/master/docs/cheatsheet.md
+```
 
 ## 如何安装
 
 ### MAC
 
 如果你是MAC用户。操作相对简单一些：
- - 1. **安装Homebrew**
+1. **安装Homebrew**
       https://brew.sh/index_zh-cn
       
       简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
       ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
-   
-<br>   
-     
-- 2. **安装 python3 + selenium + helium + chromedriver**
+
+<br>  
+
+2. **安装 python3 + selenium + helium + chromedriver**
      简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
      ```
      brew install chromedriver
@@ -40,20 +46,20 @@ https://zhuanlan.zhihu.com/p/51543237
 ### Windows
 Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
 
-  - **Python 3**   
-    https://www.python.org/
+1. **Python 3**   
+https://www.python.org/
 
-  > 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
-  > - [x] 1. Install Now
-  > - [x] 2. Disable path length limit
-   
+> 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
+> - [x] 1. Install Now
+> - [x] 2. Disable path length limit
+ 
 <br>   
-   
-  - **WebDriver for Chrome**  
+ 
+2. **WebDriver for Chrome**  
     https://sites.google.com/a/chromium.org/chromedriver/downloads
 
 <br>   
-     
+
 > 注1：根据自己Chrome当前的版本号，下载对应版本号的chromedriver。
 > 比如你浏览器版本号是是80.0，就下载80.0版本。
 > 以后有更新，也是需要重新下载对应版本的chromedriver。否则会报错。
@@ -71,25 +77,25 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
    
 <br>   
    
-- **Nodejs**   <br>
+3. **Nodejs**   <br>
   https://nodejs.org/zh-cn/
 
 > 下载最新版即可，跟着引导安装，一直点下一步。
    
    <br>   
   
-- **PIP**  
-> NodeJs安装完成后，按下Win + R，输入 cmd。然后按Ctrl + Shift + 回车键。 <br>
-> 以管理员权限进入命令行。接着输入下方的两条指令：
+  
+4. **pip install x**  
+NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。 <br>
+以管理员权限进入命令行。接着输入下方的两条指令：
 
-- **selenium**  
 ```
 python -m pip install --upgrade pip
 pip install selenium
 pip install helium
 pip install prettytable
 ```
-   
+ 
 <br>   
    
 繁琐的前置工作完成了。接着可以正式开始咯。  
@@ -106,7 +112,6 @@ pip install prettytable
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
    
 
-
 <br>   
    
 > 注：通过运行脚本启动的浏览器窗口，只能同时启动一个。若重复启动脚本将会打开空页面，需要关闭上一个窗口重新运行脚本。
@@ -121,11 +126,11 @@ pip install prettytable
 <br>   
    
 ### 2 新窗口打开文件夹（重要）
-从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的文件夹ID参数:  `folderid`
+从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的文件夹ID参数:  `folderid` <br>
 ```
 https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_list?folderid={ A }%26page={ x }
 ```
-脚本中也提供了将文件夹列表输出到控制台的选项，可以在DEBUG分栏里手动开启can_print_folder_table  
+脚本中也提供了将文件夹列表输出到控制台的选项，可以在Config分栏里手动开启 can_print_folder_table = 1  
 
 <br>   
    
@@ -133,58 +138,77 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_
 
 主要有几个参数需要修改：
 
-1. 邮箱登录账号(QQ) （必填）. ``QQNUMBER`` 和 ``PASSWORD``  <br>
-请放心填，没人能偷看你屏幕。。  <br>
+1. 邮箱登录账号(QQ) （必填）. 
+```
+QQNUMBER="132465798"
+PASSWORD="132465798"
+```
+请放心填，没人能偷看你屏幕。。
 
+
+<br> 
    
-   <br>   
-   
-2. 附件下载路径（必填）. ``DOWNLOAD_FOLDER``  <br>
+2. 附件下载路径（必填）. 
 浏览器下载的文件会自动保存在这里。   <br>
+```
+ROOTPATH = "D:\\Downloads\\2020"
+
+DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录  "D:\\Downloads\\2020\\download"
+USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
+```
 注：路径需要以 \\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ``` <br>
 如果你是MAC，则需要 \\ 作为分隔符。
  
- <br>   
+<br>   
    
-3. 文件夹ID（必填）.  ``FOLDER_ID`` <br>
+3. 文件夹ID（必填）. <br>
+```
+FOLDERID = 200
+```
 其实脚本在打开邮件时，会把你所有的文件夹打印在控制台。你可以从记录看到对应的文件夹ID。 <br>
-或者在左边面板我的文件夹，右键新窗口打开，也可以在浏览器地址栏找到folderid
+或者在左边面板我的文件夹，右键新窗口打开，也可以在浏览器地址栏找到 folderid
    
 <br>   
    
 4. 计划任务 <br>
-  Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。 <br>
-  Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。 <br>
-   <br>
-  start，表示从第几个开始。默认是1 <br>
-  steps，表示执行多少次。比如从第1个开始，往后数第10个后结束，也就是10次。 <br>
-  end, 表示到第几个结束。比如从第1个开始，到第50个结束。 <br>
-  end和steps不同的地方是，end代表着结束的终点，而steps则是开始后累计的过程。 <br>
-  ``` Title_Task = {'start':1,'step':0,'end':0} ``` <br>
-  ``` Page_Task = {'start': 1,'step':0,'end':0, 'autoNext': True} ```
+- Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。
+- Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。
+
+```
+Title_Task = { 'start':1, 'step':0, 'end': 0 }
+Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
+```
+
+start  从第几个开始。默认是1 
+steps  执行多少次结束。比如从1开始，往后数10个结束，也就是在第10封邮件时结束。
+end    表示到第几个结束。比如在第20封邮件时结束。
+end 和 steps不同的地方是，end代表着结束的终点，而steps则是从开始后累计的数量。
+
    
 <br>   
    
 5. 邮件主题关键词过滤 <br>
-  title_whitelist_keys，白名单关键词。 <br>
-  title_blacklist_keys，黑名单关键词。 <br>
-   <br>
-  ``` title_whitelist_keys = ['反馈','2020'] ，这样就只处理邮件主题中包含这两个关键词的邮件``` <br>
-  ``` title_blacklist_keys = [''] ```
+title_whitelist_keys，白名单 <br>
+title_blacklist_keys，黑名单 <br>
+``` 
+title_whitelist_keys = ['反馈','2020'] # 只处理邮件主题中包含这两个关键词的邮件
+title_blacklist_keys = [''] 
+```
    
 <br>   
    
 6. 附件类型词过滤 <br>
-  attach_blacklist_filetype，白名单关键词。 <br>
-  attach_whitelist_filetype，黑名单关键词。 <br>
-   <br>
-  ``` title_whitelist_keys = ['反馈','2020'] ，这样就只处理邮件主题中包含这两个关键词的邮件``` <br>
-  ``` title_blacklist_keys = [''] ```
+attach_blacklist_filetype，白名单 <br>
+attach_whitelist_filetype，黑名单 <br>
+``` 
+attach_blacklist_filetype = [''] 
+attach_whitelist_filetype = ['psd', 'ai']  # 不下载 psd, ai 类型的文件
+```
    
 <br> 
    
 7. Config 高级参数<br>
-  脚本中还提供了一些高级选项，可以根据实际需要来开启或关闭。通常修改参数为 1 或 0
+脚本中还提供了一些高级选项，可以根据实际需要来开启或关闭。通常修改参数为 1 或 0
 
 ```python
 
