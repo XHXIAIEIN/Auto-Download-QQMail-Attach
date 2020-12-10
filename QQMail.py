@@ -99,7 +99,6 @@ ROOTPATH = "D:\\Downloads\\2020"
 DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
  
- 
 #...............................................................................
 #  要下载的邮箱文件夹ID
 #...............................................................................
@@ -206,9 +205,9 @@ str_tag_timeoutfile = '过期附件'
 # 是否在控制台打印邮件信息
 can_print_title = 1
 can_print_attch = 1
- 
+can_print_folder = 0
+
 # 是否在控制台打印统计表格
-can_print_folder_table = 1
 can_print_title_table = 1
  
 # 是否将数据导出为CSV文件
@@ -228,8 +227,8 @@ downloading_timeout = 300
  
 # 是否需要设置 desired_capabilities 参数
 can_set_capabilities = 1
-# config_timeout_pageLoad = 10000
-# config_timeout_script = 1500
+config_timeout_pageLoad = 10000
+config_timeout_script = 1500
  
 #-------------------------------------------------------------------------------
 # 重命名模板。 
@@ -288,7 +287,6 @@ rule_folder = "address(date4)"
 #                 " 请 勿 跨 过 这 块 区 域 修 改 内 容 "
 #===============================================================================
 '''
-
 #-------------------------------------------------------------------------------
 # print color
 #-------------------------------------------------------------------------------
@@ -337,6 +335,7 @@ def thread_webdriver():
   }
   
   options.add_experimental_option("prefs", prefs)
+  options.add_argument("--dns-prefetch-disable")
   options.add_argument("--window-size=1000,1200")
   options.add_argument("--disable-gpu")
   options.add_argument("--no-sandbox")
@@ -424,7 +423,7 @@ def thread_webdriver():
     attach_black_table.align = "l"
   
   # 文件夹列表
-  if bool(can_print_folder_table): 
+  if bool(can_print_folder): 
     foldertable = prettytable.PrettyTable()
     foldertable.field_names = ["index", "folderid", "name"]
     foldertable.align = "l"
@@ -434,7 +433,7 @@ def thread_webdriver():
   #---------------------------------------------------------------------------
   
   # 获取文件夹列表
-  if bool(can_print_folder_table): 
+  if bool(can_print_folder): 
 
     # 展开文件夹列表
     chrome.execute_script("showFolders('personal', true)")
@@ -461,9 +460,9 @@ def thread_webdriver():
     chrome.execute_script("showFolders('tag', true)")
     wait_until(lambda: S("#tagfoldersDiv > ul#tagfolders").exists())
     
-    tags = [tag.web_element.get_attribute('title') for tag in find_all(S('#tagfolders > li > a'))]
+    tags = [re.sub(r' 未读邮件(.*?)封','',tag.web_element.get_attribute('title')) for tag in find_all(S('#tagfolders > li > a'))]
     
-    if bool(can_tag_nofile) and bool(str_tag_nofile) and not str_tag_nofile in tags:
+    if bool(can_tag_nofile) and bool(str_tag_nofile) and str_tag_nofile not in tags:
         print(f"{C.BLUE}[新增标签]{C.END} 用于标记不包含附件邮件的 '{C.GREEN}{str_tag_nofile}{C.END}' 标签不存在，将自动新建。")
         rightclick(S('#folder_tag'))
         wait_until(S('#tag_QMMenu').exists)
@@ -472,7 +471,7 @@ def thread_webdriver():
         write(f'{str_tag_nofile}', S("#QMconfirm_QMDialog_txt"))
         click(S('#QMconfirm_QMDialog_confirm'))
     
-    if bool(can_tag_timeoutfile) and not str_tag_timeoutfile in tags:
+    if bool(can_tag_timeoutfile) and bool(str_tag_timeoutfile) and str_tag_timeoutfile not in tags:
         print(f"{C.BLUE}[新增标签]{C.END} 用于标记包含过期附件邮件的 '{C.GREEN}{str_tag_timeoutfile}{C.END}' 标签不存在，将自动新建。")
         rightclick(S('#folder_tag'))
         wait_until(S('#tag_QMMenu').exists)
@@ -554,7 +553,7 @@ def thread_webdriver():
       
     # 读取当前页数
     currentpage = int(S('#frm > div > .right').web_element.text.split('/')[0])
-    print(f"\n {C.BGWHITE} ▷ {folder_name} {currentpage} / {thelastpage}{C.END} ")
+    print(f"\n{C.BGWHITE} ▷ {folder_name} {currentpage} / {thelastpage}{C.END} ")
     
     # 读取当前页面所有标题名称
     namelist = [item.web_element.text for item in find_all(S('u.tt'))]
@@ -699,7 +698,7 @@ def thread_webdriver():
     # 是否包含过期文件
     if(Text("已过期").exists()):
         highlight(Text("已过期"))
-        print(f"{C.BGRED}[存在过期文件] {title['index']} {title['title']} {title['email']}{C.END}")
+        print(f"{C.BGRED}![过期附件] {title['index']}: {title['email']:<24}\t{title['title']:<24} 包含过期附件 {C.END}")
         
         # 设为星标
         if bool(can_star_timeoutfile):
@@ -738,8 +737,9 @@ def thread_webdriver():
     #---------------------------------------------------------------------------
     
     elements = [e.find_elements_by_tag_name('a')[0] for e in chrome.find_elements_by_class_name('ico_big')]
-    
+
     for i, e in enumerate(elements, start=0):
+
         attach={}
         attach.update({'filename': e.get_attribute('filename')})
         attach.update({'filetype': e.get_attribute('filename').split('.')[-1]})
@@ -760,19 +760,19 @@ def thread_webdriver():
         
         # 附件类型黑名单
         if attach_blacklist_filetype != [''] and any([key in attach["filetype"] for key in attach_blacklist_filetype]):
-            print(f"{C.SILVER}[文件类型过滤] 已跳过 {title['name']}\t\t\t{title['email']}\t\t\t{attach['filename']} {C.END}")
+            print(f"{C.SILVER}[文件类型过滤] 已跳过 {title['index']}: {title['name']:<24}\t{title['title']}\t{attach['index']}\t{attach['filename']} {C.END}")
             attach_black_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
             continue
         
         # 附件类型白名单
         if attach_whitelist_filetype != [''] and not all([key in attach["filetype"] for key in attach_whitelist_filetype]): 
-            print(f"{C.SILVER}[文件类型过滤] 已跳过 {title['name']}\t\t\t{title['email']}\t\t\t{attach['filename']} {C.END}")
+            print(f"{C.SILVER}[文件类型过滤] 已跳过 {title['index']}: {title['name']:<24}\t{title['title']}\t{attach['index']}\t{attach['filename']} {C.END}")
             attach_black_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
             continue
         
         # 该附件是否已过期
         if bool(attach['timeout']):
-            print(f"{C.RED}![过期附件] {title['name']}\t\t\t{title['email']}\t\t\t{attach['filename']} 该文件已过期！！{C.END}")
+            print(f"{C.RED}![过期附件] {title['index']}: {title['name']:<24}\t{title['title']}\t{attach['index']}\t{attach['filename']} 该文件已过期！！{C.END}")
             timeout_count+=1
             attach_timeout_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
             break
@@ -825,17 +825,19 @@ def thread_webdriver():
         folder_path = os.path.join(rootpath, re_rule_folder)       # 移入文件夹的新路径
         rename_path = os.path.join(rootpath, re_rule_rename)       # 重命名后的新路径
         
+        TEMP['FILENAME'] = attach['filename']
+
         #---------------------------------------------------------------------------
         # ready download
         #---------------------------------------------------------------------------
         
         # 下载前检查文件是否已存在，如果存在跳过下载。
         if ready_download_but_file_exists == 'skip':
-        
+
             if os.path.isfile(expepath) and os.path.getsize(expepath) == attach['filebyte']:
-                print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在，跳过本次下载。{C.END}")
+                print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在根目录，跳过本次下载。{C.END}")
                 continue
-            
+
             if bool(can_move_folder):
                 if not os.path.exists(folder_path): 
                     os.mkdir(folder_path)
@@ -845,64 +847,54 @@ def thread_webdriver():
                         print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在文件夹，跳过本次下载。{C.END}")
                         continue
         
-        # 打印日志
-        if bool(can_print_attch):
-            print(f"+ {title['index']:<4}\t{attach_count:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
-        
         #---------------------------------------------------------------------------
         # download
         #---------------------------------------------------------------------------
-        
+
         if bool(can_download_file):
             ActionChains(chrome).click(chrome.find_elements_by_link_text('下载')[i]).perform() 
         
         #---------------------------------------------------------------------------
         # downloading
         #---------------------------------------------------------------------------
-        
-        if can_move_folder == can_rename_file == 0: continue
-        
+
         # 等待下载
-        wait_time = 0
-        while wait_time <= downloading_timeout:
-        
-            if wait_time %2 == 0:
-                filepath = get_last_filepath()
-                filetype = filepath.split('.')[-1] 
-                filename = os.path.basename(filepath)
-                
-                # 可能已下载完成。为什么是可能？因为没有判断当前文件大小是否等于服务器标注的原始大小： and os.path.getsize(filepath) == attach['filebyte']
-                if filepath != '' and filetype != 'crdownload' and filetype != 'tmp' : 
-                    break
-                
-                # 如果下载时长过久。默认300: 大于5分钟
-                if wait_time >= downloading_timeout and filename != attach['filename']:
-                    print(f"{C.GOLD} ^ {title['index']}\t{attach['index']:02}: {attach['filename']} 下载时长过久，放弃等待，执行下一个。{C.END}")
-                    break
+        if bool(can_move_folder) or bool(can_rename_file):
+          wait_time = 0
+          while wait_time <= downloading_timeout:
+
+            if get_last_filepath() != '':
+               break
+
+            if wait_time %2 == 0: 
+              # 如果下载时长过久。默认300: 大于5分钟
+              if wait_time >= downloading_timeout:
+                print(f"{C.GOLD} ^ {title['index']}\t{attach['index']:02}: {attach['filename']} 下载时长过久，放弃等待，执行下一个。{C.END}")
+                break
+              
+              # 每分钟提示
+              if wait_time >= 60 and not bool(wait_time % 60):
+                print(f"{C.SILVER}^ {title['index']}\t{attach['index']:02}: {attach['filename']} 正在下载... 您已等待了 {wait_time / 60} 分钟。{C.END}")
+
+            time.sleep(2)
+            wait_time += 2
             
-            time.sleep(1)
-            wait_time += 1
-        
         #---------------------------------------------------------------------------
         # download finish
         #---------------------------------------------------------------------------
-        
-        # 检查该文件是否于之前的文件重复 ：file.jpg & file(1).jpg
-        if len(get_all_filename()) > 0:
-            lastpath = get_last_filepath()
-            if filecmp.cmp(lastpath, DOWNLOAD_FOLDER):
-                print(f"{C.BLUE}{attach['filename']} 已存在。{C.END}\n ")
-                os.remove(lastpath)
-                continue
-        
+
         # 是否允许重命名文件
         if bool(can_rename_file):
-            rename_file(get_last_filepath(), rename_path)
-        
+          rename_file(get_last_filepath(), rename_path, {attach['filename']})
+         
         # 是否允许移动到文件夹
         if bool(can_move_folder):
-           move_file(get_last_filepath(), folder_path)
-        
+          move_file(get_last_filepath(), folder_path, {attach['filename']})
+
+        # 打印日志
+        if bool(can_print_attch):
+            print(f"+ {title['index']:<4}\t{attach_count:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
+
     switch_to(find_all(Window())[0])
   
   # 下载结束
@@ -924,20 +916,21 @@ def thread_webdriver():
 # os
 #-------------------------------------------------------------------------------
   
-def get_all_filename(path = DOWNLOAD_FOLDER):
-    return [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-  
 # 返回最后一个下载完成的文件路径
-def get_last_filepath(filepath = DOWNLOAD_FOLDER):
-    files = get_all_filename(filepath)
+def get_last_filepath(path = DOWNLOAD_FOLDER):
+    fn = lambda f: os.path.join(path, f)
+    files = [f for f in os.listdir(path) if os.path.isfile(fn(f)) and os.path.splitext(f)[1] not in ['.tmp','.crdownload']]
     if len(files) == 0:
       return ''
     else:
-      files.sort(key=lambda fn: os.path.getmtime(os.path.join(filepath, fn)))
-      return os.path.join(filepath, files[-1])
-  
+      files.sort(key=lambda f: os.path.getmtime(fn(f)))
+      return os.path.join(path, files[-1])
+
 # 将文件重命名
-def rename_file(oldpath, newpath):
+def rename_file(oldpath, newpath, err = ''):
+    if oldpath == '' or not os.path.exists(oldpath):
+      print(f"{C.RED}[rename_file] {err} 文件不存在。{C.END}")
+      return
     rootpath = os.path.dirname(oldpath)
     # 先检查目标文件是否已存在
     if os.path.exists(newpath):
@@ -959,10 +952,12 @@ def rename_file(oldpath, newpath):
         os.rename(oldpath, newpath)
   
 # 将文件移动到目标文件夹
-def move_file(filepath, newfolder):
+def move_file(filepath, newfolder, err = ''):
+    if filepath == '' or not os.path.exists(filepath):
+      print(f"{C.RED}[move_file] {err} 文件不存在。{C.END}")
+      return
     filename = os.path.basename(filepath)
     newpath = os.path.join(newfolder, filename)
-    
     # 先检查目标文件夹是否已存在该文件
     if os.path.exists(newpath): 
         # 先检查两个文件是否相同。
@@ -971,7 +966,7 @@ def move_file(filepath, newfolder):
             os.remove(filepath)
         else:
             rename_file(filepath, newpath)
-            shutil.move(get_last_filepath(), newfolder)
+            shutil.move(newpath, newfolder)
     else:
         shutil.move(filepath, newfolder)
   
@@ -996,3 +991,4 @@ def main():
 # END
 #-------------------------------------------------------------------------------
 if __name__ == '__main__': os.system('cls'); print(''); main();
+
