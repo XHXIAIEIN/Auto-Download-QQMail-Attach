@@ -842,7 +842,7 @@ def thread_webdriver():
                 else:
                     folderfile_path = os.path.join(folder_path, attach['filename'])
                     if os.path.isfile(folderfile_path) and os.path.getsize(folderfile_path) == attach['filebyte']:
-                        print(f"{C.BLUE}{attach['filename']} 文件已存在，跳过本次下载。{C.END}")
+                        print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在文件夹，跳过本次下载。{C.END}")
                         continue
         
         # 打印日志
