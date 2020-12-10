@@ -386,7 +386,7 @@ def thread_webdriver():
                 time.sleep(1)
         
         try: wait_until(S('#mainFrameContainer').exists)
-        except TimeoutException:print(f"{C.RED}等待超时{C.END}")
+        except :print(f"{C.RED}等待超时{C.END}")
     
     #---------------------------------------------------------------------------
     # update token
@@ -402,13 +402,18 @@ def thread_webdriver():
     if bool(can_print_folder_table): 
         
         # 展开文件夹列表
-        if S('#icon_personal').web_element.get_attribute('class') == 'fd_on': click(S("#folder_personal"))
+        if S('#icon_personal').web_element.get_attribute('class') == 'fd_on': 
+            click(S("#folder_personal"))
         
         for i, e in enumerate([find_all(S("#personalfolders > li > a"))][0], start=1):
             aid = e.web_element.get_attribute('id').split('_')[1]
             atl = e.web_element.get_attribute('title')
             folderslist.append({'index':f"{i:02}", 'id':int(aid), 'name':re.sub(r'未读邮件(.*?)封','',atl)})
         
+        # 关闭文件夹列表
+        if S('#icon_personal').web_element.get_attribute('class') == 'fd_off': 
+            click(S("#folder_personal"))
+
         # 打印好看的表格 - 文件夹列表
         foldertable = prettytable.PrettyTable()
         foldertable.field_names = ["#", "folderid", "name"]
@@ -456,11 +461,12 @@ def thread_webdriver():
     
       # 展开标签列表
       if S('#icon_tag').web_element.get_attribute('class') == 'fd_on': 
-        click(S("#folder_tag"))
+          click(S("#folder_tag"))
     
       try: wait_until(lambda: S("#tagfoldersDiv > ul#tagfolders").exists())
-      except TimeoutException: print(f"{C.RED}等待超时{C.END}")
-    
+      except: print(f"{C.RED}等待超时{C.END}")
+      
+      # 所有标签列表
       tags = [tag.web_element.get_attribute('title') for tag in find_all(S('#tagfolders > li > a'))]
     
       if bool(can_tag_nofile) and bool(str_tag_nofile) and not str_tag_nofile in tags:
@@ -480,7 +486,11 @@ def thread_webdriver():
           wait_until(S('#QMconfirm_QMDialog').exists)
           write(f'{str_tag_timeoutfile}', S("#QMconfirm_QMDialog_txt"))
           click(S('#QMconfirm_QMDialog_confirm'))
-    
+      
+      # 关闭标签列表
+      if S('#icon_tag').web_element.get_attribute('class') == 'fd_off': 
+          click(S("#folder_tag"))
+       
     #---------------------------------------------------------------------------
     # mail
     #---------------------------------------------------------------------------
@@ -490,7 +500,7 @@ def thread_webdriver():
     time.sleep(1)
     
     try: wait_until(S('#_ut_c').exists)
-    except TimeoutException:print(f"{C.RED}等待超时{C.END}")
+    except :print(f"{C.RED}等待超时{C.END}")
     
     # 读取文件夹名称、总邮件数
     folder_name = chrome.title.split(" - ")[1]
@@ -640,7 +650,7 @@ def thread_webdriver():
         time.sleep(1)
         
         try: wait_until(S('#frm').exists)
-        except TimeoutException:print(f"{C.RED}等待超时{C.END}")
+        except :print(f"{C.RED}等待超时{C.END}")
         
         # 您请求的频率太快，请稍后再试
         wait = 0
@@ -774,7 +784,7 @@ def thread_webdriver():
             attach_count += 1
             
             if bool(can_print_attch):
-                print(f"+ {title['index']:<4}\t{'%04d'%attach_count}: {title['name']:<24}\t{title['email']:<24}\t{attach['filename']}")
+                print(f"+ {title['index']:<4}\t{'%04d'%attach_count}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
             
             #---------------------------------------------------------------------------
             # rule
