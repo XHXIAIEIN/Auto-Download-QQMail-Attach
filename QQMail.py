@@ -410,7 +410,7 @@ def thread_webdriver():
             folderslist.append({'index':f"{i:02}", 'id':int(aid), 'name':re.sub(r'未读邮件(.*?)封','',atl)})
         
         # 打印好看的表格 - 文件夹列表
-        foldertable = pt.PrettyTable()
+        foldertable = prettytable.PrettyTable()
         foldertable.field_names = ["#", "folderid", "name"]
         foldertable.align = "l"
         for a in folderslist: foldertable.add_row([a['index'], a['id'], a['name']])
