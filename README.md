@@ -297,52 +297,6 @@ config_timeout_script = 1500
 ```
 
 <br>   
-    
-   
-### 6 附加脚本：将含有关键词的文件移动到指定文件夹。
-
-```
-import os
-import shutil
-import fnmatch
-
-def find_key(key,path):
-    for n in os.listdir(os.getcwd()):
-        if fnmatch.fnmatch(n, key):
-            print('{}：{}'.format(key,n))
-            shutil.move(n,path)
-
-def checkfile():
-    all_md5 = {}
-    filedir = os.walk(os.getcwd())
-    for i in filedir:
-        for tlie in i[2]:
-            if md5sum(tlie) in all_md5.values():
-                print('- {}'.format(tlie))
-                shutil.move(tlie,'md5')
-                #os.remove(tlie)
-            else:
-                all_md5[tlie] = md5sum(tlie)
-
-if __name__ == '__main__':
-    # 提前新建好需要分类的文件夹
-    os.mkdir('psd')
-    os.mkdir('图片')
-    os.mkdir('反馈')
-    os.mkdir('VIP')
-    
-    # 过滤扩展名：比如将.jpg文件移动到‘图片’文件夹。
-    find_key('*.psd','psd')
-    find_key('*.PSD','psd')
-    find_key('*.jpg','图片')
-    find_key('*.png','图片')
-    
-    # 过滤关键词：比如将含有‘issues’的文件名移动到'反馈'目录
-    find_key('*issues*.*','反馈')
-    find_key('*会员*.*','VIP')
-```
-   
-   <br>   
    
 ## 特性
 - 自定义附件的下载路径
