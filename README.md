@@ -31,8 +31,10 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
    1. **安装Homebrew**  
     https://brew.sh/index_zh-cn
       
-    简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
-    ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
+   简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
+    ```
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+    ```
 
 <br>  
 
