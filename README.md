@@ -28,7 +28,7 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 
 如果你是MAC用户。操作相对简单一些：
 
-1. **安装Homebrew**  
+    1. **安装Homebrew**  
     https://brew.sh/index_zh-cn
       
     简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
@@ -36,7 +36,7 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 
 <br>  
 
-2. **安装 python3 + selenium + helium + chromedriver**
+    2. **安装 python3 + selenium + helium + chromedriver**
     简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
     
     ```
@@ -51,7 +51,7 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 ### Windows
 Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
 
-1. **Python 3**   
+    1. **Python 3**   
     https://www.python.org/
 
     > 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
@@ -60,7 +60,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
  
 <br>   
  
-2. **WebDriver for Chrome**  
+    2. **WebDriver for Chrome**  
     https://sites.google.com/a/chromium.org/chromedriver/downloads
 
 <br>   
@@ -82,14 +82,14 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
    
 <br>   
    
-3. **Nodejs**   <br>
+    3. **Nodejs**   <br>
     https://nodejs.org/zh-cn/
     下载最新版即可，跟着引导安装，一直点下一步。
    
    <br>   
   
   
-4. **pip install x**  
+    4. **pip install x**  
     NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。 <br>
     以管理员权限进入命令行。接着输入下方的两条指令：
 
@@ -109,9 +109,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
 ## 如何使用
 
 已经安装了Python，会发现开始菜单新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】 <br>
- <br>
-然后把[QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File/blob/master/QQMail)里的代码复制粘贴到IDLE中，将文件保存在任意位置，随便取个名比如QQmail.py。 <br>
-另外建议不要放在桌面，因为脚本会生成一个文件夹用来储存浏览器缓存，可能有些占位置。 <br>
+然后把[QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File/blob/master/QQMail)里的代码复制粘贴到IDLE中，将文件保存在任意位置(比如桌面)，随便取个名比如QQmail.py。 <br>
  <br>
 当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
    
