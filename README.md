@@ -27,22 +27,22 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 ### MAC
 
 如果你是MAC用户。操作相对简单一些：
-1. **安装Homebrew**
-      https://brew.sh/index_zh-cn
+1. **安装Homebrew**  
+https://brew.sh/index_zh-cn
       
-      简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
-      ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
+简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
+```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
 
 <br>  
 
 2. **安装 python3 + selenium + helium + chromedriver**
-     简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
-     ```
-     brew install chromedriver
-     brew install selenium
-     brew install helium
-     brew install prettytable
-     ```
+简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
+```
+brew install chromedriver
+brew install selenium
+brew install helium
+brew install prettytable
+```
    
 <br>   
      
@@ -59,7 +59,7 @@ https://www.python.org/
 <br>   
  
 2. **WebDriver for Chrome**  
-    https://sites.google.com/a/chromium.org/chromedriver/downloads
+https://sites.google.com/a/chromium.org/chromedriver/downloads
 
 <br>   
 
@@ -81,9 +81,9 @@ https://www.python.org/
 <br>   
    
 3. **Nodejs**   <br>
-  https://nodejs.org/zh-cn/
+https://nodejs.org/zh-cn/
 
-> 下载最新版即可，跟着引导安装，一直点下一步。
+下载最新版即可，跟着引导安装，一直点下一步。
    
    <br>   
   
