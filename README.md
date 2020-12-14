@@ -27,22 +27,24 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 ### MAC
 
 如果你是MAC用户。操作相对简单一些：
+
 1. **安装Homebrew**  
-https://brew.sh/index_zh-cn
+    https://brew.sh/index_zh-cn
       
-简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
-```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
+    简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
+    ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"```
 
 <br>  
 
 2. **安装 python3 + selenium + helium + chromedriver**
-简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
-```
-brew install chromedriver
-brew install selenium
-brew install helium
-brew install prettytable
-```
+    简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
+    
+    ```
+    brew install chromedriver
+    brew install selenium
+    brew install helium
+    brew install prettytable
+    ```
    
 <br>   
      
@@ -50,16 +52,16 @@ brew install prettytable
 Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
 
 1. **Python 3**   
-https://www.python.org/
+    https://www.python.org/
 
-> 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
-> - [x] 1. Install Now
-> - [x] 2. Disable path length limit
+    > 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
+    > - [x] 1. Install Now
+    > - [x] 2. Disable path length limit
  
 <br>   
  
 2. **WebDriver for Chrome**  
-https://sites.google.com/a/chromium.org/chromedriver/downloads
+    https://sites.google.com/a/chromium.org/chromedriver/downloads
 
 <br>   
 
@@ -81,23 +83,22 @@ https://sites.google.com/a/chromium.org/chromedriver/downloads
 <br>   
    
 3. **Nodejs**   <br>
-https://nodejs.org/zh-cn/
-
-下载最新版即可，跟着引导安装，一直点下一步。
+    https://nodejs.org/zh-cn/
+    下载最新版即可，跟着引导安装，一直点下一步。
    
    <br>   
   
   
 4. **pip install x**  
-NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。 <br>
-以管理员权限进入命令行。接着输入下方的两条指令：
+    NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。 <br>
+    以管理员权限进入命令行。接着输入下方的两条指令：
 
-```
-python -m pip install --upgrade pip
-pip install selenium
-pip install helium
-pip install prettytable
-```
+    ```
+    python -m pip install --upgrade pip
+    pip install selenium
+    pip install helium
+    pip install prettytable
+    ```
  
 <br>   
    
