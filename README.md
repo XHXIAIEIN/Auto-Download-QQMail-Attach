@@ -29,24 +29,24 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 如果你是MAC用户。操作相对简单一些：
 
    1. **安装Homebrew**  
-    https://brew.sh/index_zh-cn
+   https://brew.sh/index_zh-cn
       
    简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
-    ```
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-    ```
+   ```
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+   ```
 
 <br>  
 
    2. **安装 python3 + selenium + helium + chromedriver**  
-    简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
+   简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
     
-    ```
-    brew install chromedriver
-    brew install selenium
-    brew install helium
-    brew install prettytable
-    ```
+   ```
+   brew install chromedriver
+   brew install selenium
+   brew install helium
+   brew install prettytable
+   ```
    
 <br>   
      
