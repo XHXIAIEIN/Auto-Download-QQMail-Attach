@@ -28,7 +28,7 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 
 如果你是MAC用户。操作相对简单一些：
 
-    1. **安装Homebrew**  
+   1. **安装Homebrew**  
     https://brew.sh/index_zh-cn
       
     简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
@@ -36,7 +36,7 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 
 <br>  
 
-    2. **安装 python3 + selenium + helium + chromedriver**
+   2. **安装 python3 + selenium + helium + chromedriver**  
     简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
     
     ```
@@ -51,8 +51,8 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 ### Windows
 Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
 
-    1. **Python 3**   
-    https://www.python.org/
+   1. **Python 3**   
+    https://www.python.org/  
 
     > 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
     > - [x] 1. Install Now
@@ -60,7 +60,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
  
 <br>   
  
-    2. **WebDriver for Chrome**  
+   2. **WebDriver for Chrome**  
     https://sites.google.com/a/chromium.org/chromedriver/downloads
 
 <br>   
@@ -82,15 +82,15 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
    
 <br>   
    
-    3. **Nodejs**   <br>
-    https://nodejs.org/zh-cn/
+   3. **Nodejs**  
+    https://nodejs.org/zh-cn/  
     下载最新版即可，跟着引导安装，一直点下一步。
    
    <br>   
   
   
-    4. **pip install x**  
-    NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。 <br>
+   4. **pip install x**  
+    NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。    
     以管理员权限进入命令行。接着输入下方的两条指令：
 
     ```
@@ -101,6 +101,7 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
     ```
  
 <br>   
+<br>  
    
 繁琐的前置工作完成了。接着可以正式开始咯。  
    
@@ -122,94 +123,96 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
    
 登陆进邮箱主页后，需要做几件事   
    
-### 1 邮箱文件夹
+### 1 邮箱文件夹  
 把你想要下载的邮件**移动到**文件夹里，方便整理区分。
    
 <br>   
    
-### 2 新窗口打开文件夹（重要）
-从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的文件夹ID参数:  `folderid` <br>
+### 2 新窗口打开文件夹（重要）  
+从邮箱左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，**右键-新窗口打开**。在浏览器的地址栏找到链接的文件夹ID参数:  `folderid`  
 ```
 https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_list?folderid={ A }%26page={ x }
-```
-脚本中也提供了将文件夹列表输出到控制台的选项，可以在Config分栏里手动开启 can_print_folder_table = 1  
-
+```  
+  
 <br>   
    
 ### 3 修改脚本里面的自定义参数，然后启动脚本
 
 主要有几个参数需要修改：
 
-1. 邮箱登录账号(QQ) （必填）. 
-```
-QQNUMBER="132465798"
-PASSWORD="132465798"
-```
-请放心填，没人能偷看你屏幕。。
-
-
+   1. 邮箱登录账号(QQ) （必填）  
+    请放心填，没人能偷看你屏幕。。  
+    ```
+    QQNUMBER="132465798"
+    PASSWORD="132465798"
+    ```
+   
 <br> 
    
-2. 附件下载路径（必填）. 
-浏览器下载的文件会自动保存在这里。   <br>
-```
-ROOTPATH = "D:\\Downloads\\2020"
+   2. 附件下载路径（必填）  
+    浏览器下载的文件会自动保存在这里。    
+    
+    ```
+    ROOTPATH = "D:\\Downloads\\2020"
 
-DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录  "D:\\Downloads\\2020\\download"
-USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
-```
-注：路径需要以 \\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ``` <br>
-如果你是MAC，则需要 \\ 作为分隔符。
- 
+    DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录  "D:\\Downloads\\2020\\download"
+    USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
+    ```
+      
+   注：路径需要以 /\\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ```     
+   如果你是MAC，则需要 / 作为分隔符。  
+    
+
 <br>   
    
-3. 文件夹ID（必填）. <br>
-```
-FOLDERID = 200
-```
-其实脚本在打开邮件时，会把你所有的文件夹打印在控制台。你可以从记录看到对应的文件夹ID。 <br>
-或者在左边面板我的文件夹，右键新窗口打开，也可以在浏览器地址栏找到 folderid
+   3. 文件夹ID（必填）.  
+    看邮箱页面左边面板找到你想下载的文件夹，右键新窗口打开，可以在浏览器地址栏找到一个参数 `folderid`  
+    ```
+    FOLDERID = 200
+    ```
    
 <br>   
    
-4. 计划任务 <br>
-- Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。
-- Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。
+4. 计划任务  
+    - Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。
+    - Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。
 
-```
-Title_Task = { 'start':1, 'step':0, 'end': 0 }
-Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
-```
-
-start  从第几个开始。默认是1 
-steps  执行多少次结束。比如从1开始，往后数10个结束，也就是在第10封邮件时结束。
-end    表示到第几个结束。比如在第20封邮件时结束。
-end 和 steps不同的地方是，end代表着结束的终点，而steps则是从开始后累计的数量。
+     ```
+     Title_Task = { 'start':1, 'step':0, 'end': 0 }
+     Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
+     ```
+    
+    start  从第几个开始。默认是1   
+    steps  执行多少次结束。比如从1开始，往后数10个结束，也就是在第10封邮件时结束。  
+    end    表示到第几个结束。比如在第20封邮件时结束。  
+    end 和 steps不同的地方是，end代表着结束的终点，而steps则是从开始后累计的数量。  
 
    
 <br>   
    
 5. 邮件主题关键词过滤 <br>
-title_whitelist_keys，白名单 <br>
-title_blacklist_keys，黑名单 <br>
-``` 
-title_whitelist_keys = ['反馈','2020'] # 只处理邮件主题中包含这两个关键词的邮件
-title_blacklist_keys = [''] 
-```
+    title_whitelist_keys，白名单  
+    title_blacklist_keys，黑名单  
+      
+    ``` 
+    title_whitelist_keys = ['反馈','2020'] # 只处理邮件主题中包含这两个关键词的邮件
+    title_blacklist_keys = [''] 
+    ```
    
 <br>   
    
-6. 附件类型词过滤 <br>
-attach_blacklist_filetype，白名单 <br>
-attach_whitelist_filetype，黑名单 <br>
-``` 
-attach_blacklist_filetype = [''] 
-attach_whitelist_filetype = ['psd', 'ai']  # 不下载 psd, ai 类型的文件
-```
+6. 附件类型词过滤   
+    attach_blacklist_filetype，白名单  
+    attach_whitelist_filetype，黑名单  
+      
+    ``` 
+    attach_blacklist_filetype = [''] 
+    attach_whitelist_filetype = ['psd', 'ai']  # 不下载 psd, ai 类型的文件
+    ```
    
 <br> 
    
-7. Config 高级参数<br>
+7. Config 高级参数  
 脚本中还提供了一些高级选项，可以根据实际需要来开启或关闭。通常修改参数为 1 或 0
 
 ```python
@@ -335,8 +338,8 @@ config_timeout_script = 1500
 
 1. 如果开启了[按邮件新建文件夹]或[自动重命名]功能，附件名包含空格字符，可能会导致脚本崩溃。 <br> （目前暂未修复）
 
-2. 如果。 <br> （目前暂未修复）
-
+2. 如果网络异常，浏览器可能提示下载失败，但脚本会长时间等待它下载完成，或者超过5分钟后，脚本也会将它跳过。 <br>
+  （解决方案：如果发现下载失败，可以手动在浏览器底部的下载提示中继续执行。）
   
 
 <br>   
