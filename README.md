@@ -140,75 +140,74 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_
 
 主要有几个参数需要修改：
 
-   1. 邮箱登录账号(QQ) （必填）  
-    请放心填，没人能偷看你屏幕。。  
-    ```
-    QQNUMBER="132465798"
-    PASSWORD="132465798"
-    ```
+1. **邮箱登录账号**（必填）  
+请放心填，没人能偷看你屏幕。。
+```
+QQNUMBER="132465798"  
+PASSWORD="132465798"
+```
    
 <br> 
    
-   2. 附件下载路径（必填）  
-    浏览器下载的文件会自动保存在这里。    
+2. **附件下载路径**（必填）  
+浏览器下载的文件会自动保存在这里。只需要填`ROOTPATH`， 剩下两个会在这个目录创建文件夹。
     
-    ```
-    ROOTPATH = "D:\\Downloads\\2020"
+```
+ROOTPATH = "D:\\Downloads\\2020"
 
-    DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录  "D:\\Downloads\\2020\\download"
-    USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
-    ```
+DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录 即："D:\\Downloads\\2020\\download"
+USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据 即："D:\\Downloads\\2020\\selenium"
+```
       
-   注：路径需要以 /\\ 作为分隔。如： ``` DOWNLOAD_FOLDER='D:\\Downloads\\' ```     
-   如果你是MAC，则需要 / 作为分隔符。  
+注：路径需要以 \\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
+如果你是MAC，则需要 / 作为分隔符。  
     
 
 <br>   
    
-   3. 文件夹ID（必填）.  
-    看邮箱页面左边面板找到你想下载的文件夹，右键新窗口打开，可以在浏览器地址栏找到一个参数 `folderid`  
-    ```
-    FOLDERID = 200
-    ```
+3. **文件夹ID**（必填）  
+邮箱页面左边面板的文件夹列表中，找到你想下载的文件夹，右键新窗口打开，可以在浏览器地址栏找到一个参数 `folderid`    
+
    
 <br>   
    
 4. 计划任务  
-    - Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。
-    - Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。
+- Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。
+- Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。
 
-     ```
-     Title_Task = { 'start':1, 'step':0, 'end': 0 }
-     Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
-     ```
-    
-    start  从第几个开始。默认是1   
-    steps  执行多少次结束。比如从1开始，往后数10个结束，也就是在第10封邮件时结束。  
-    end    表示到第几个结束。比如在第20封邮件时结束。  
-    end 和 steps不同的地方是，end代表着结束的终点，而steps则是从开始后累计的数量。  
+start  从第几个开始。默认是1   
+steps  执行多少次结束。比如从1开始，往后数10个结束，也就是在第10封邮件时结束。  
+end    表示到第几个结束。比如在第20封邮件时结束。  
+
+end 和 steps不同的地方是，end代表着结束的终点，而steps则是从开始后累计的数量。  
+
+```
+Title_Task = { 'start':1, 'step':0, 'end': 0 }
+Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
+```
 
    
 <br>   
    
 5. 邮件主题关键词过滤 <br>
-    title_whitelist_keys，白名单  
-    title_blacklist_keys，黑名单  
+title_whitelist_keys，白名单  
+title_blacklist_keys，黑名单  
       
-    ``` 
-    title_whitelist_keys = ['反馈','2020'] # 只处理邮件主题中包含这两个关键词的邮件
-    title_blacklist_keys = [''] 
-    ```
+``` 
+title_whitelist_keys = ['反馈','2020'] # 只处理邮件主题中包含这两个关键词的邮件
+title_blacklist_keys = [''] 
+```
    
 <br>   
    
 6. 附件类型词过滤   
-    attach_blacklist_filetype，白名单  
-    attach_whitelist_filetype，黑名单  
+attach_blacklist_filetype，白名单  
+attach_whitelist_filetype，黑名单  
       
-    ``` 
-    attach_blacklist_filetype = [''] 
-    attach_whitelist_filetype = ['psd', 'ai']  # 不下载 psd, ai 类型的文件
-    ```
+``` 
+attach_blacklist_filetype = [''] 
+attach_whitelist_filetype = ['psd', 'ai']  # 不下载 psd, ai 类型的文件
+```
    
 <br> 
    
