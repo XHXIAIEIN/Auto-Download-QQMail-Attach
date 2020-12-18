@@ -160,7 +160,7 @@ ROOTPATH = "D:\\Downloads\\2020"
 DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录 即："D:\\Downloads\\2020\\download"
 USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据 即："D:\\Downloads\\2020\\selenium"
 ```  
->  注：Win系统路径需要以 \\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
+>  注：Win系统路径需要以 \\\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
 >      MAC系统则需要 / 作为分隔符。  
   
 <br>   
