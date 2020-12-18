@@ -140,7 +140,7 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={ x }&url=/cgi-bin/mail_
    
 ### 3 修改脚本里面的自定义参数，然后启动脚本
 
-主要有几个参数需要修改：
+主要有几个参数需要修改：  
 
 1. **邮箱登录账号**（必填）  
 请放心填，没人能偷看你屏幕。。
@@ -149,26 +149,27 @@ QQNUMBER="132465798"
 PASSWORD="132465798"
 ```
   
-<br>   
+<br>  <br>  
   
 2. **附件下载路径**（必填）  
-浏览器下载的文件会自动保存在这里。只需要填`ROOTPATH`， 剩下两个会在这个目录创建文件夹。
-    
+浏览器下载的文件会自动保存在这里。只需要填`ROOTPATH`， 剩下两个会在这个目录创建文件夹。  
+> 注：Win系统路径需要以 \\\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
+>     MAC系统则需要 / 作为分隔符。 
 ```
 ROOTPATH = "D:\\Downloads\\2020"
-
-DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录 即："D:\\Downloads\\2020\\download"
-USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据 即："D:\\Downloads\\2020\\selenium"
-```  
->  注：Win系统路径需要以 \\\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
->      MAC系统则需要 / 作为分隔符。  
+DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 不需要修改。附件实际下载目录 即："D:\\Downloads\\2020\\download"
+USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 不需要修改。浏览器的缓存数据 即："D:\\Downloads\\2020\\selenium"
+```   
   
-<br>   
+<br>  <br>  
   
 3. **文件夹ID**（必填）  
 邮箱页面左边面板的文件夹列表中，找到你想下载的文件夹，右键新窗口打开，可以在浏览器地址栏找到一个参数 `folderid`    
+```
+https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={x}&url=/cgi-bin/mail_list?folderid={ A }%26page={x}
+``` 
   
-<br>   
+<br>  <br>  
   
 4. **计划任务**  
 - Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。  
@@ -185,7 +186,7 @@ Title_Task = { 'start':1, 'step':0, 'end': 0 }
 Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
 ```
   
-<br>   
+<br>  <br>  
   
 5. **邮件主题关键词过滤**   
 title_whitelist_keys，白名单  
@@ -195,8 +196,8 @@ title_blacklist_keys，黑名单
 title_whitelist_keys = ['反馈','2020'] # 只处理邮件主题中包含这两个关键词的邮件
 title_blacklist_keys = [''] 
 ```
-   
-<br>   
+  
+<br>  <br>  
    
 6. **附件类型词过滤**   
 attach_blacklist_filetype，白名单  
@@ -206,9 +207,9 @@ attach_whitelist_filetype，黑名单
 attach_blacklist_filetype = [''] 
 attach_whitelist_filetype = ['psd', 'ai']  # 不下载 psd, ai 类型的文件
 ```
-   
-<br> 
-   
+  
+<br>  <br>  
+  
 7. **Config 高级参数**  
 脚本中还提供了一些高级选项，可以根据实际需要来开启或关闭。通常修改参数为 1 或 0
 
@@ -297,9 +298,9 @@ config_timeout_pageLoad = 10000
 config_timeout_script = 1500
 
 ```
-
-<br>   
-   
+  
+<br>  <br>  
+  
 ## 特性
 
 **下载**
@@ -328,9 +329,8 @@ config_timeout_script = 1500
 - 脚本结束后会生成csv文件，包含所有附件列表信息。
 
   
-<br>   
-   
-
+<br>  <br>  
+  
 ## 可能出现的问题
 
 1. 如果开启了[按邮件新建文件夹]或[自动重命名]功能，附件名包含空格字符，可能会导致脚本崩溃。  
