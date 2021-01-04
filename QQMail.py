@@ -9,7 +9,7 @@ import prettytable
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2020/12/10
+# 更新：2021/04/04
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File
 #===============================================================================
 
@@ -44,6 +44,7 @@ import prettytable
 #...............................................................................
 #  Windows用户，安装 python 和 NodeJs 之后，运行 cmd 在控制台输入以下指令：
 #  python -m pip install --upgrade pip
+#  pip install selenium
 #  pip install helium
 #  pip install prettytable
 #...............................................................................
@@ -82,8 +83,8 @@ is_mac_user = 0
 # 如果你登陆了相同QQ账号的客户端，会自动帮你点击快速登录的头像。否则填写账号密码
 #...............................................................................
  
-QQNUMBER="132465798"
-PASSWORD="132465798"
+QQNUMBER="134625798"
+PASSWORD="134625798"
  
 #...............................................................................
 # 附件下载到哪个文件夹。
@@ -94,11 +95,12 @@ PASSWORD="132465798"
 # 注：Win用户用 '\\' 作为路径分隔符。如："d:\\download\\email"
 #     Mac用户用 '/' 作为路径分隔符。如："~/Downloads/email"
 #...............................................................................
- 
-ROOTPATH = "D:\\Downloads\\2020"
-DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录
+
+ROOTPATH = "D:\\XHXIAIEIN\\Downloads\\2020"
+DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"1228")         # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
  
+
 #...............................................................................
 #  要下载的邮箱文件夹ID
 #...............................................................................
@@ -113,7 +115,7 @@ FOLDERID = 200
 # 指定下载计划。
 #-------------------------------------------------------------------------------
 #  start:     从列表第n个开始。（包含n，即列表第一个就是n。）默认值：1
-#  end:       在列表第n个结束。（包含n，即列表最后一个是n。）默认值：-1
+#  end:       在列表第n个结束。（包含n，即列表最后一个是n。）默认值：0
 #  step:      从开始计算，累计n个结束。（包含start，即列表最终有n个）默认值：0
 #  autoNext:  是否允许翻页。允许：1  /  禁用：0
 #-------------------------------------------------------------------------------
@@ -123,7 +125,6 @@ Title_Task = { 'start':1, 'step':0, 'end': 0 }
  
 # 翻页规则
 Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
-
  
 #...............................................................................
 # 邮件主题，关键词过滤
@@ -157,7 +158,7 @@ attach_whitelist_filetype = ['']
 # 是否禁止显示网页图片。
 # 首次登录时，需要开启显示图片功能，否则无法进行滑块安全验证。
 # 登录时，勾选"下次自动登录"，下次就可以手动开启禁用图片了。
-can_disabled_images = 0
+can_disabled_images = 1
  
 #···············································································
 # 下载
@@ -166,28 +167,30 @@ can_disabled_images = 0
 # 是否需要下载附件
 can_download_file = 1
  
-# 是否重命名文件
+# 是否重命名文件 
+# 紧急备注：当前重命名选项会出现编号错乱问题，不建议使用！ -2021.01.04
 can_rename_file = 0
+
+# 是否将文件名的空格转换为下划线
+can_replace_filename_space_to_hyphens = 1
  
 # 是否按邮件创建文件夹
-can_move_folder = 1
+can_move_folder = 0
  
 # 是否根据投稿时间顺序下载附件。：即从最后一页往前下载。
-can_reverse_list = 0
+can_reverse_list = 1
  
-# 下载前，检测文件是否存在，若已存在则跳过 / 继续下载。
-# 若继续下载，新下载的文件名可能会自动被加上（1）这样的序号。
-# 检测方式：对比文件名以及文件大小是否相同。
+# 下载前，对比文件名以及文件大小，在本地是否存在相同文件。
+# 'skip'    :  如果存在相同的文件名，并且文件大小相同。则跳过下载。
+# 'continue':  继续下载，重复的文件名可能会自动被加上（1）这样的序号。
 ready_download_but_file_exists = 'skip' or 'continue'
  
 #···············································································
 # 星标 / 标签
 #···············································································
  
-# 没有附件的邮件设为星标
+# 将没有附件/过期附件的邮件设为星标
 can_star_nofile = 1
- 
-# 过期附件的邮件设为星标
 can_star_timeoutfile = 0
  
 # 没有附件添加标签
@@ -205,8 +208,9 @@ str_tag_timeoutfile = '过期附件'
 # 是否在控制台打印邮件信息
 can_print_title = 1
 can_print_attch = 1
-can_print_folder = 0
 
+can_print_folder = 0
+ 
 # 是否在控制台打印统计表格
 can_print_title_table = 1
  
@@ -221,6 +225,7 @@ can_export_attchdata_to_csv = 1
 # 是否需要读取标题、邮件
 can_load_title = 1
 can_load_email = 1
+can_load_attach = 1
  
 # 下载等待时长(单位：秒)。超过时长后则放弃后续操作，如移动文件夹或重命名。
 downloading_timeout = 300
@@ -272,11 +277,7 @@ config_timeout_script = 1500
 #-------------------------------------------------------------------------------
  
 # 重命名规则
-# 123456@qq.com_20201104_1430'59_file.jpg
-rule_rename = "address_date4_filename2"
- 
-# file_1104_0.jpg
-# rule_rename = "filename1_date1_titleindex.extension1"
+rule_rename = "attchindex_filename2"     
  
 # 文件夹
 # 123456@qq.com(20201104_1430'59)
@@ -287,6 +288,7 @@ rule_folder = "address(date4)"
 #                 " 请 勿 跨 过 这 块 区 域 修 改 内 容 "
 #===============================================================================
 '''
+  
 #-------------------------------------------------------------------------------
 # print color
 #-------------------------------------------------------------------------------
@@ -362,6 +364,8 @@ def thread_webdriver():
     chrome.desired_capabilities['timeouts']['pageLoad'] = config_timeout_pageLoad or 10000
     chrome.desired_capabilities['timeouts']['script'] = config_timeout_script or 1500
   
+
+  print(f"如果页面等待时间过长(大于5秒)，可尝试在浏览器页面按一次Esc键。")
   go_to("https://mail.qq.com")
   
   #---------------------------------------------------------------------------
@@ -657,246 +661,256 @@ def thread_webdriver():
       print(f"\n\n{title_table}\n共有{len(titlelist)}封邮件。\n\n")
   
   # 如果不需要读取邮件
-  if not bool(can_load_email):
-    os.system('pause')
-    return
-  
-  #---------------------------------------------------------------------------
-  # download path
-  #---------------------------------------------------------------------------
-  
-  if not os.path.exists(DOWNLOAD_FOLDER): 
-    os.mkdir(DOWNLOAD_FOLDER)
-  
-  #---------------------------------------------------------------------------
-  # mail
-  #---------------------------------------------------------------------------
-  
-  TEMP = {}
-  
-  # 打开邮件正文
+  if bool(can_load_email):
 
-  for index, title in enumerate(titlelist, start=0):
-    
-    go_to(f"https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={token_sid}&url=/cgi-bin/readmail?t=readmail%26mailid={title['mailid']}%26mode=pre")
-    time.sleep(2)
-    
-    # 您请求的频率太快，请稍后再试
-    wait = 0
-    while not S('#mainmail').exists():
-        if wait == 0: time.sleep(10); refresh()
-        elif wait == 2: time.sleep(5); refresh()
-        elif wait%3 == 0: time.sleep(3); refresh()
-        else:time.sleep(1)
-        wait+=1
-    
-    
-    # 临时数据，用于失败原因检测（未完成） 
-    TEMP['INDEX'] = title['index']
-    TEMP['TITLE'] = title['title']
-    
-    # 是否包含过期文件
-    if(Text("已过期").exists()):
-        highlight(Text("已过期"))
-        print(f"{C.BGRED}![过期附件] {title['index']}: {title['email']:<24}\t{title['title']:<24} 包含过期附件 {C.END}")
-        
-        # 设为星标
-        if bool(can_star_timeoutfile):
-          if S('#img_star').web_element.get_attribute('class') == 'qm_ico_flagoff':
-            click(S('#img_star'))
-    
-        # 添加标签
-        if bool(can_tag_timeoutfile):
-          click(Text('标记为...'))
-          wait_until(S('#select_QMMenu__menuall_').exists)
-          click(Text(str_tag_timeoutfile))
-    
-    # 邮件是否包含附件
-    if not(S("#attachment").exists()): 
+      #---------------------------------------------------------------------------
+      # download path
+      #---------------------------------------------------------------------------
       
-      print(f"{C.RED}[没有附件] {title['index']}: {title['email']:<24}\t{title['name']:<24}\t{title['title']}{C.END}")
+      if not os.path.exists(DOWNLOAD_FOLDER): 
+        os.mkdir(DOWNLOAD_FOLDER)
       
-      # 设为星标
-      if bool(can_star_nofile):
-        if S('#img_star').web_element.get_attribute('class') == 'qm_ico_flagoff':
-          click(S('#img_star'))
-    
-      # 添加标签
-      if bool(can_tag_nofile):
-        click(Text('标记为...'))
-        wait_until(S('#select_QMMenu__menuall_').exists)
-        click(Text(str_tag_nofile))
-    
-      continue
-    
-    # 滚动页面至底部
-    scroll_down(S("#pageEnd").y)
-    
-    #---------------------------------------------------------------------------
-    # attach
-    #---------------------------------------------------------------------------
-    
-    elements = [e.find_elements_by_tag_name('a')[0] for e in chrome.find_elements_by_class_name('ico_big')]
+      #---------------------------------------------------------------------------
+      # mail
+      #---------------------------------------------------------------------------
+      
+      TEMP = {}
 
-    for i, e in enumerate(elements, start=0):
+      # 打开邮件正文
 
-        attach={}
-        attach.update({'filename': e.get_attribute('filename')})
-        attach.update({'filetype': e.get_attribute('filename').split('.')[-1]})
-        attach.update({'filebyte': int(e.get_attribute('filebyte'))})
-        attach.update({'filedown': "https://mail.qq.com" + e.get_attribute('down')})
-        attach.update({'index': int(e.get_attribute('idx') or 0)+1})
-        # 只有超大附件(bigattach="1") 有("timeout"= 0 or 1)参数。普通附件(attach="1")没有。 
-        attach.update({'timeout': int(e.get_attribute('timeout') or 0)}) 
-        attach.update({'ti': title['index']})
-        attach.update({'tn': title['name']})
-        attach.update({'tt': title['title']})
-        attach.update({'page': title['page']})
-        attach.update({'email': title['email']})
-        attach.update({'timestamp': title['timestamp']})
+      for index, title in enumerate(titlelist, start=0):
         
-        attchlist.append(attach)
-        attach_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+        go_to(f"https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={token_sid}&url=/cgi-bin/readmail?t=readmail%26mailid={title['mailid']}%26mode=pre")
+        time.sleep(2)
         
-        # 附件类型黑名单
-        if attach_blacklist_filetype != [''] and any([key in attach["filetype"] for key in attach_blacklist_filetype]):
-            print(f"{C.SILVER}[文件类型过滤] 已跳过 {title['index']}: {title['name']:<24}\t{title['title']}\t{attach['index']}\t{attach['filename']} {C.END}")
-            attach_black_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
-            continue
+        # 您请求的频率太快，请稍后再试
+        wait = 0
+        while not S('#mainmail').exists():
+            if wait == 0: time.sleep(10); refresh()
+            elif wait == 2: time.sleep(5); refresh()
+            elif wait%3 == 0: time.sleep(3); refresh()
+            else:time.sleep(1)
+            wait+=1
         
-        # 附件类型白名单
-        if attach_whitelist_filetype != [''] and not all([key in attach["filetype"] for key in attach_whitelist_filetype]): 
-            print(f"{C.SILVER}[文件类型过滤] 已跳过 {title['index']}: {title['name']:<24}\t{title['title']}\t{attach['index']}\t{attach['filename']} {C.END}")
-            attach_black_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
-            continue
+        # 临时数据，用于失败原因检测（未完成） 
+        TEMP['INDEX'] = title['index']
+        TEMP['TITLE'] = title['title']
         
-        # 该附件是否已过期
-        if bool(attach['timeout']):
-            print(f"{C.RED}![过期附件] {title['index']}: {title['name']:<24}\t{title['title']}\t{attach['index']}\t{attach['filename']} 该文件已过期！！{C.END}")
-            timeout_count+=1
-            attach_timeout_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
-            break
-        
-        attach_count += 1
-        
-        #---------------------------------------------------------------------------
-        # rule
-        #---------------------------------------------------------------------------
-        
-        # 重命名规则模板
-        rule = { 
-          'filename1':        attach['filename'].split(".")[0] if len(attach['filename'].split('.')) <= 1 else '.'.join(attach['filename'].split('.')[0:-1]), # file
-          'filename2':        attach['filename'],                                             # file.jpg
-          'extension1':       '.' + attach['filetype'],                                       # .jpg
-          'extension2':       attach['filetype'],                                             # jpg
-          'attchtitleindex':  str(attach["index"]),                                           # 标附序
-          'titleindex':       str(title_count),                                               # 标序 [1 ~ 总标]
-          'attchindex':       str(title_count),                                               # 附序 [1 ~ 总附]
-          'titlecount':       str(len(titlelist)),                                            # 总标 0 
-          'attchcount':       str(len(attchlist)),                                            # 总附 0 
-          'nameid':           title['name'],                                                  # 发信人昵称
-          'address':          title['email'],                                                 # 邮箱地址：123456@qq.com
-          'mailid':           title['email'].split("@")[0],                                   # 邮箱ID：123456
-          'year':             time.strftime("%Y", title['timestamp']),                        # 年：2020
-          'month':            time.strftime("%m", title['timestamp']),                        # 月：11
-          'day':              time.strftime("%d", title['timestamp']),                        # 日：04
-          'week':             time.strftime("%a", title['timestamp']),                        # 周：Wed
-          'ampm':             time.strftime("%p", title['timestamp']),                        # 午：PM
-          'hours':            time.strftime("%H", title['timestamp']),                        # 时：14
-          'minutes':          time.strftime("%M", title['timestamp']),                        # 分：30
-          'seconds':          time.strftime("%S", title['timestamp']),                        # 秒：59
-          'time1':            time.strftime("%H%M", title['timestamp']),                      # 时间： 1430
-          'time2':            time.strftime("%H'%M'%S", title['timestamp']),                  # 时间： 14'30'59
-          'date1':            time.strftime("%m%d", title['timestamp']),                      # 日期:  1207
-          'date2':            time.strftime("%Y%m%d", title['timestamp']),                    # 日期:  20201207
-          'date3':            time.strftime("%Y-%m-%d", title['timestamp']),                  # 日期:  2020-12-07
-          'date4':            time.strftime("%Y%m%d_%H'%M'%S", title['timestamp']),           # 日期:  2020-12-07_14'30'59
-        }
-        
-        # 替换变量模板
-        pattern = re.compile("|".join(rule.keys()))
-        fn = lambda x: rule[re.escape(x.group(0))]
-        
-        re_rule_folder = pattern.sub(fn, rule_folder)
-        re_rule_rename = pattern.sub(fn, rule_rename)
-        
-        rootpath = DOWNLOAD_FOLDER
-        expepath = os.path.join(rootpath, attach['filename'])      # 原始预期下载路径
-        folder_path = os.path.join(rootpath, re_rule_folder)       # 移入文件夹的新路径
-        rename_path = os.path.join(rootpath, re_rule_rename)       # 重命名后的新路径
-        
-        TEMP['FILENAME'] = attach['filename']
-
-        #---------------------------------------------------------------------------
-        # ready download
-        #---------------------------------------------------------------------------
-        
-        # 下载前检查文件是否已存在，如果存在跳过下载。
-        if ready_download_but_file_exists == 'skip':
-
-            if os.path.isfile(expepath) and os.path.getsize(expepath) == attach['filebyte']:
-                print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在根目录，跳过本次下载。{C.END}")
-                continue
-
-            if bool(can_move_folder):
-                if not os.path.exists(folder_path): 
-                    os.mkdir(folder_path)
-                else:
-                    folderfile_path = os.path.join(folder_path, attach['filename'])
-                    if os.path.isfile(folderfile_path) and os.path.getsize(folderfile_path) == attach['filebyte']:
-                        print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在文件夹，跳过本次下载。{C.END}")
-                        continue
-        
-        #---------------------------------------------------------------------------
-        # download
-        #---------------------------------------------------------------------------
-
-        if bool(can_download_file):
-            ActionChains(chrome).click(chrome.find_elements_by_link_text('下载')[i]).perform() 
-        
-        #---------------------------------------------------------------------------
-        # downloading
-        #---------------------------------------------------------------------------
-
-        # 等待下载
-        if bool(can_move_folder) or bool(can_rename_file):
-          wait_time = 0
-          while wait_time <= downloading_timeout:
-
-            if get_last_filepath() != '':
-               break
-
-            if wait_time %2 == 0: 
-              # 如果下载时长过久。默认300: 大于5分钟
-              if wait_time >= downloading_timeout:
-                print(f"{C.GOLD} ^ {title['index']}\t{attach['index']:02}: {attach['filename']} 下载时长过久，放弃等待，执行下一个。{C.END}")
-                break
-              
-              # 每分钟提示
-              if wait_time >= 60 and not bool(wait_time % 60):
-                print(f"{C.SILVER}^ {title['index']}\t{attach['index']:02}: {attach['filename']} 正在下载... 您已等待了 {wait_time / 60} 分钟。{C.END}")
-
-            time.sleep(2)
-            wait_time += 2
+        # 是否包含过期文件
+        if(Text("已过期").exists()):
+            highlight(Text("已过期"))
+            print(f"{C.BGRED}![过期附件] {title['index']}: {title['email']:<24}\t{title['title']:<24} 包含过期附件 {C.END}")
             
+            # 设为星标
+            if bool(can_star_timeoutfile):
+              if S('#img_star').web_element.get_attribute('class') == 'qm_ico_flagoff':
+                click(S('#img_star'))
+        
+            # 添加标签
+            if bool(can_tag_timeoutfile):
+              click(Text('标记为...'))
+              wait_until(S('#select_QMMenu__menuall_').exists)
+              click(Text(str_tag_timeoutfile))
+        
+        # 邮件是否包含附件
+        if not(S("#attachment").exists()): 
+          
+          print(f"{C.RED}[没有附件] {title['index']}: {title['email']:<24}\t{title['name']:<24}\t{title['title']}{C.END}")
+          
+          # 设为星标
+          if bool(can_star_nofile):
+            if S('#img_star').web_element.get_attribute('class') == 'qm_ico_flagoff':
+              click(S('#img_star'))
+        
+          # 添加标签
+          if bool(can_tag_nofile):
+            click(Text('标记为...'))
+            wait_until(S('#select_QMMenu__menuall_').exists)
+            click(Text(str_tag_nofile))
+        
+          continue
+
+        # 如果不需要读取附件
+        if not bool(can_load_attach):
+          return
+
+        # 滚动页面至底部
+        scroll_down(S("#pageEnd").y)
+        
         #---------------------------------------------------------------------------
-        # download finish
+        # attach
         #---------------------------------------------------------------------------
+        
+        elements = [e.find_elements_by_tag_name('a')[0] for e in chrome.find_elements_by_class_name('ico_big')]
 
-        # 是否允许重命名文件
-        if bool(can_rename_file):
-          rename_file(get_last_filepath(), rename_path, {attach['filename']})
-         
-        # 是否允许移动到文件夹
-        if bool(can_move_folder):
-          move_file(get_last_filepath(), folder_path, {attach['filename']})
+        for i, e in enumerate(elements, start=0):
 
-        # 打印日志
-        if bool(can_print_attch):
-            print(f"+ {title['index']:<4}\t{attach_count:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
+            attach={}
+            attach.update({'filename': e.get_attribute('filename')})
+            attach.update({'filetype': e.get_attribute('filename').split('.')[-1].lower()})
+            attach.update({'filebyte': int(e.get_attribute('filebyte'))})
+            attach.update({'filedown': "https://mail.qq.com" + e.get_attribute('down')})
+            attach.update({'index': int(e.get_attribute('idx') or 0)+1})
+            # 只有超大附件(bigattach="1") 有("timeout"= 0 or 1)参数。普通附件(attach="1")没有。 
+            attach.update({'timeout': int(e.get_attribute('timeout') or 0)}) 
+            attach.update({'ti': title['index']})
+            attach.update({'tn': title['name']})
+            attach.update({'tt': title['title']})
+            attach.update({'page': title['page']})
+            attach.update({'email': title['email']})
+            attach.update({'timestamp': title['timestamp']})
 
-    switch_to(find_all(Window())[0])
-  
+            # 转换空格为下划线
+            if can_replace_filename_space_to_hyphens:
+                attach["filename"] = attach["filename"].replace(" ", "_")
+            
+            attchlist.append(attach)
+            attach_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+            
+            # 附件类型黑名单
+            if attach_blacklist_filetype != [''] and any([key in attach["filetype"] for key in attach_blacklist_filetype]):
+                print(f"{C.SILVER}* {title['index']:<4}\t{attach_count:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
+                attach_black_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+                continue
+            
+            # 附件类型白名单
+            if attach_whitelist_filetype != [''] and not all([key in attach["filetype"] for key in attach_whitelist_filetype]): 
+                print(f"{C.SILVER}* {title['index']:<4}\t{attach_count:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
+                attach_black_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+                continue
+            
+            # 该附件是否已过期
+            if bool(attach['timeout']):
+                print(f"{C.RED}* {title['index']:<4}\t{attach_count:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
+                timeout_count+=1
+                attach_timeout_table.add_row([f'{attach_count+1:04}', attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+                break
+            
+            attach_count += 1
+            
+            #---------------------------------------------------------------------------
+            # rule
+            #---------------------------------------------------------------------------
+            
+            # 重命名规则模板
+            rule = { 
+              'filename1':        attach['filename'].split(".")[0] if len(attach['filename'].split('.')) <= 1 else '.'.join(attach['filename'].split('.')[0:-1]), # file
+              'filename2':        attach['filename'],                                             # file.jpg
+              'extension1':       '.' + attach['filetype'],                                       # .jpg
+              'extension2':       attach['filetype'],                                             # jpg
+              'attchtitleindex':  str(attach["index"]),                                           # 标附序
+              'titleindex':       str(title_count),                                               # 标序 [1 ~ 总标]
+              'attchindex':       str(attach_count),                                              # 附序 [1 ~ 总附]
+              'titlecount':       str(len(titlelist)),                                            # 总标 0 
+              'attchcount':       str(len(attchlist)),                                            # 总附 0 
+              'nameid':           title['name'],                                                  # 发信人昵称
+              'address':          title['email'],                                                 # 邮箱地址：123456@qq.com
+              'mailid':           title['email'].split("@")[0],                                   # 邮箱ID：123456
+              'year':             time.strftime("%Y", title['timestamp']),                        # 年：2020
+              'month':            time.strftime("%m", title['timestamp']),                        # 月：11
+              'day':              time.strftime("%d", title['timestamp']),                        # 日：04
+              'week':             time.strftime("%a", title['timestamp']),                        # 周：Wed
+              'ampm':             time.strftime("%p", title['timestamp']),                        # 午：PM
+              'hours':            time.strftime("%H", title['timestamp']),                        # 时：14
+              'minutes':          time.strftime("%M", title['timestamp']),                        # 分：30
+              'seconds':          time.strftime("%S", title['timestamp']),                        # 秒：59
+              'time1':            time.strftime("%H%M", title['timestamp']),                      # 时间： 1430
+              'time2':            time.strftime("%H'%M'%S", title['timestamp']),                  # 时间： 14'30'59
+              'date1':            time.strftime("%m%d", title['timestamp']),                      # 日期:  1207
+              'date2':            time.strftime("%Y%m%d", title['timestamp']),                    # 日期:  20201207
+              'date3':            time.strftime("%Y-%m-%d", title['timestamp']),                  # 日期:  2020-12-07
+              'date4':            time.strftime("%Y%m%d_%H'%M'%S", title['timestamp']),           # 日期:  2020-12-07_14'30'59
+            }
+            
+            # 替换变量模板
+            pattern = re.compile("|".join(rule.keys()))
+            fn = lambda x: rule[re.escape(x.group(0))]
+            
+            re_rule_folder = pattern.sub(fn, rule_folder)
+            re_rule_rename = pattern.sub(fn, rule_rename)
+      
+            # DEBUG
+            TEMP['FILENAME'] = attach['filename']
+
+            #---------------------------------------------------------------------------
+            # ready download
+            #---------------------------------------------------------------------------
+            
+            rootpath = DOWNLOAD_FOLDER
+            expepath = os.path.join(rootpath, attach['filename'])      # 原始预期下载路径
+
+            # 下载前检查文件是否已存在，如果存在跳过下载。
+            if ready_download_but_file_exists == 'skip':
+
+                if os.path.isfile(expepath) and os.path.getsize(expepath) == attach['filebyte']:
+                    print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在根目录，跳过本次下载。{C.END}")
+                    continue
+                
+                if bool(can_move_folder):
+                    if not os.path.exists(folder_path): 
+                        os.mkdir(folder_path)
+                    else:
+                        folderfile_path = os.path.join(folder_path, attach['filename'])
+                        if os.path.isfile(folderfile_path) and os.path.getsize(folderfile_path) == attach['filebyte']:
+                            print(f"{C.BLUE}~ {title['index']:<4}\t{attach_count:04}: {attach['filename']} 文件已存在文件夹，跳过本次下载。{C.END}")
+                            continue
+            
+            #---------------------------------------------------------------------------
+            # download
+            #---------------------------------------------------------------------------
+
+            if bool(can_download_file):
+                ActionChains(chrome).click(chrome.find_elements_by_link_text('下载')[i]).perform() 
+            
+            #---------------------------------------------------------------------------
+            # downloading
+            #---------------------------------------------------------------------------
+
+            # 等待下载
+            if bool(can_move_folder) or bool(can_rename_file):
+              wait_time = 0
+              while wait_time <= downloading_timeout:
+
+                if get_last_filepath() != '':
+                   break
+
+                if wait_time %2 == 0: 
+                  # 如果下载时长过久。默认300: 大于5分钟
+                  if wait_time >= downloading_timeout:
+                    print(f"{C.GOLD} ^ {title['index']}\t{attach['index']:02}: {attach['filename']} 下载时长过久，放弃等待，执行下一个。{C.END}")
+                    break
+                  
+                  # 每分钟提示
+                  if wait_time >= 60 and not bool(wait_time % 60):
+                    print(f"{C.SILVER}^ {title['index']}\t{attach['index']:02}: {attach['filename']} 正在下载... 您已等待了 {wait_time / 60} 分钟。{C.END}")
+
+                time.sleep(2)
+                wait_time += 2
+               
+              #---------------------------------------------------------------------------
+              # download finish
+              #---------------------------------------------------------------------------
+               
+              # 是否允许重命名文件（TODO）
+              if bool(can_rename_file):
+                return
+                # 紧急备注：目前重命名选项会出现编号错乱问题，不建议使用！ 2021.01.04
+                # file_path = get_last_filepath()
+                # rename_path = os.path.join(rootpath, re_rule_rename)
+                # rename_file(file_path, rename_path, {attach['filename']})
+               
+              # 是否允许移动到文件夹
+              if bool(can_move_folder):
+                 file_path = get_last_filepath()
+                 folder_path = os.path.join(rootpath, re_rule_folder)
+                 move_file(file_path, folder_path, {attach['filename']})
+
+            # 打印日志
+            if bool(can_print_attch):
+                print(f"+ {title['index']:<4}\t{attach_count:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
+
+        switch_to(find_all(Window())[0])
+      
   # 下载结束
   print(f"{C.GREEN}任务完成{C.END}")
   go_to("https://mail.qq.com")
@@ -909,7 +923,7 @@ def thread_webdriver():
     ptable_to_csv(title_table, os.path.join(ROOTPATH, f"_邮件导出列表{script_start_time}.csv"))
 
   # 将数据导出为CSV
-  if bool(can_export_attchdata_to_csv):
+  if bool(can_export_attchdata_to_csv) and bool(can_load_email):
     ptable_to_csv(attach_table, os.path.join(ROOTPATH, f"_附件导出列表{script_start_time}.csv"))
   
 #-------------------------------------------------------------------------------
@@ -928,34 +942,40 @@ def get_last_filepath(path = DOWNLOAD_FOLDER):
 
 # 将文件重命名
 def rename_file(oldpath, newpath, err = ''):
+    # 避免错误的传入.tmp / .crdownload 类型的临时文件
     if oldpath == '' or not os.path.exists(oldpath):
       print(f"{C.RED}[rename_file] {err} 文件不存在。{C.END}")
       return
-    rootpath = os.path.dirname(oldpath)
+
+    nameold = os.path.basename(oldpath)
+    namenew = os.path.basename(newpath)
+
     # 先检查目标文件是否已存在
     if os.path.exists(newpath):
         # 先检查两个文件是否相同。相同则删除a文件。
         if filecmp.cmp(oldpath, newpath):
-            print(f"{C.BGBLUE}[rename_file] {newname} 已存在。且与文件 {oldname} 内容相同。已自动删除。{C.END}")
+            print(f"{C.BGBLUE}[rename_file] {namenew} 已存在。且与文件 {nameold} 内容相同。已自动删除。{C.END}")
             os.remove(oldpath)
         else:
             randnumber = 1
-            filename = newname.split(".")[0] if len(newname.split('.')) <= 1 else '.'.join(newname.split('.')[0:-1])
+            filename = os.path.splitext(newpath)[0]
             filetype = newname.split(".")[-1]
             aliaspath = os.path.join(rootpath, f'{filename}_{randnumber}.{filetype}')
             while os.path.exists(aliaspath):
                 randnumber+=1
                 aliaspath = os.path.join(rootpath, f'{filename}_{randnumber}.{filetype}')
             os.rename(oldpath, aliaspath)
-            print(f"{C.BGBLUE}[rename_file] {newname} 已存在。但两个文件内容不相同。已在 {newname} 文件名后面添加编号 {randnumber} 。{C.END}")
+            print(f"{C.BGBLUE}[rename_file] {namenew} 已存在。但两个文件内容不相同。已在 {newname} 文件名后面添加编号 {randnumber} 。{C.END}")
     else:
         os.rename(oldpath, newpath)
   
 # 将文件移动到目标文件夹
 def move_file(filepath, newfolder, err = ''):
+    # 避免错误的传入.tmp / .crdownload 类型的临时文件
     if filepath == '' or not os.path.exists(filepath):
       print(f"{C.RED}[move_file] {err} 文件不存在。{C.END}")
       return
+
     filename = os.path.basename(filepath)
     newpath = os.path.join(newfolder, filename)
     # 先检查目标文件夹是否已存在该文件
@@ -991,4 +1011,3 @@ def main():
 # END
 #-------------------------------------------------------------------------------
 if __name__ == '__main__': os.system('cls'); print(''); main();
-
