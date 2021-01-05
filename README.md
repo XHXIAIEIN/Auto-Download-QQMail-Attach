@@ -1,6 +1,7 @@
 支持Mac和Windows系统。
 https://zhuanlan.zhihu.com/p/51543237
-
+  
+  
 ## 批量下载QQ邮箱附件，下载完后修改文件重命名
 
 因为工作原因，需要处理QQ邮箱上来自各地网友的投稿附件。数量比较多（上千份），如果手动一个一个下载非常麻烦。。。
@@ -13,7 +14,8 @@ https://zhuanlan.zhihu.com/p/51543237
   
 ---
   
-新增：后面我发现了个好东西 helium，它把 selenium 封装得非常简单易用，调试起来超级方便！！具体的说明可以看这里：
+新增模块：  
+后面我发现了个好东西 helium，它把 selenium 封装得非常简单易用，调试起来超级方便！！具体的说明可以看这里：
 
 ```
 Helium                     https://github.com/mherrmann/selenium-python-helium/
@@ -21,6 +23,11 @@ Helium                     https://github.com/mherrmann/selenium-python-helium/
 Helium API:                https://selenium-python-helium.readthedocs.io/en/latest/api.html
 Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/blob/master/docs/cheatsheet.md
 ```
+  
+---
+
+<br>  
+
 
 ## 如何安装
 
@@ -71,12 +78,12 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
 > 比如你浏览器版本号是是 80.0，就下载 80.0 版本。  
 > 以后有更新，也是需要重新下载对应版本的 chromedriver。否则会报错。  
 >   
-> 注2：**如何查看Chrome当前版本号**：  
+> 注2：**如何查看 Chrome 当前版本号**：  
 > 右上角 - 设置 - 关于Google Chrome 
 >   
 > 注3：**如何安装**：    
-> 下载好之后，把 `chromedriver.exe` 放到随意一个文件夹，然后复制当前这个文件夹的路径。  
-> 通常我喜欢把这类工具专门放到一个叫 bin 的文件夹里。比如 `D:\Program\bin`
+> 下载好之后，把 chromedriver.exe 放到随意一个文件夹，然后复制当前这个文件夹的路径。  
+> 通常我喜欢把这类工具专门放到一个叫 bin 的文件夹里。比如 ` D:\Program\bin `
 >   
 > 按下 Windows 键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。  
 > 打开右下角「环境变量」，在下面「系统变量」列表里，找到 Path 一行，双击编辑。  
@@ -111,12 +118,13 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
    
 ## 如何使用
 
-已经安装了 Python，会发现开始菜单新增了一个 IDLE 编辑器。打开 Shell 窗口后在菜单新建文件。 `File - New File`
-然后把 [QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File/blob/master/QQMail)里的代码复制粘贴到 IDLE 中，将文件保存在任意位置(比如桌面)，随便取个名比如 QQmail.py。  
-  
-当你想运行脚本时，只需要在 IDLE 中按下键盘 F5，就可以运行了。
+已经安装了 Python，会发现开始菜单新增了一个 IDLE 编辑器，从菜单新建文件：File - New File (Ctrl + N)。  
+然后把 [QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File/blob/master/QQMail)的代码复制粘贴到 IDLE 中，将文件保存在任意位置(比如桌面)，随便取个名比如 QQmail.py  
+    
+阅读前半部分的参数区，根据你的需要对参数进行修改。具体的参数说明请继续看下方。    
+当你想运行脚本时，只需要在 IDLE 中运行代码即可：Run - Run Module (F5)   
    
-
+  
 <br>   
    
 > 注：通过运行脚本启动的浏览器窗口，只能同时启动一个。若重复启动脚本将会打开空页面，需要关闭上一个窗口重新运行脚本。
@@ -152,7 +160,7 @@ PASSWORD="132465798"
 <br>  <br>  
   
 2. **附件下载路径**（必填）  
-浏览器下载的文件会自动保存在这里。只需要填 `ROOTPATH`， 剩下两个会在这个目录创建文件夹。  
+浏览器下载的文件会自动保存在这里。只需要填 ` ROOTPATH `， 剩下两个会在这个目录创建文件夹。  
 > 注：Win系统路径需要以 \\\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
 >     MAC系统则需要 / 作为分隔符。 
 ```
@@ -175,9 +183,9 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={x}&url=/cgi-bin/mail_li
 - Title_Task，从第几封邮件开始，只读取多少封邮件，或者在第几封邮件结束。  
 - Pages_Task，从第几页开始，翻多少页后结束，或者在第几页结束。   
  
-> start  从第几个开始。默认是1。即从第1封邮件开始。    
-> end    到第几个结束。比如执行到第20封邮件时结束。(包含第20封邮件)   
-> step   执行多少次后结束。比如从1开始，往后执行10个结束，也就是在第10封邮件时结束。   
+> start  从第几个开始。默认从第1封邮件开始。    
+> end    到第几个结束。举例：执行到第 20 封邮件时结束。(包含第20封邮件)   
+> step   执行多少次后结束。举例：从第 1 封邮件开始执行，往后处理 10 封结束，也就是在第 10 封邮件时结束下载。   
 
 注：end 和 step 不同的地方是，end 代表着结束的终点，而 step 则是从开始后累计的数量。  
 
@@ -294,7 +302,9 @@ config_timeout_script = 1500
 
 ```
   
+  
 <br>  <br>  
+  
   
 ## 特性
 
@@ -320,8 +330,8 @@ config_timeout_script = 1500
 - 任务计划：从文件夹第几封邮件开始，到第几封邮件结束，或者处理多少封邮件后结束。
 
 **统计**
-- 脚本结束后会生成 csv 文件，包含所有**邮件**列表信息。  
-- 脚本结束后会生成 csv 文件，包含所有**附件**列表信息。  
+- 脚本结束后会生成csv文件，包含所有**邮件**列表信息。  
+- 脚本结束后会生成csv文件，包含所有**附件**列表信息。  
 
   
 <br>  <br>  
@@ -334,12 +344,12 @@ config_timeout_script = 1500
 <br>   
   
 2. 如果开启了[按邮件新建文件夹]或[自动重命名]功能，附件名包含空格字符，可能会导致脚本崩溃。  
-> 解决方案：空格转换为下划线，再执行重命名和移动文件的方案。）
+> 解决方案：空格转换为下划线，再执行重命名和移动文件的方案。
   
 <br>  
 
 3. 如果网络异常，浏览器可能提示下载失败，但脚本会长时间等待它下载完成，或者超过5分钟后，脚本也会将它跳过。  
-> 解决方案：如果发现下载失败，可以手动在浏览器底部的下载提示中继续执行。）
+> 解决方案：如果发现下载失败，可以手动在浏览器底部的下载提示中继续执行。
   
 <br>  
    
@@ -362,7 +372,9 @@ config_timeout_script = 1500
 <br>   
   
 4. 对方发送的"超大附件"会过期，无法下载。  
-> 解决方案：超大附件(bigattach="1")有一个参数("timeout"= 0 or 1)是普通附件(attach="1")没有的。如果检测到邮件中包含过期附件，脚本会自动跳过，并且自动标记为星标邮件，或者添加"过期附件"的标签。  
+> 解决方案：超大附件(bigattach="1")有一个参数("timeout"= 0 or 1)是普通附件(attach="1")没有的。  
+> 如果检测到邮件中包含过期附件，脚本会自动跳过，并且自动标记为星标邮件，或者添加"过期附件"的标签。  
   
 <br>   
   
+
