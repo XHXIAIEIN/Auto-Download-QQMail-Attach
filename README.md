@@ -28,7 +28,7 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 
 如果你是MAC用户。操作相对简单一些：
 
-   1. **安装Homebrew**  
+   1. **安装 Homebrew**  
    https://brew.sh/index_zh-cn
       
    简单的说，就是把下面这段指令复制粘贴到终端(Terminal)   
@@ -51,7 +51,7 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
 <br>   
      
 ### Windows
-Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
+Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼的操作了吧：
 
    1. **Python 3**   
     https://www.python.org/  
@@ -67,19 +67,19 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
 
 <br>   
 
-> 注1：根据自己Chrome当前的版本号，下载对应版本号的chromedriver 
-> 比如你浏览器版本号是是80.0，就下载80.0版本。  
-> 以后有更新，也是需要重新下载对应版本的chromedriver。否则会报错。  
+> 注1：根据自己 Chrome 当前的版本号，下载对应版本号的 chromedriver 
+> 比如你浏览器版本号是是 80.0，就下载 80.0 版本。  
+> 以后有更新，也是需要重新下载对应版本的 chromedriver。否则会报错。  
 >   
 > 注2：**如何查看Chrome当前版本号**：  
 > 右上角 - 设置 - 关于Google Chrome 
 >   
 > 注3：**如何安装**：    
-> 下载好之后，把`chromedriver.exe`放到随意一个文件夹，然后复制当前这个文件夹的路径。  
-> 通常我喜欢把这类工具专门放到一个叫bin的文件夹里。比如` D:\Program\bin`
+> 下载好之后，把 `chromedriver.exe` 放到随意一个文件夹，然后复制当前这个文件夹的路径。  
+> 通常我喜欢把这类工具专门放到一个叫 bin 的文件夹里。比如 `D:\Program\bin`
 >   
-> 按下Win键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。  
-> 打开右下角「环境变量」，在下面「系统变量」列表里，找到「Path」的一行，双击编辑。  
+> 按下 Windows 键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。  
+> 打开右下角「环境变量」，在下面「系统变量」列表里，找到 Path 一行，双击编辑。  
 > 右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
    
 <br>   
@@ -111,10 +111,10 @@ Windows用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼�
    
 ## 如何使用
 
-已经安装了Python，会发现开始菜单新增了一个IDLE编辑器。打开Shell窗口后在菜单新建文件。【File - New File】  
-然后把[QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File/blob/master/QQMail)里的代码复制粘贴到IDLE中，将文件保存在任意位置(比如桌面)，随便取个名比如QQmail.py。  
+已经安装了 Python，会发现开始菜单新增了一个 IDLE 编辑器。打开 Shell 窗口后在菜单新建文件。 `File - New File`
+然后把 [QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File/blob/master/QQMail)里的代码复制粘贴到 IDLE 中，将文件保存在任意位置(比如桌面)，随便取个名比如 QQmail.py。  
   
-当你想运行脚本时，只需要在IDLE中按下键盘F5，就可以运行了。
+当你想运行脚本时，只需要在 IDLE 中按下键盘 F5，就可以运行了。
    
 
 <br>   
@@ -152,7 +152,7 @@ PASSWORD="132465798"
 <br>  <br>  
   
 2. **附件下载路径**（必填）  
-浏览器下载的文件会自动保存在这里。只需要填`ROOTPATH`， 剩下两个会在这个目录创建文件夹。  
+浏览器下载的文件会自动保存在这里。只需要填 `ROOTPATH`， 剩下两个会在这个目录创建文件夹。  
 > 注：Win系统路径需要以 \\\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
 >     MAC系统则需要 / 作为分隔符。 
 ```
@@ -179,7 +179,7 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={x}&url=/cgi-bin/mail_li
 > end    到第几个结束。比如执行到第20封邮件时结束。(包含第20封邮件)   
 > step   执行多少次后结束。比如从1开始，往后执行10个结束，也就是在第10封邮件时结束。   
 
-注：end 和 step 不同的地方是，end代表着结束的终点，而step则是从开始后累计的数量。  
+注：end 和 step 不同的地方是，end 代表着结束的终点，而 step 则是从开始后累计的数量。  
 
 ```
 Title_Task = { 'start':1, 'step':0, 'end': 0 }
@@ -222,7 +222,7 @@ can_disabled_images = 0
 # 是否倒序读取（从最后一页开始往前）
 can_reverse_list = 0
 
-#··········· 下载 ···········
+#··········· 下载 ···········#
 
 # 是否需要重命名附件
 can_rename_file = 0
@@ -235,7 +235,7 @@ can_move_folder = 1
 ready_download_but_file_exists = 'skip' or 'continue'
 
 
-#··········· 星标 / 标签 ···········
+#··········· 星标 / 标签 ···········#
 
 # 没有附件的邮件设为星标
 can_star_nofile = 1
@@ -252,7 +252,7 @@ can_tag_timeoutfile = 1
 str_tag_timeoutfile = '过期附件'
 
 
-#··········· 功能 ···········
+#··········· 功能 ···········#
 
 # 是否需要下载附件
 can_download_file = 1
@@ -267,7 +267,7 @@ can_load_title = 1
 downloading_timeout = 300
 
 
-#··········· 控制台 ···········
+#··········· 控制台 ···········#
  
 # 是否在控制台打印邮件信息
 can_print_title = 1
@@ -278,14 +278,14 @@ can_print_folder_table = 1
 can_print_title_table = 1
 
 
-#··········· 统计 ···········
+#··········· 统计 ···········#
 
 # 是否将数据导出为CSV文件
 can_export_titledata_to_csv = 1
 can_export_attchdata_to_csv = 1
 
 
-#··········· 高级选项 ···········
+#··········· 高级选项 ···········#
 
 # 是否需要设置 desired_capabilities 参数
 can_set_capabilities = 1
@@ -320,24 +320,28 @@ config_timeout_script = 1500
 - 任务计划：从文件夹第几封邮件开始，到第几封邮件结束，或者处理多少封邮件后结束。
 
 **统计**
-- 脚本结束后会生成csv文件，包含所有邮件列表信息。  
-- 脚本结束后会生成csv文件，包含所有附件列表信息。  
+- 脚本结束后会生成 csv 文件，包含所有**邮件**列表信息。  
+- 脚本结束后会生成 csv 文件，包含所有**附件**列表信息。  
 
   
 <br>  <br>  
   
 ## 可能出现的问题
 
-1. 如果开启了[按邮件新建文件夹]或[自动重命名]功能，附件名包含空格字符，可能会导致脚本崩溃。  
-> 目前暂未修复。也许应该先把空格转换为下划线，再执行重命名和移动文件的方案。
+1. 如果开启了[自动重命名]功能，最终命名时会出现错位情况。下载的第一个文件的命名变成了第二个，第二个变成第三个....
+> 目前暂未修复。先暂时禁用这个功能，有空再研究...
   
 <br>   
   
-2. 如果网络异常，浏览器可能提示下载失败，但脚本会长时间等待它下载完成，或者超过5分钟后，脚本也会将它跳过。  
+2. 如果开启了[按邮件新建文件夹]或[自动重命名]功能，附件名包含空格字符，可能会导致脚本崩溃。  
+> 解决方案：空格转换为下划线，再执行重命名和移动文件的方案。）
+  
+<br>  
+
+3. 如果网络异常，浏览器可能提示下载失败，但脚本会长时间等待它下载完成，或者超过5分钟后，脚本也会将它跳过。  
 > 解决方案：如果发现下载失败，可以手动在浏览器底部的下载提示中继续执行。）
   
-
-<br>   
+<br>  
    
 
 ## 踩坑历史
