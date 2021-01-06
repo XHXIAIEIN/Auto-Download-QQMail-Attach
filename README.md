@@ -14,8 +14,9 @@ https://zhuanlan.zhihu.com/p/51543237
   
 ---
   
-新增模块：  
-后面我发现了个好东西 [helium](https://github.com/mherrmann/selenium-python-helium/)，它把 selenium 封装得非常简单易用，调试起来超级方便！！并且自带一个Web driver，也就是说你不需要自己去下载一个 ChromeDriver 放到 Path 里面了。 
+新增模块：
+后面我发现了个好东西 [helium](https://github.com/mherrmann/selenium-python-helium/)，它把 selenium 封装得非常简单易用，调试起来超级方便！！并且自带一个Web driver，也就是说你不需要自己去下载一个 ChromeDriver 放到 Path 里面了。
+
 ---
 
 <br>  
