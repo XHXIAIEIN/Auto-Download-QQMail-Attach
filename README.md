@@ -15,15 +15,7 @@ https://zhuanlan.zhihu.com/p/51543237
 ---
   
 新增模块：  
-后面我发现了个好东西 helium，它把 selenium 封装得非常简单易用，调试起来超级方便！！具体的说明可以看这里：
-
-```
-Helium                     https://github.com/mherrmann/selenium-python-helium/
-
-Helium API:                https://selenium-python-helium.readthedocs.io/en/latest/api.html
-Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/blob/master/docs/cheatsheet.md
-```
-  
+后面我发现了个好东西 [helium](https://github.com/mherrmann/selenium-python-helium/)，它把 selenium 封装得非常简单易用，调试起来超级方便！！并且自带一个Web driver，也就是说你不需要自己去下载一个 ChromeDriver 放到 Path 里面了。 
 ---
 
 <br>  
@@ -49,9 +41,9 @@ Helium cheatsheet:         https://github.com/mherrmann/selenium-python-helium/b
    简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
     
    ```
-   brew install chromedriver
    brew install selenium
    brew install helium
+   brew install chromedriver
    brew install prettytable
    ```
    
@@ -69,10 +61,14 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
  
 <br>   
  
-   2. **WebDriver for Chrome**  
+   2. **WebDriver for Chrome**  （可跳过）
     https://sites.google.com/a/chromium.org/chromedriver/downloads
 
 <br>   
+
+
+> 注： 因为使用了 helium ，所以已经不需要再手动安装 chromedriver 了。这一步可以省略。
+
 
 > 注1：根据自己 Chrome 当前的版本号，下载对应版本号的 chromedriver 
 > 比如你浏览器版本号是是 80.0，就下载 80.0 版本。  
