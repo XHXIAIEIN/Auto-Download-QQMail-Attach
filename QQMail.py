@@ -9,7 +9,7 @@ import prettytable
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2021/04/04
+# 更新：2021/01/04
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-File
 #===============================================================================
 
@@ -97,7 +97,7 @@ PASSWORD="134625798"
 #...............................................................................
 
 ROOTPATH = "D:\\XHXIAIEIN\\Downloads\\2020"
-DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"1228")         # 附件实际下载目录
+DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")         # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
  
 
@@ -130,11 +130,11 @@ Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
 # 邮件主题，关键词过滤
 #...............................................................................
  
-# 黑名单关键词。忽略邮件主题中包含任意一个关键词的邮件。
+# 黑名单关键词。邮件主题如果包含了任意一个关键词，就忽略不下载。
 # 示例：title_blacklist_keys = ['发信方已撤回邮件','QQ会员业务通知邮件']
 title_blacklist_keys = ['发信方已撤回邮件']
 
-# 白名单关键词。只搜索邮件主题中包含任意一个关键词的邮件。
+# 白名单关键词。邮件主题必须包含白名单里的所有关键词。关键词越多，匹配规则越严格。
 # 示例：title_whitelist_keys = ['反馈','回复']
 title_whitelist_keys = ['']
  
@@ -146,7 +146,8 @@ title_whitelist_keys = ['']
 # 示例：attach_blacklist_filetype = ['psd','txt']
 attach_blacklist_filetype = ['']
  
-# 文件类型白名单。只有指定类型的文件允许下载。不包含'.'
+# 文件类型白名单。只下载指定类型的文件，不包含 '.'
+# 只要满足任意一个关键词即可下载。
 attach_whitelist_filetype = ['']
  
 #-------------------------------------------------------------------------------
@@ -158,7 +159,7 @@ attach_whitelist_filetype = ['']
 # 是否禁止显示网页图片。
 # 首次登录时，需要开启显示图片功能，否则无法进行滑块安全验证。
 # 登录时，勾选"下次自动登录"，下次就可以手动开启禁用图片了。
-can_disabled_images = 1
+can_disabled_images = 0
  
 #···············································································
 # 下载
@@ -178,7 +179,7 @@ can_replace_filename_space_to_hyphens = 1
 can_move_folder = 0
  
 # 是否根据投稿时间顺序下载附件。：即从最后一页往前下载。
-can_reverse_list = 1
+can_reverse_list = 0
  
 # 下载前，对比文件名以及文件大小，在本地是否存在相同文件。
 # 'skip'    :  如果存在相同的文件名，并且文件大小相同。则跳过下载。
@@ -194,11 +195,11 @@ can_star_nofile = 1
 can_star_timeoutfile = 0
  
 # 没有附件添加标签
-can_tag_nofile = 1
+can_tag_nofile = 0
 str_tag_nofile = '没有附件'
  
 # 过期附件添加标签
-can_tag_timeoutfile = 1
+can_tag_timeoutfile = 0
 str_tag_timeoutfile = '过期附件'
  
 #···············································································
@@ -231,7 +232,7 @@ can_load_attach = 1
 downloading_timeout = 300
  
 # 是否需要设置 desired_capabilities 参数
-can_set_capabilities = 1
+can_set_capabilities = 0
 config_timeout_pageLoad = 10000
 config_timeout_script = 1500
  
