@@ -9,7 +9,7 @@ import prettytable
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2021/01/04
+# 更新：2021/02/22
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
 #===============================================================================
 
@@ -21,7 +21,6 @@ import prettytable
 #  0. 必要的运行库
 #...............................................................................
 #  python3    :   https://www.python.org/
-#  Nodejs     :   https://nodejs.org/zh-cn/
 #...............................................................................
 
 #...............................................................................
@@ -97,7 +96,7 @@ PASSWORD="134625798"
 #...............................................................................
 
 ROOTPATH = "D:\\XHXIAIEIN\\Downloads\\2020"
-DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")         # 附件实际下载目录
+DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
  
 
@@ -126,6 +125,7 @@ Title_Task = { 'start':1, 'step':0, 'end': 0 }
 # 翻页规则
 Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
  
+ 
 #...............................................................................
 # 邮件主题，关键词过滤
 #...............................................................................
@@ -137,6 +137,7 @@ title_blacklist_keys = ['发信方已撤回邮件']
 # 白名单关键词。邮件主题必须包含白名单里的所有关键词。关键词越多，匹配规则越严格。
 # 示例：title_whitelist_keys = ['反馈','回复']
 title_whitelist_keys = ['']
+ 
  
 #...............................................................................
 # 附件过滤
@@ -150,6 +151,7 @@ attach_blacklist_filetype = ['']
 # 只要满足任意一个关键词即可下载。
 attach_whitelist_filetype = ['']
  
+ 
 #-------------------------------------------------------------------------------
 # Config
 #-------------------------------------------------------------------------------
@@ -160,6 +162,7 @@ attach_whitelist_filetype = ['']
 # 首次登录时，需要开启显示图片功能，否则无法进行滑块安全验证。
 # 登录时，勾选"下次自动登录"，下次就可以手动开启禁用图片了。
 can_disabled_images = 0
+ 
  
 #···············································································
 # 下载
@@ -186,6 +189,7 @@ can_reverse_list = 0
 # 'continue':  继续下载，重复的文件名可能会自动被加上（1）这样的序号。
 ready_download_but_file_exists = 'skip' or 'continue'
  
+ 
 #···············································································
 # 星标 / 标签
 #···············································································
@@ -202,6 +206,7 @@ str_tag_nofile = '没有附件'
 can_tag_timeoutfile = 0
 str_tag_timeoutfile = '过期附件'
  
+ 
 #···············································································
 # 控制台信息
 #···············································································
@@ -210,6 +215,7 @@ str_tag_timeoutfile = '过期附件'
 can_print_title = 1
 can_print_attch = 1
 
+# 是否在控制台打印文件夹列表
 can_print_folder = 0
  
 # 是否在控制台打印统计表格
@@ -218,6 +224,7 @@ can_print_title_table = 1
 # 是否将数据导出为CSV文件
 can_export_titledata_to_csv = 1
 can_export_attchdata_to_csv = 1
+ 
  
 #···············································································
 # 高级选项
@@ -284,6 +291,8 @@ rule_rename = "attchindex_filename2"
 # 123456@qq.com(20201104_1430'59)
 rule_folder = "address(date4)"
   
+ 
+ 
 '''
 #===============================================================================
 #                 " 请 勿 跨 过 这 块 区 域 修 改 内 容 "
@@ -418,7 +427,7 @@ def thread_webdriver():
   # 标题黑名单
   if title_blacklist_keys != [''] or title_whitelist_keys != ['']:
     title_black_table = prettytable.PrettyTable()
-    title_black_table.field_names = ["count","filename","index","name","title","email","fileindex","filebyte","filetype","page","timeout","timestamp"]
+    title_black_table.field_names = ["index", "page", "name", "title", "email", "timestamp"]
     title_black_table.align = "l"
   
   # 附件黑名单
