@@ -65,10 +65,8 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
    2. **WebDriver for Chrome**  （可跳过）  
       https://sites.google.com/a/chromium.org/chromedriver/downloads
     
-      注： 因为使用了 helium ，所以已经不需要再手动安装 chromedriver 了。这一步可以省略。  
-
-  
-但是还是把安装方法留着吧，也许以后有些路人用的上
+      注： 因为使用了 helium ，所以已经不需要再手动安装 chromedriver 了。这一步可以省略。
+           但是还是把安装方法留着吧，也许以后有些路人用的上
 
 > 注1：
 > 根据自己 Chrome 当前的版本号，下载对应版本号的 chromedriver 
