@@ -63,23 +63,24 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
 <br>   
  
    2. **WebDriver for Chrome**  （可跳过）  
-    https://sites.google.com/a/chromium.org/chromedriver/downloads
+      https://sites.google.com/a/chromium.org/chromedriver/downloads
+    
+      注： 因为使用了 helium ，所以已经不需要再手动安装 chromedriver 了。这一步可以省略。  
 
-<br>   
-
-
-注： 因为使用了 helium ，所以已经不需要再手动安装 chromedriver 了。这一步可以省略。  
   
-<br>   
+但是还是把安装方法留着吧，也许以后有些路人用的上
 
-> 注1：根据自己 Chrome 当前的版本号，下载对应版本号的 chromedriver 
+> 注1：
+> 根据自己 Chrome 当前的版本号，下载对应版本号的 chromedriver 
 > 比如你浏览器版本号是是 80.0，就下载 80.0 版本。  
 > 以后有更新，也是需要重新下载对应版本的 chromedriver。否则会报错。  
 >   
-> 注2：**如何查看 Chrome 当前版本号**：  
+> 注2：
+> **如何查看 Chrome 当前版本号**：  
 > 右上角 - 设置 - 关于Google Chrome 
 >   
-> 注3：**如何安装**：    
+> 注3：
+> **如何安装**：    
 > 下载好之后，把 chromedriver.exe 放到随意一个文件夹，然后复制当前这个文件夹的路径。  
 > 通常我喜欢把这类工具专门放到一个叫 bin 的文件夹里。比如 ` D:\Program\bin `
 >   
@@ -88,27 +89,20 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
 > 右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
    
 <br>   
-   
-   3. **Nodejs**  
-    https://nodejs.org/zh-cn/  
-    下载最新版即可，跟着引导安装，一直点下一步。
-   
-   <br>   
-  
-  
-   4. **pip install x**  
-    NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。    
-    以管理员权限进入命令行。接着输入下方的两条指令：
 
-    ```
-    python -m pip install --upgrade pip
-    pip install selenium
-    pip install helium
-    pip install prettytable
-    ```
+4. **pip install x**  
+NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。    
+以管理员权限进入命令行。接着输入下方的两条指令：
+
+```
+python -m pip install --upgrade pip
+pip install selenium
+pip install helium
+pip install prettytable
+```
  
-<br>   
-<br>  
+<br><br> 
+
    
 繁琐的前置工作完成了。接着可以正式开始咯。  
    
@@ -155,7 +149,7 @@ QQNUMBER="132465798"
 PASSWORD="132465798"
 ```
   
-<br>  <br>  
+<br><br>  
   
 2. **附件下载路径**（必填）  
 浏览器下载的文件会自动保存在这里。只需要填 ` ROOTPATH `， 剩下两个会在这个目录创建文件夹。  
