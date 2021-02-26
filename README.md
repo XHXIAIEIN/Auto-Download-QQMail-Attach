@@ -66,7 +66,9 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
       https://sites.google.com/a/chromium.org/chromedriver/downloads
     
       注： 因为使用了 helium ，所以已经不需要再手动安装 chromedriver 了。这一步可以省略。
-           但是还是把安装方法留着吧，也许以后有些路人用的上
+           但是还是把安装方法留着吧，也许以后有路人用的上
+
+<br>
 
 > 注1：
 > 根据自己 Chrome 当前的版本号，下载对应版本号的 chromedriver 
@@ -86,9 +88,9 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
 > 打开右下角「环境变量」，在下面「系统变量」列表里，找到 Path 一行，双击编辑。  
 > 右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
    
-<br>   
+<br><br>   
 
-4. **pip install x**  
+3. **pip install x**  
 NodeJs安装完成后，按下Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。    
 以管理员权限进入命令行。接着输入下方的两条指令：
 
