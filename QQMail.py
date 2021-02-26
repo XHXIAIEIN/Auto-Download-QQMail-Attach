@@ -24,24 +24,14 @@ import prettytable
 #...............................................................................
 
 #...............................................................................
-#  1. WebDriver for Chrome
-#...............................................................................
-#  使用前检查Chrome与chromedriver版本是否一致，若Chrome有更新，请更新chromedriver
-#  https://sites.google.com/a/chromium.org/chromedriver/downloads
-#
-#  注意，还需要将 chromedriver 的路径放进系统环境变量PATH里面
-#  MAC用户："/usr/local/bin/chromedriver"
-#...............................................................................
-
-#...............................................................................
-#  2.脚本中使用到的工具库
+#  1.脚本中使用到的工具库
 #...............................................................................
 #  - helium         :    https://selenium-python-helium.readthedocs.io/
 #  - prettytable    :    https://pypi.org/project/prettytable/
 #...............................................................................
 #  运行后如果提示缺少xxx，请运行 cmd 在控制台执行 pip install xxx
 #...............................................................................
-#  Windows用户，安装 python 和 NodeJs 之后，运行 cmd 在控制台输入以下指令：
+#  Windows用户，运行 cmd 在控制台输入以下指令：
 #  python -m pip install --upgrade pip
 #  pip install selenium
 #  pip install helium
@@ -73,6 +63,7 @@ import prettytable
 #===============================================================================
 '''
  
+ 
 # 是否为Mac用户。如果是，请改为 1
 is_mac_user = 0
  
@@ -95,10 +86,10 @@ PASSWORD="134625798"
 #     Mac用户用 '/' 作为路径分隔符。如："~/Downloads/email"
 #...............................................................................
 
-ROOTPATH = "D:\\XHXIAIEIN\\Downloads\\2020"
+ROOTPATH = "D:\\Downloads\\2020"
 DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 浏览器的缓存数据
- 
+
 
 #...............................................................................
 #  要下载的邮箱文件夹ID
@@ -172,7 +163,7 @@ can_disabled_images = 0
 can_download_file = 1
  
 # 是否重命名文件 
-# 紧急备注：当前重命名选项会出现编号错乱问题，不建议使用！ -2021.01.04
+# 紧急备注：当前重命名选项会出现编号错乱问题，在修复好之前不建议使用！ -2021.01.04
 can_rename_file = 0
 
 # 是否将文件名的空格转换为下划线
@@ -222,8 +213,8 @@ can_print_folder = 0
 can_print_title_table = 1
  
 # 是否将数据导出为CSV文件
-can_export_titledata_to_csv = 1
-can_export_attchdata_to_csv = 1
+can_export_titledata_to_csv = 0
+can_export_attchdata_to_csv = 0
  
  
 #···············································································
@@ -291,7 +282,6 @@ rule_rename = "attchindex_filename2"
 # 123456@qq.com(20201104_1430'59)
 rule_folder = "address(date4)"
   
- 
  
 '''
 #===============================================================================
