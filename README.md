@@ -111,7 +111,7 @@ pip install prettytable
 ## 如何使用
 
 已经安装了 Python，会发现开始菜单新增了一个 IDLE 编辑器，从菜单新建文件：File - New File (Ctrl + N)。  
-然后把 [QQMail.py](https://github.com/XHXIAIEIN/Auto-Download-QQMail-Attach/blob/master/QQMail.py)的代码复制粘贴到 IDLE 中，将文件保存在任意位置(比如桌面)，随便取个名比如 QQmail.py  
+然后把 [QQMail.py](https://raw.githubusercontent.com/XHXIAIEIN/Auto-Download-QQMail-Attach/master/QQMail.py)的代码复制粘贴到 IDLE 中，将文件保存在任意位置(比如桌面)，随便取个名比如 QQmail.py  
     
 阅读前半部分的参数区，根据你的需要对参数进行修改。具体的参数说明请继续看下方。    
 当你想运行脚本时，只需要在 IDLE 中运行代码即可：Run - Run Module (F5)   
