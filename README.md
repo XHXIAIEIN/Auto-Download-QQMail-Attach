@@ -91,11 +91,10 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
 <br><br>   
 
 3. **pip install x**  
-如果你已经安装好了 python 环境，按下 Win + R，输入 cmd 然后按 Ctrl + Shift + 回车键。    
-以管理员权限进入命令行。接着输入下方的两条指令：
+如果你已经安装好了 python 环境，按下 Win + R，输入 cmd，打开控制台。    
+接着输入下方的指令：
 
 ```
-python -m pip install --upgrade pip
 pip install selenium
 pip install helium
 pip install prettytable
