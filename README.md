@@ -31,14 +31,14 @@ https://brew.sh/index_zh-cn
 
 <br>  
 
- 2. **python3 + helium**  
- 简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
+2. **python3 + helium**  
+简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
 
- ```
- brew install helium
- brew install chromedriver
- brew install prettytable
- ```
+```
+brew install --cask chromedriver
+brew install --cask helium
+brew install --cask chromedriver
+```
 
 <br>   
      
@@ -52,7 +52,8 @@ https://www.python.org/
 > - [x] 1. Install Now
 > - [x] 2. Disable path length limit
 
-
+<br>   
+     
 2. **pip install x**  
 如果你已经安装好了 python 环境，按下 Win + R，输入 cmd，打开控制台。    
 接着输入下方的指令：
@@ -67,6 +68,8 @@ pip install prettytable
 
 <details><summary>WebDriver for Chrome （可跳过）</summary>
 
+<br>   
+     
 **WebDriver for Chrome**  
 https://sites.google.com/a/chromium.org/chromedriver/downloads
     
@@ -95,14 +98,11 @@ https://sites.google.com/a/chromium.org/chromedriver/downloads
    
 </details>  
  
-
-<br><br>   
+<br><br>  
   
-   
 好了，繁琐的前置工作完成了。接着可以正式开始咯。  
 
-  
-<br><br>  
+<br>
    
 ## 在开始之前，你需要先做几件事。
 
@@ -175,7 +175,6 @@ ROOTPATH = "D:\\Downloads\\2020"
 DOWNLOAD_FOLDER = os.path.join(ROOTPATH,"download")     # 不需要修改。附件实际下载目录 即："D:\\Downloads\\2020\\download"
 USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 不需要修改。浏览器的缓存数据 即："D:\\Downloads\\2020\\selenium"
 ```   
-  
   
 <br><br>  
   
@@ -468,3 +467,15 @@ rule_folder = "{titleindex}_{address}_{fulldate1}"
 2. 如果开启了[按邮件新建文件夹]或[自动重命名]功能，附件名包含空格字符，可能会导致脚本崩溃。  
 > 临时解决方案：据说只是因为脚本文件没有声明编码？我试着在文件头部加了2行，实际效果效果待测试。
   
+  
+  
+<br><br><br>   
+
+
+# 小伙子，你干得不错！
+
+如果你觉得这个脚本对你非常有帮助，节省了你的时间，提升了你的工作效率....
+可以请我喝杯咖啡喔！我会非常高兴的！！
+
+![xhxiaiein_sponsors](https://user-images.githubusercontent.com/45864744/116388661-a2f7db00-a84e-11eb-9f05-f058aea6222c.png)
+
