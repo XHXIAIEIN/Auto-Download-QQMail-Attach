@@ -477,5 +477,5 @@ rule_folder = "{titleindex}_{address}_{fulldate1}"
 如果你觉得这个脚本对你非常有帮助，节省了你的时间，提升了你的工作效率....
 可以请我喝杯咖啡喔！我会非常高兴的！！
 
-![xhxiaiein_sponsors](https://user-images.githubusercontent.com/45864744/116388661-a2f7db00-a84e-11eb-9f05-f058aea6222c.png)
+![xhxiaiein_sponsors](https://user-images.githubusercontent.com/45864744/116389688-d38c4480-a84f-11eb-9dec-036bc1abf397.png)
 
