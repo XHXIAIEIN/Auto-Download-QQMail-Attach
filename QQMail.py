@@ -5,7 +5,7 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2021/04/28
+# 更新：2021/04/30
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
 #===============================================================================
 
@@ -94,7 +94,7 @@ is_exmail_user = 0
 
 # 企业邮箱账号密码
 EX_QQNUMBER="name@company.onexmail.com"
-EX_PASSWORD="123456"
+EX_PASSWORD="helloworld"
  
 #...............................................................................
 #  QQ账号
@@ -147,7 +147,7 @@ FOLDER_ID = 200
 #-------------------------------------------------------------------------------
  
 # 邮件列表
-TITLE_TASK = { 'start':1, 'step':0, 'end': 0 }
+TITLE_TASK = { 'start':1, 'step':0, 'end': 0}
  
 # 翻页规则
 PAGES_TASK = { 'start':1, 'step':0, 'end':0, 'autoNext': 1, 'reverse': 0}
@@ -162,7 +162,7 @@ TITLE_BACKLIST_KEYS = ['发信方已撤回邮件']
 
 # 白名单关键词。邮件主题必须包含白名单里的所有关键词。关键词越多，匹配规则越严格。
 # 示例：TITLE_BACKLIST_KEYS = ['反馈','回复']
-TITLE_BACKLIST_KEYS = ['']
+TITLE_WHITELIST_KEYS = ['']
  
 #...............................................................................
 # 附件过滤
@@ -191,11 +191,12 @@ ATTACH_WHITELIST_FILETYPE = ['']
 # 是否需要下载附件
 can_download_attach = 1
  
+# 是否按邮件创建文件夹
+can_move_folder = 0
+ 
 # 是否重命名文件 
 can_rename_file = 0
- 
-# 是否按邮件创建文件夹(暂不支持，预计明天更新)
-can_move_folder = 0
+
 
 # 下载前，对比文件名以及文件大小，在本地是否存在相同文件。
 # 'skip'    :  如果存在相同的文件名，并且文件大小相同。则跳过下载。
@@ -212,11 +213,11 @@ downloading_timeout = 300
  
 # 是否需要检查无附件/过期附件
 can_check_no_attach = 1
-can_check_timeout_attach = 0
+can_check_timeout_attach = 1
 
 # 没有附件或附件已过期设为星标
 can_star_no_attach = 1
-can_star_timeout_attach = 0
+can_star_timeout_attach = 1
  
 # 没有附件添加标签
 can_tag_no_attach = 0
@@ -237,9 +238,6 @@ can_print_prettytable = 1
 # 是否在控制台显示邮件信息
 can_print_title = 1
 can_print_attch = 1
-
-# 是否在控制台显示文件夹列表
-can_print_folder = 0
  
 # 是否在控制台显示统计表格
 can_print_title_table = 1
@@ -256,14 +254,6 @@ can_export_attchdata_to_csv = 0
 can_load_title = 1
 can_load_email = 1
 can_load_attach = 1
-
-
-# 是否需要设置 desired_capabilities 参数
-can_set_capabilities = 0
-config_timeout_pageLoad = 10000
-config_timeout_script = 1500
-
-
 
 #-------------------------------------------------------------------------------
 # 重命名模板
@@ -317,13 +307,14 @@ config_timeout_script = 1500
 # 需要放到花括号里。例如 {attchindex}_{filename2} => 0001_作品.pdf
 
 # 附件重命名规则。
-# 案例：{attchindex}_{filename2} => 0001_作品.pdf
+# 示例1：{attchindex}_{filename2}      => 02_作品.pdf
+# 示例2：{attchtitleindex}_{filename2} => 01_作品.pdf （推荐移动至文件夹时使用）
 rule_rename = "{attchindex}_{filename2}"     
  
-# 文件夹名称（暂不支持，预计明天更新）。
-# 案例：{address}({date4}) => 0001_123456@qq.com_2020-12-07_14-30-59
-rule_folder = "{titleindex}_{address}_{fulldate1}"
-
+# 文件夹名称。
+# 示例1：{titleindex}_{address}({date4}) => 01_123456@qq.com_2020-12-07_14-30-59
+# 示例2：{titleindex}_{nameid}           => 02_小明
+rule_folder = "{titleindex}_{nameid}"
 
 
 '''
@@ -348,9 +339,10 @@ LOCALDATA = {
   'show_count'    : 25,
   'max_page'      : 0,
   'title_index'   : 0,
-  'attach_count'  : 0,
+  'attach_index'  : 0,
   'timeout_count' : 0,
   'title_count'   : 0,
+  'attach_count'  : 0,
   'rule_rename'   : [],
   'rule_folder'   : [],
   'title_list'    : [],
@@ -374,7 +366,7 @@ MAIL_SELECTOR = {
   'create_tag_menuitem'      : ['#tag_QMMenu__menuitem_createtag' , '#tag_0_i__menuitem_createtag'],
   'create_tag_input'         : ['#QMconfirm_QMDialog_txt'         , '#QMconfirm_i_txt'],
   'create_tag_confirm'       : ['#QMconfirm_QMDialog_confirm'     , '#QMconfirm_i_confirm'],
-  'create_tag_setting_xpath' : ["//a[starts-with(#id              , 'folder_tag_') and contains(#id, '_name')]", "//tr[starts-with(#id,'tag_')]/td[1]/div[2]/a"],
+  'create_tag_setting_xpath' : ["//a[starts-with(#id,'folder_tag_') and contains(#id, '_name')]", "//tr[starts-with(#id,'tag_')]/td[1]/div[2]/a"],
   'folder_mail_title'        : ['u.tt'                            , 'u.black'],
   'attach_info_class'        : ['ico_big'                         , 'down_big']
 }
@@ -382,8 +374,8 @@ MAIL_SELECTOR = {
 # 漂亮表格
 PRETTY_TABLE = {}
 
-# 开启DEBUG模式 [True, tickcount]
-DEBUG_MODE = [0, 0]
+# 开启DEBUG模式 [True, tickcount, flag]
+DEBUG_MODE = [0, 0, 0]
 
 # 用于结束任务的标记
 END_FLAG = False
@@ -417,8 +409,9 @@ class C:
 # debug function 
 #-------------------------------------------------------------------------------
 
-def test(name, increment=1):
-    DEBUG_MODE[1] += increment
+def test(name='', index=1, flag=0):
+    DEBUG_MODE[1] += index
+    if DEBUG_MODE[2] != 0 and flag == 0: return
     print(f"{DEBUG_MODE[1]} {name}")
 
 def xprint(text):
@@ -448,36 +441,36 @@ def init_prettytable():
 
     # 邮件标题
     PRETTY_TABLE['title_list'] = prettytable.PrettyTable()
-    PRETTY_TABLE['title_list'].field_names = ["index", "page", "name", "title", "email", "timestamp"]
-    PRETTY_TABLE['title_list'].align = "l"
+    PRETTY_TABLE['title_list'].field_names = ['index', 'page', 'name', 'title', 'email', 'timestamp']
+    PRETTY_TABLE['title_list'].align = 'l'
     
     # 邮件附件
     PRETTY_TABLE['attach_list'] = prettytable.PrettyTable()
-    PRETTY_TABLE['attach_list'].field_names = ["count","filename","index","name","title","email","fileindex","filebyte","filetype","page","timeout","timestamp"]
-    PRETTY_TABLE['attach_list'].align = "l"
+    PRETTY_TABLE['attach_list'].field_names = ['count','filename','index','name','title','email','fileindex','filebyte','filetype','page','timeout','timestamp']
+    PRETTY_TABLE['attach_list'].align = 'l'
     
     # 过期附件
     PRETTY_TABLE['attach_timeout'] = prettytable.PrettyTable()
-    PRETTY_TABLE['attach_timeout'].field_names = ["count","filename","index","name","title","email","fileindex","filebyte","filetype","page","timeout","timestamp"]
-    PRETTY_TABLE['attach_timeout'].align = "l"
+    PRETTY_TABLE['attach_timeout'].field_names = ['count','filename','index','name','title','email','fileindex','filebyte','filetype','page','timeout','timestamp']
+    PRETTY_TABLE['attach_timeout'].align = 'l'
   
     # 标题黑名单
     if TITLE_BACKLIST_KEYS != [''] or TITLE_BACKLIST_KEYS != ['']:
         PRETTY_TABLE['title_backlist'] = prettytable.PrettyTable()
-        PRETTY_TABLE['title_backlist'].field_names = ["index", "page", "name", "title", "email", "timestamp"]
-        PRETTY_TABLE['title_backlist'].align = "l"
+        PRETTY_TABLE['title_backlist'].field_names = ['index', 'page', 'name', 'title', 'email', 'timestamp']
+        PRETTY_TABLE['title_backlist'].align = 'l'
   
     # 附件黑名单
     if ATTACH_BACKLIST_FILETYPE != [''] or ATTACH_WHITELIST_FILETYPE != ['']:
         PRETTY_TABLE['attach_backlist'] = prettytable.PrettyTable()
-        PRETTY_TABLE['attach_backlist'].field_names = ["count","filename","index","name","title","email","fileindex","filebyte","filetype","page","timeout","timestamp"]
-        PRETTY_TABLE['attach_backlist'].align = "l"
+        PRETTY_TABLE['attach_backlist'].field_names = ['count','filename','index','name','title','email','fileindex','filebyte','filetype','page','timeout','timestamp']
+        PRETTY_TABLE['attach_backlist'].align = 'l'
   
     # 文件夹列表
     if bool(can_print_folder): 
         PRETTY_TABLE['folder_list'] = prettytable.PrettyTable()
-        PRETTY_TABLE['folder_list'].field_names = ["index", "folderid", "name"]
-        PRETTY_TABLE['folder_list'].align = "l"
+        PRETTY_TABLE['folder_list'].field_names = ['index', 'folderid', 'name']
+        PRETTY_TABLE['folder_list'].align = 'l'
 
 #-------------------------------------------------------------------------------
 # webdriver
@@ -486,21 +479,21 @@ def init_prettytable():
 def init_webdriver():
 
     prefs = {
-        "download.directory_upgrade": True,
-        "download.prompt_for_download": "false",
+        'download.directory_upgrade': True,
+        'download.prompt_for_download': 'false',
         'profile.default_content_settings.multiple-automatic-downloads': 1,
-        "download.default_directory": DOWNLOAD_FOLDER
+        'download.default_directory': DOWNLOAD_FOLDER
     }
 
     options = ChromeOptions()
-    options.add_experimental_option("prefs", prefs)
-    options.add_argument("--window-size=1000,1200")
-    options.add_argument("--dns-prefetch-disable")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
+    options.add_experimental_option('prefs', prefs)
+    options.add_argument('--window-size=1000,1200')
+    options.add_argument('--dns-prefetch-disable')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
 
     # 禁止网页显示图片
-    if bool(can_disabled_images): options.add_argument("--blink-settings=imagesEnabled=false")
+    if bool(can_disabled_images): options.add_argument('--blink-settings=imagesEnabled=false')
     
     # 如果无法启动，请检查环境变量 PATH 是否正确填写了 chromedriver 的路径。
     # 没错，WIN 和 MAC 的区别只是多个 = 符号的区别（x
@@ -513,13 +506,7 @@ def init_webdriver():
     except Exception as e:
         print(f"{C.RED}无法打开浏览器。检查是否已运行了另一个脚本。{C.END}")
         print(f"\n\n{C.RED}{e}{C.END}\n\n")
-        os.system("PAUSE")
-    
-    # desired_capabilities
-    if bool(can_set_capabilities):
-        chrome.desired_capabilities["pageLoadStrategy"] = "none"
-        chrome.desired_capabilities['timeouts']['pageLoad'] = config_timeout_pageLoad or 10000
-        chrome.desired_capabilities['timeouts']['script'] = config_timeout_script or 1500
+        os.system('PAUSE')
     
     set_driver(chrome)
     
@@ -533,11 +520,11 @@ def login_qqmail():
     if DEBUG_MODE[0]: test('login_qqmail')
 
     while S(MAIL_SELECTOR['login_container'][MAILDOMIN]).exists():
-        if S("#login_wx_iframe").exists(): click(Text("QQ登录"));
-        if Link("帐号密码登录").exists(): click(Link("帐号密码登录"));
+        if S("#login_wx_iframe").exists(): click(Text('QQ登录'));
+        if Link('帐号密码登录').exists(): click(Link('帐号密码登录'));
 
         # 勾选下次自动登录
-        if S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).web_element.get_attribute("class") == "uncheck": 
+        if S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).web_element.get_attribute('class') == 'uncheck': 
             click(S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]))
 
         # 快速登录
@@ -562,9 +549,9 @@ def login_exmail():
     if DEBUG_MODE[0]: test('login_exmail')
     while S(MAIL_SELECTOR['login_container'][MAILDOMIN]).exists():
         # 如果默认显示是微信扫码登录，则切换到帐号密码登录
-        click("帐号密码登录")
+        click('帐号密码登录')
         # 点击自动登录后 #auto_login_in_five_days_pwd 没有任何反馈，非常奇怪。
-        click("5天内自动登录")
+        click('5天内自动登录')
         # 开始输入账号密码
         write(EX_QQNUMBER, S(MAIL_SELECTOR['login_username'][MAILDOMIN]))
         write(EX_PASSWORD, S(MAIL_SELECTOR['login_password'][MAILDOMIN]))
@@ -572,14 +559,13 @@ def login_exmail():
 
     # 等待选择账号
     once = True
-    while S("#accountList").exists():
+    while S('#accountList').exists():
         if once: xprint(f"{C.FLASHANI}等待选择要登录的账号...{C.END}"); once = False;
         time.sleep(1)
-    wait_until(S('#mainFrameContainer').exists)
 
 def update_token_sid():
     if DEBUG_MODE[0]: test('update_token_sid')
-    LOCALDATA['token_sid'] = get_driver().current_url.split("sid=")[1].split("&")[0]
+    LOCALDATA['token_sid'] = get_driver().current_url.split('sid=')[1].split('&')[0]
 
 
 #-------------------------------------------------------------------------------
@@ -592,9 +578,9 @@ def check_folder_in_list():
 
     # 展开文件夹列表
     get_driver().execute_script("showFolders('personal', true)")
-    wait_until(lambda: S("#personalfoldersDiv > ul#personalfolders").exists())
+    wait_until(lambda: S('#personalfoldersDiv > ul#personalfolders').exists())
 
-    for i, e in enumerate([find_all(S("#personalfolders > li > a"))][0], start=1):
+    for i, e in enumerate([find_all(S('#personalfolders > li > a'))][0], start=1):
         aid = e.web_element.get_attribute('id').split('_')[1]
         atl = e.web_element.get_attribute('title')
         LOCALDATA['folder_list'].append({'index':f"{i:02}", 'id':int(aid), 'name':re.sub(r'未读邮件(.*?)封','',atl)})
@@ -602,8 +588,11 @@ def check_folder_in_list():
     get_driver().execute_script("showFolders('personal', false)")
     wait_until(S('#tagfoldersDiv').exists)
 
-    for a in LOCALDATA['folder_list']: PRETTY_TABLE['folder_list'].add_row([a['index'], a['id'], a['name']])
-    xprint(PRETTY_TABLE['folder_list'])
+    if bool(can_print_prettytable):
+        for a in LOCALDATA['folder_list']: PRETTY_TABLE['folder_list'].add_row([a['index'], a['id'], a['name']])
+        xprint(PRETTY_TABLE['folder_list'])
+    else:
+        for a in LOCALDATA['folder_list']: xprint([a['index'], a['id'], a['name']])
 
 # 嘻嘻 纯属恶趣味 :)
 def check_folder_in_setting():
@@ -753,7 +742,7 @@ def load_folder_title():
 
     # 读取当前页面所有标题名称
     namelist = [item.web_element.text for item in find_all(S(MAIL_SELECTOR['folder_mail_title'][MAILDOMIN]))]
-    maillist = find_all(S('input[name="mailid"]'))
+    maillist = find_all(S("input[name='mailid']"))
   
     # 根据投稿时间顺序下载附件
     if bool(PAGES_TASK['reverse']): maillist = maillist[::-1]
@@ -761,54 +750,53 @@ def load_folder_title():
     # 开始遍历
     for i, e in enumerate(maillist, start=0):
 
+        title = {}
+        title.update({'index'     : i})
+        title.update({'page'      : int(LOCALDATA['token_page'])+1})
+        title.update({'name'      : e.web_element.get_attribute('fn')})
+        title.update({'email'     : e.web_element.get_attribute('fa')})
+        title.update({'mailid'    : e.web_element.get_attribute('value')})
+        title.update({'timestamp' : time.localtime(float(int(e.web_element.get_attribute('totime'))/1000))})
+        title.update({'title'     : namelist[i]})
+
+        if bool(can_print_prettytable): 
+            PRETTY_TABLE['title_list'].add_row([title['index'], title['page'], title['name'], title['title'], title['email'], time.strftime('%Y-%m-%d %H:%M:%S',title['timestamp'])])
+        
+        # 是否需要打印到控制台
+        if bool(can_print_title):
+            xprint(f"+ {title['index']:<4}: {title['page']}\t{title['email']:<24}\t{title['name']:<24}\t{title['title']}") 
+
         # 标题黑名单
         if TITLE_BACKLIST_KEYS != [''] and any([key in namelist[i] for key in TITLE_BACKLIST_KEYS]): 
             xprint(f"{C.GREY}[黑名单] 邮件标题包含黑名单关键词，已跳过：{namelist[i]}{C.END}")
-            if bool(can_print_prettytable): PRETTY_TABLE['title_backlist'].add_row([title["index"], title["page"], title["name"], title["title"], title["email"], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+            if bool(can_print_prettytable): PRETTY_TABLE['title_backlist'].add_row([title['index'], title['page'], title['name'], title['title'], title['email'], time.strftime('%Y-%m-%d %H:%M:%S',title['timestamp'])])
             continue
         
         # 标题白名单
-        if TITLE_BACKLIST_KEYS != [''] and not all([key in namelist[i] for key in TITLE_BACKLIST_KEYS]): 
+        if TITLE_WHITELIST_KEYS != [''] and not all([key in namelist[i] for key in TITLE_WHITELIST_KEYS]): 
             xprint(f"{C.SILVER}[白名单] 邮件标题不包含白名单关键词，已跳过：{namelist[i]}{C.END}")
-            if bool(can_print_prettytable): PRETTY_TABLE['title_backlist'].add_row([title["index"], title["page"], title["name"], title["title"], title["email"], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+            if bool(can_print_prettytable): PRETTY_TABLE['title_backlist'].add_row([title['index'], title['page'], title['name'], title['title'], title['email'], time.strftime('%Y-%m-%d %H:%M:%S',title['timestamp'])])
             continue
-        
-        # 统计数量
-        LOCALDATA['title_index'] += 1
-        
+
         # TITLE_TASK['start']
-        if TITLE_TASK['start'] > 1 and LOCALDATA['title_index'] < TITLE_TASK['start']:
-            xprint(f"{C.GREY}[TITLE_TASK: start] 跳过。{LOCALDATA['title_index']} / {TITLE_TASK['start']}{C.END}")
+        if TITLE_TASK['start'] > 1 and title['index'] < TITLE_TASK['start']:
+            xprint(f"{C.GREY}[TITLE_TASK: start] 跳过。{title['index']} / {TITLE_TASK['start']}{C.END}")
             continue
         
+        LOCALDATA['title_list'].append(title)
+
         # TITLE_TASK['end']
-        if TITLE_TASK['end'] >= 1 and LOCALDATA['title_index'] > TITLE_TASK['end']:
+        if TITLE_TASK['end'] >= 1 and title['index'] > TITLE_TASK['end']:
             xprint(f"{C.BGPURPLE}[TITLE_TASK: end]{C.END} 任务结束。{TITLE_TASK['start']} / {TITLE_TASK['end']}")
             can_next_page = 0
             break
         
         # TITLE_TASK['step']
-        if TITLE_TASK['step'] >= 1 and LOCALDATA['title_index'] >= TITLE_TASK['start'] + TITLE_TASK['step']:
-            xprint(f"{C.BGPURPLE}[TITLE_TASK: step]{C.END} 任务结束。{TITLE_TASK['start']}(+{TITLE_TASK['step']}) -> {LOCALDATA['title_index']}")
+        if TITLE_TASK['step'] >= 1 and title['index'] >= TITLE_TASK['start'] + TITLE_TASK['step']:
+            xprint(f"{C.BGPURPLE}[TITLE_TASK: step]{C.END} 任务结束。{TITLE_TASK['start']}(+{TITLE_TASK['step']}) -> {title['index']}")
             can_next_page = 0
             break
         
-        title = {}
-        title.update({"index"     : f"{LOCALDATA['title_index']:04}"})
-        title.update({"page"      : int(LOCALDATA['token_page'])+1})
-        title.update({"name"      : e.web_element.get_attribute('fn')})
-        title.update({"email"     : e.web_element.get_attribute('fa')})
-        title.update({"mailid"    : e.web_element.get_attribute("value")})
-        title.update({"timestamp" : time.localtime(float(int(e.web_element.get_attribute('totime'))/1000))})
-        title.update({"title"     : namelist[i]})
-        LOCALDATA['title_list'].append(title)
-
-        if bool(can_print_prettytable): 
-            PRETTY_TABLE['title_list'].add_row([title["index"], title["page"], title["name"], title["title"], title["email"], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
-        
-        # 是否需要打印到控制台
-        if bool(can_print_title):
-            xprint(f"+ {title['index']}: {title['page']}\t{title['email']:<24}\t{title['name']:<24}\t{title['title']}") 
 
 
 def foreach_folder_title():
@@ -895,7 +883,7 @@ def foreach_read_mail():
     if DEBUG_MODE[0]: test('foreach_read_mail')
 
     # 先检查文件夹是否存在
-    if bool(can_download_attach): check_folder_exists(DOWNLOAD_FOLDER)
+    if bool(can_download_attach): check_folder_exists(DOWNLOAD_FOLDER, 1)
 
     # 开始遍历
     for title in LOCALDATA['title_list']:
@@ -903,8 +891,11 @@ def foreach_read_mail():
         goto(f"https://{LOCALDATA['token_domin']}.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={LOCALDATA['token_sid']}&url=/cgi-bin/readmail?t=readmail%26mailid={title['mailid']}%26mode=pre")
         time.sleep(1)
 
-        NEXT_MAIL()
+        # 统计数量
+        LOCALDATA['title_index'] += 1
         
+        NEXT_MAIL()
+
         # 您请求的频率太快，请稍后再试
         FBI_WAITTING('#mainmail')
 
@@ -931,7 +922,7 @@ def check_no_attach(title):
     if S("#attachment").exists(): return False
     if DEBUG_MODE[0]: test('check_no_attach')
 
-    xprint(f"{C.RED}[没有附件] {title['index']}: {title['email']:<24}\t{title['name']:<24}\t{title['title']}{C.END}")
+    xprint(f"{C.RED}[没有附件] {title['index']:<4}: {title['email']:<24}\t{title['name']:<24}\t{title['title']}{C.END}")
     
     # 设为星标
     if bool(can_star_no_attach):
@@ -948,7 +939,7 @@ def check_timeout_attach(title):
     if not Text("已过期").exists(): return False
     if DEBUG_MODE[0]: test('check_timeout_attach')
 
-    xprint(f"{C.BGRED}![过期附件] {title['index']}: {title['email']:<24}\t{title['title']:<24} 包含过期附件 {C.END}")
+    xprint(f"{C.BGRED}![过期附件] {title['index']:<4}: {title['email']:<24}\t{title['title']:<24} 包含过期附件 {C.END}")
     
     # 设为星标
     if bool(can_star_timeout_attach):
@@ -974,7 +965,7 @@ def load_attach_info(i, e, title, exmail):
         attach.update({'filetype' : attach['filename'].split('.')[-1].lower()})
         attach.update({'filebyte' : exmail['filebyte'][i]})
         attach.update({'filedown' : exmail['filedown'][i]})
-        attach.update({'index'    : i})
+        attach.update({'index'    : str(i)})
         attach.update({'timeout'  : 0}) # TODO 注，由于目前我还没在企业邮箱测试超大附件，因此不知道它是以什么形式出现。
     else:
         attach.update({'filename' : e.get_attribute('filename')})
@@ -1013,45 +1004,51 @@ def foreach_mail_attach(title):
 
         # 漂亮表格
         if bool(can_print_prettytable): 
-            PRETTY_TABLE['attach_list'].add_row([f"{LOCALDATA['attach_count']:04}", attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+            PRETTY_TABLE['attach_list'].add_row([f"{LOCALDATA['attach_index']:04}", attach['filename'], title['index'], title['name'], title['title'], title['email'], attach['index'], attach['filebyte'], attach['filetype'], title['page'], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
         
         # 附件类型黑名单
-        if ATTACH_BACKLIST_FILETYPE != [''] and any([key in attach["filetype"] for key in ATTACH_BACKLIST_FILETYPE]):
-            xprint(f"{C.SILVER}* {title['index']:<4}\t{LOCALDATA['attach_count']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
-            if bool(can_print_prettytable): PRETTY_TABLE['attach_backlist'].add_row([f"{LOCALDATA['attach_count']+1:04}", attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+        if ATTACH_BACKLIST_FILETYPE != [''] and any([key in attach['filetype'] for key in ATTACH_BACKLIST_FILETYPE]):
+            xprint(f"{C.SILVER}* {title['index']:<4}\t{LOCALDATA['attach_index']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
+            if bool(can_print_prettytable): PRETTY_TABLE['attach_backlist'].add_row([f"{LOCALDATA['attach_index']+1:04}", attach['filename'], title['index'], title['name'], title['title'], title['email'], attach['index'], attach['filebyte'], attach['filetype'], title['page'], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
             continue
         
         # 附件类型白名单
-        if ATTACH_WHITELIST_FILETYPE != [''] and not all([key in attach["filetype"] for key in ATTACH_WHITELIST_FILETYPE]): 
-            xprint(f"{C.SILVER}* {title['index']:<4}\t{LOCALDATA['attach_count']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
-            if bool(can_print_prettytable): PRETTY_TABLE['attach_backlist'].add_row([f"{LOCALDATA['attach_count']+1:04}", attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+        if ATTACH_WHITELIST_FILETYPE != [''] and not all([key in attach['filetype'] for key in ATTACH_WHITELIST_FILETYPE]): 
+            xprint(f"{C.SILVER}* {title['index']:<4}\t{LOCALDATA['attach_index']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
+            if bool(can_print_prettytable): PRETTY_TABLE['attach_backlist'].add_row([f"{LOCALDATA['attach_index']+1:04}", attach['filename'], title['index'], title['name'], title['title'], title['email'], attach['index'], attach['filebyte'], attach['filetype'], title['page'], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
             continue
 
         # 该附件是否已过期
         if bool(attach['timeout']):
-            xprint(f"{C.RED}* {title['index']:<4}\t{LOCALDATA['attach_count']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
+            xprint(f"{C.RED}* {title['index']:<4}\t{LOCALDATA['attach_index']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}{C.END}")
             LOCALDATA['timeout_count']+=1
-            if bool(can_print_prettytable): PRETTY_TABLE['attach_timeout'].add_row([f"{LOCALDATA['attach_count']+1:04}", attach["filename"], title["index"], title["name"], title["title"], title["email"], attach["index"], attach["filebyte"], attach["filetype"], title["page"], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
+            if bool(can_print_prettytable): PRETTY_TABLE['attach_timeout'].add_row([f"{LOCALDATA['attach_index']+1:04}", attach['filename'], title['index'], title['name'], title['title'], title['email'], attach['index'], attach['filebyte'], attach['filetype'], title['page'], attach['timeout'], time.strftime("%Y-%m-%d %H:%M:%S",title['timestamp'])])
             break
         
         # 统计附件数量
-        LOCALDATA['attach_count'] += 1
+        LOCALDATA['attach_index'] += 1
 
         # 为了保险起见，还是等一等。免得车开太快了
-        time.sleep(1)
+        time.sleep(0.5)
+
+        # 初始化重命名模板
+        if bool(can_move_folder) or bool(can_rename_file): ready_replace_name(attach, title)
 
         # 下载前检查文件是否已存在，如果存在跳过下载。
         if ready_download_but_file_exists == 'skip': check_file_exists(attach, title)
-
+        
         # 如果文件已存在，则跳过
         if bool(SKIP_FLAG): continue
 
         # 打印日志
         if bool(can_print_attch): 
-            xprint(f"+ {title['index']:<4}\t{LOCALDATA['attach_count']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
+            xprint(f"+ {title['index']:<4}\t{LOCALDATA['attach_index']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
 
         # 下载
         if bool(can_download_attach): download_attach(elements[i], i)
+
+        # 统计附件数量
+        LOCALDATA['attach_index'] += 1
 
         # 等待下载完毕（如果需要等待）
         if bool(can_move_folder) or bool(can_rename_file): 
@@ -1060,15 +1057,13 @@ def foreach_mail_attach(title):
 
             # 为了保险起见，还是等一等。免得车开太快了
             time.sleep(2)
-            
-            # 初始化重命名模板
-            if bool(can_move_folder) or bool(can_rename_file): ready_replace_name(attach, title)
 
             # 是否允许重命名文件
             if bool(can_rename_file): rename_file(LOCALDATA['rule_rename'][int(len(LOCALDATA['rule_rename']))-1])
 
             # 是否允许移动到文件夹
             if bool(can_move_folder): move_folder(LOCALDATA['rule_folder'][int(len(LOCALDATA['rule_folder']))-1])
+            
 
     switch_to(find_all(Window())[0])
 
@@ -1106,41 +1101,6 @@ def waitting_download(attach, title):
 
     if DEBUG_MODE[0]: test(f"waitting_download ▲ {time.strftime('%H:%M:%S',time.localtime(time.time()))}")
     
-
-def check_file_exists(attach, title):
-
-    NEXT_MAIL()
-
-    # TODO： 由于企业邮箱没有 filebyte 的参数，只有文本。暂时没空去手动计算。
-    if bool(is_exmail_user): return
-
-    # 原始预期下载路径
-    rootpath = DOWNLOAD_FOLDER
-    filename = attach['filename']
-    filebyte = attach['filebyte']
-    expectpath = os.path.join(rootpath, filename)
-    
-    if DEBUG_MODE[0]: test(f"check_file_exists\t{filename}")
-
-    # 检查文件名是否存在，并且文件大小和属性相同。
-    if check_file_matching(expectpath, filebyte):
-        xprint(f"{C.BLUE}~ {title['index']:<4}\t{LOCALDATA['attach_count']:04}: {filename} 文件已存在根目录，跳过本次下载。{C.END}")
-        SKIP_MAIL()
-        return
-    
-    # # 检查文件名是否存在与目标文件夹
-    # if bool(can_move_folder):
-    #     if not check_folder_exists(folder_path): return
-    #     foldername = LOCALDATA['rule_folder'][int(len(LOCALDATA['rule_folder']))-1]
-    #     expectpath = os.path.join(rootpath, foldername, filename)
-    #     if check_file_matching(expectpath, filebyte):
-    #         xprint(f"{C.BLUE}~ {title['index']:<4}\t{LOCALDATA['attach_count']:04}: {filename} 文件已存在 {foldername} 文件夹，跳过本次下载。{C.END}")
-    #         SKIP_MAIL()
-
-
-def check_file_matching(path, byte):
-    return os.path.isfile(path) and os.path.getsize(path) == byte
-
 #---------------------------------------------------------------------------
 # rename rule
 #---------------------------------------------------------------------------
@@ -1157,17 +1117,17 @@ def ready_replace_name(attach, title):
         '{filename2}':        attach['filename'],                                             # file.jpg
         '{extension1}':       '.' + attach['filetype'],                                       # .jpg
         '{extension2}':       attach['filetype'],                                             # jpg
-        '{attchtitleindex}':  str(attach["index"]).zfill(2),                                  # 标附序
-        '{titleindex}':       str(LOCALDATA['title_index']).zfill(4),                         # 标序 [1 ~ 总标]
-        '{attchindex}':       str(LOCALDATA['attach_count']).zfill(4),                        # 附序 [1 ~ 总附]
-        '{pageindex}':        str(LOCALDATA['token_page']).zfill(3),                          # 页序 [1 ~ 总附]
-        '{titlecount}':       str(len(LOCALDATA['title_list'])).zfill(4),                     # 总标 0 
-        '{attchcount}':       str(len(LOCALDATA['attach_list'])).zfill(4),                    # 总附 0 
+        '{attchtitleindex}':  zerofill(int(attach['index'])),                                 # 标附序
+        '{titleindex}':       zerofill(LOCALDATA['title_index']),                             # 标序 [1 ~ 总标]
+        '{attchindex}':       zerofill(LOCALDATA['attach_index']),                            # 附序 [1 ~ 总附]
+        '{pageindex}':        zerofill(int(LOCALDATA['token_page'])+1),                       # 页序 [1 ~ 总附]
+        '{titlecount}':       zerofill(len(LOCALDATA['title_list'])),                         # 总标 0 
+        '{attchcount}':       zerofill(len(LOCALDATA['attach_list'])),                        # 总附 0 
         '{folderid}':         str(LOCALDATA['folder_id']),                                    # 129
-        '{foldername}':       LOCALDATA['folder_name'],                                       # 文件夹名称：我的文件夹
+        '{foldername}':       validateName(LOCALDATA['folder_name']),                                       # 文件夹名称：我的文件夹  (注，如果昵称不符合命名规范，会替换成x)
         '{foldertitle}':      str(LOCALDATA['folder_title']),                                 # 文件夹邮件数量：500
-        '{folderpages}':      str(LOCALDATA['max_page']).zfill(3),                            # 文件夹页数：002
-        '{nameid}':           title['name'],                                                  # 发信人昵称
+        '{folderpages}':      zerofill(LOCALDATA['max_page']),                                # 文件夹页数：002
+        '{nameid}':           validateName(title['name']),                                    # 发信人昵称 (注，如果昵称不符合命名规范，会替换成x)
         '{address}':          title['email'],                                                 # 邮箱地址：123456@qq.com
         '{mailid}':           title['email'].split("@")[0],                                   # 邮箱ID：123456
         '{year}':             time.strftime("%Y", title['timestamp']),                        # 年：2020
@@ -1195,79 +1155,126 @@ def ready_replace_name(attach, title):
         LOCALDATA['rule_rename'][rename_index] = LOCALDATA['rule_rename'][rename_index].replace(i, j)
         LOCALDATA['rule_folder'][folder_index] = LOCALDATA['rule_folder'][folder_index].replace(i, j)
 
-    
+
+
+def check_file_matching(path, byte):
+    return os.path.isfile(path) and os.path.getsize(path) == byte
+
+
+def check_file_exists(attach, title):
+
+    NEXT_MAIL()
+
+    # TODO： 由于企业邮箱没有 filebyte 的参数，只有文本。暂时没空去手动计算。
+    if bool(is_exmail_user): return
+
+    # 原始预期下载路径
+    rootpath = DOWNLOAD_FOLDER
+    filename = attach['filename'] if not bool(can_rename_file) else LOCALDATA['rule_rename'][int(len(LOCALDATA['rule_rename']))-1]
+    filebyte = attach['filebyte']
+    expectpath = os.path.join(rootpath, filename)
+
+    if DEBUG_MODE[0]: test(f"check_file_exists\t{filename}")
+
+    # 检查文件名是否存在，并且文件大小和属性相同。
+    if check_file_matching(expectpath, filebyte):
+        xprint(f"{C.BLUE}~ {title['index']:<4}\t{LOCALDATA['attach_index']:04}: {filename} 文件已存在根目录，跳过本次下载。{C.END}")
+        SKIP_MAIL()
+        return
+        
+    # 检查文件名是否存在与目标文件夹
+    if bool(can_move_folder):
+        foldername = LOCALDATA['rule_folder'][int(len(LOCALDATA['rule_folder']))-1]
+        folderpath = os.path.join(rootpath, foldername)
+        if not os.path.exists(folderpath): return
+        expectpath = os.path.join(folderpath, filename)
+        if not os.path.exists(expectpath): return
+        if check_file_matching(expectpath, filebyte):
+            xprint(f"{C.BLUE}~ {title['index']:<4}\t{LOCALDATA['attach_index']:04}: 文件夹 {foldername} 已存在文件 {filename}，跳过本次下载。{C.END}")
+            SKIP_MAIL()
+
+
 def rename_file(newname):
 
-    oldpath  = get_last_filepath()
-    oldname  = os.path.basename(oldpath)
-    newpath  = os.path.join(DOWNLOAD_FOLDER, newname)
+    filepath  = get_last_filepath()
+    filename  = os.path.basename(filepath)
+    expectpath  = os.path.join(DOWNLOAD_FOLDER, newname)
 
     # 避免错误的传入.tmp / .crdownload 类型的临时文件
-    if oldpath == '' or not os.path.exists(oldpath):
-      xprint(f"{C.RED}[rename_file] {oldname} 文件不存在。{C.END}")
+    if filepath == '' or not os.path.exists(filepath):
+      xprint(f"{C.RED}[rename_file] {filename} 文件不存在。{C.END}")
       return
 
     if DEBUG_MODE[0]: test(f"rename_file to\t\t{newname}")
 
     # 先检查目标文件是否已存在
-    if os.path.exists(newpath):
+    if os.path.exists(expectpath):
         # 先检查两个文件是否相同。相同则删除a文件。
-        if filecmp.cmp(oldpath, newpath):
-            xprint(f"{C.BGBLUE}[rename_file] {newname} 已存在。且与文件 {oldname} 内容相同。已自动删除。{C.END}")
-            os.remove(oldpath)
+        if filecmp.cmp(filepath, expectpath):
+            xprint(f"{C.BGBLUE}[rename_file] {newname} 已存在，且与文件 {filename} 内容相同。{C.END}")
+            os.remove(filepath)
         else:
             randnumber = 1
-            filename = os.path.splitext(newpath)[0]
-            filetype = oldname.split(".")[-1]
+            filename = os.path.splitext(expectpath)[0]
+            filetype = filename.split(".")[-1]
             aliaspath = os.path.join(DOWNLOAD_FOLDER, f'{filename}-{randnumber}.{filetype}')
             while os.path.exists(aliaspath):
                 randnumber+=1
                 aliaspath = os.path.join(DOWNLOAD_FOLDER, f'{filename}-{randnumber}.{filetype}')
-            os.rename(oldpath, aliaspath)
-            xprint(f"{C.BGBLUE}[rename_file] {newname} 已存在。但两个文件内容不相同。已在 {oldname} 文件名后面添加编号 {randnumber} 。{C.END}")
+            os.rename(filepath, aliaspath)
+            xprint(f"{C.BGBLUE}[rename_file] {newname} 已存在。但两个文件内容不相同。已在 {filename} 文件名后面添加编号 {randnumber} 。{C.END}")
     else:
-        os.rename(oldpath, newpath)
-        xprint(f"{C.GREEN}[rename_file] {oldname}\t\t\t{newname} {C.END}")
+        os.rename(filepath, expectpath)
+        xprint(f"{C.GREEN}[rename_file] {filename}\t\t\t{newname} {C.END}")
 
 
 def move_folder(foldername):
 
     filepath = get_last_filepath()
     filename = os.path.basename(filepath)
-    newpath  = os.path.join(DOWNLOAD_FOLDER, foldername, filename)
+    folderpath = os.path.join(DOWNLOAD_FOLDER, foldername)
+    expectpath = os.path.join(folderpath, filename)
 
     # 避免错误的传入.tmp / .crdownload 类型的临时文件
     if filepath == '' or not os.path.exists(filepath):
         print(f"{C.RED}[move_folder] {filename} 文件不存在。{C.END}")
         return
 
+    # 检查文件夹是否存在
+    check_folder_exists(folderpath, 1)
+
     if DEBUG_MODE[0]: test(f"move_folder to\t\t\t{foldername}")
 
     # 先检查目标文件夹是否已存在该文件
-    if os.path.exists(newpath): 
+    if os.path.exists(expectpath): 
         # 先检查两个文件是否相同。
-        if filecmp.cmp(filepath, newpath): 
+        if filecmp.cmp(filepath, expectpath): 
             os.remove(filepath)
-            xprint(f"{C.BGBLUE}[move_folder] {filename} 已存在{foldername}文件夹中。已自动删除原始文件。{C.END}")
+            xprint(f"{C.BGBLUE}[move_folder] 文件夹 {foldername} 已存在文件 {filename} {C.END}")
         else:
-            rename_file(filepath, newpath)
-            shutil.move(newpath, newfolder)
-            xprint(f"{C.GREEN}[move_folder] {filename}\t\t\t{foldername} {C.END}")
+            rename_file(filepath, expectpath)
+            shutil.move(expectpath, newfolder)
+            xprint(f"{C.GREEN}[move_folder] {foldername}\t\t\t{filename} {C.END}")
     else:
-        shutil.move(filepath, newfolder)
-        xprint(f"{C.GREEN}[move_folder] {filename}\t\t\t{foldername} {C.END}")
+        shutil.move(filepath, expectpath)
+        xprint(f"{C.GREEN}[move_folder] {foldername}\t\t\t{filename} {C.END}")
 
 #-------------------------------------------------------------------------------
 # file
 #-------------------------------------------------------------------------------
 
+def validateName(name):
+    # '/ \ : * ? " < > |'
+    regex = r"[\/|\\|\:|\*|\?|\"|\<|\>|\||\.]"
+    return re.sub(regex, "x", name)
+
 # 检查文件夹是否存在，不存在则创建
-def check_folder_exists(path = DOWNLOAD_FOLDER):
+def check_folder_exists(path = DOWNLOAD_FOLDER, can_mkdir=0):
     if DEBUG_MODE[0]: test(f"check_folder_exists\t\t{path}")
     if not os.path.exists(path): 
-        os.mkdir(path)
+        if bool(can_mkdir): os.mkdir(path)
         return False
-    return True
+    else: return True
 
 def get_last_filepath(path = DOWNLOAD_FOLDER):
     fn = lambda f: os.path.join(path, f)
@@ -1289,20 +1296,33 @@ def get_querystring(url):
     return dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
 
 # 将Table导出为csv文件
-def ptable_to_csv(table, filename):
-    if DEBUG_MODE[0]: test('ptable_to_csv')
+def table_to_csv(table, filename):
+    if DEBUG_MODE[0]: test('table_to_csv')
     raw = table.get_string()
     data = [tuple(filter(None, map(str.strip, splitline))) for line in raw.splitlines() for splitline in [line.split('|')] if len(splitline) > 1]
     with codecs.open(filename,'w','utf_8_sig') as f: 
         for d in data: f.write('{}\n'.format(','.join(d)))
 
+def zerofill(n):
+    n = n if type(n) == type(1) else int(n)
+    z = 2
+    if n >= 10000:
+        z=5
+    elif n>=1000 and n<10000:
+        z=4
+    elif n>=100 and n<1000: 
+        z=3
+    else:
+        z=2
+    return str(n).zfill(z)
+
 #-------------------------------------------------------------------------------
 # TODO: thread
 #-------------------------------------------------------------------------------
 
-async def thread_webdriver():
+def thread_webdriver():
 
-    script_start_time = time.strftime("%Y-%m-%d / %H:%M:%S",time.localtime(time.time()))
+    script_start_time = time.strftime("%Y-%m-%d_%H-%M-%S",time.localtime(time.time()))
     print(f"任务开始：{script_start_time}")
 
     # 初始化webdriver
@@ -1322,9 +1342,6 @@ async def thread_webdriver():
 
     # update token_sid
     update_token_sid()
-
-    # 获取文件夹列表
-    if bool(can_print_folder) and bool(can_print_prettytable): check_folder_in_setting() if not S('#personalfoldersDiv').exists() and LOCALDATA['folder_id'] != 1 else check_folder_in_list()
 
     # 获取标签列表
     if bool(can_tag_no_attach) or bool(can_tag_timeout_attach): check_tag_exists_in_list() if S('#tagfoldersDiv').exists() else check_tag_exists_in_setting()
@@ -1346,19 +1363,28 @@ async def thread_webdriver():
 
     # 下载结束
     print(f"{C.GREEN}任务完成{C.END}")
-    
+
     goto(MAIL_SELECTOR['login_index'][MAILDOMIN])
 
+    # 将数据导出为CSV
+    if bool(can_print_prettytable): xprint(f"\n\n{PRETTY_TABLE['attach_list']}\n")
+    
+    tips_timeout = f"其中，有 {LOCALDATA['timeout_count']} 个附件过期无法下载。" if LOCALDATA['timeout_count'] > 0 else ''
+    print(f"包含 {len(LOCALDATA['title_list'])} 封邮件，共 {len(LOCALDATA['attach_list'])} 个附件。{tips_timeout}\n预计实际下载完成 {LOCALDATA['attach_index']} 个附件。\n\n")
+
+    if bool(can_export_titledata_to_csv) and bool(can_load_title): table_to_csv(PRETTY_TABLE['title_list'], os.path.join(ROOTPATH, f"_邮件统计{script_start_time}.csv"))
+    if bool(can_export_attchdata_to_csv) and bool(can_load_email): table_to_csv(PRETTY_TABLE['attach_list'], os.path.join(ROOTPATH, f"_附件统计{script_start_time}.csv"))
+    
 
 #-------------------------------------------------------------------------------
 # main
 #-------------------------------------------------------------------------------
 
-async def main(): task_webdriver = asyncio.create_task(thread_webdriver())
+def main(): thread_webdriver()
 
 #-------------------------------------------------------------------------------
 # END
 #-------------------------------------------------------------------------------
 if __name__ == '__main__': 
     os.system('cls')
-    asyncio.run(main());
+    main()
