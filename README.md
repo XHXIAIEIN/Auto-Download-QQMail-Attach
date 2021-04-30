@@ -64,7 +64,7 @@ pip install helium
 pip install prettytable
 ```
 
-<br><br> 
+<br>
 
 <details><summary>WebDriver for Chrome （可跳过）</summary>
 
@@ -112,7 +112,7 @@ https://sites.google.com/a/chromium.org/chromedriver/downloads
    
 <br>   
    
-### 2 邮箱文件夹的编号
+### 2 找到对应的文件夹ID
 在左侧的面板‘我的文件夹’中找到你刚刚创建的文件夹，  
 然后**右键-新窗口打开**，在浏览器地址栏的网址链接找到**文件夹ID**的参数:  `folderid`  
   
