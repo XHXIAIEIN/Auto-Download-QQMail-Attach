@@ -429,6 +429,7 @@ def NEXT_MAIL():
     global SKIP_FLAG
     SKIP_FLAG = False
 
+
 #-------------------------------------------------------------------------------
 # prettytable 打印好看的表格
 #-------------------------------------------------------------------------------
@@ -466,11 +467,11 @@ def init_prettytable():
         PRETTY_TABLE['attach_backlist'].field_names = ['count','filename','index','name','title','email','fileindex','filebyte','filetype','page','timeout','timestamp']
         PRETTY_TABLE['attach_backlist'].align = 'l'
   
-#     # 文件夹列表
-#     if bool(can_print_folder): 
-#         PRETTY_TABLE['folder_list'] = prettytable.PrettyTable()
-#         PRETTY_TABLE['folder_list'].field_names = ['index', 'folderid', 'name']
-#         PRETTY_TABLE['folder_list'].align = 'l'
+    # 文件夹列表
+    # if bool(can_print_folder): 
+    #     PRETTY_TABLE['folder_list'] = prettytable.PrettyTable()
+    #     PRETTY_TABLE['folder_list'].field_names = ['index', 'folderid', 'name']
+    #     PRETTY_TABLE['folder_list'].align = 'l'
 
 #-------------------------------------------------------------------------------
 # webdriver
@@ -1048,7 +1049,7 @@ def foreach_mail_attach(title):
         if bool(can_download_attach): download_attach(elements[i], i)
 
         # 统计附件数量
-        LOCALDATA['attach_index'] += 1
+        LOCALDATA['attach_count'] += 1
 
         # 等待下载完毕（如果需要等待）
         if bool(can_move_folder) or bool(can_rename_file): 
@@ -1370,7 +1371,7 @@ def thread_webdriver():
     if bool(can_print_prettytable): xprint(f"\n\n{PRETTY_TABLE['attach_list']}\n")
     
     tips_timeout = f"其中，有 {LOCALDATA['timeout_count']} 个附件过期无法下载。" if LOCALDATA['timeout_count'] > 0 else ''
-    print(f"包含 {len(LOCALDATA['title_list'])} 封邮件，共 {len(LOCALDATA['attach_list'])} 个附件。{tips_timeout}\n预计实际下载完成 {LOCALDATA['attach_index']} 个附件。\n\n")
+    print(f"包含 {len(LOCALDATA['title_list'])} 封邮件，共 {len(LOCALDATA['attach_list'])} 个附件。{tips_timeout}\n预计实际下载完成 {LOCALDATA['attach_count']} 个附件。\n\n")
 
     if bool(can_export_titledata_to_csv) and bool(can_load_title): table_to_csv(PRETTY_TABLE['title_list'], os.path.join(ROOTPATH, f"_邮件统计{script_start_time}.csv"))
     if bool(can_export_attchdata_to_csv) and bool(can_load_email): table_to_csv(PRETTY_TABLE['attach_list'], os.path.join(ROOTPATH, f"_附件统计{script_start_time}.csv"))
