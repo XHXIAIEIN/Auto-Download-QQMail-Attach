@@ -466,11 +466,11 @@ def init_prettytable():
         PRETTY_TABLE['attach_backlist'].field_names = ['count','filename','index','name','title','email','fileindex','filebyte','filetype','page','timeout','timestamp']
         PRETTY_TABLE['attach_backlist'].align = 'l'
   
-    # 文件夹列表
-    if bool(can_print_folder): 
-        PRETTY_TABLE['folder_list'] = prettytable.PrettyTable()
-        PRETTY_TABLE['folder_list'].field_names = ['index', 'folderid', 'name']
-        PRETTY_TABLE['folder_list'].align = 'l'
+#     # 文件夹列表
+#     if bool(can_print_folder): 
+#         PRETTY_TABLE['folder_list'] = prettytable.PrettyTable()
+#         PRETTY_TABLE['folder_list'].field_names = ['index', 'folderid', 'name']
+#         PRETTY_TABLE['folder_list'].align = 'l'
 
 #-------------------------------------------------------------------------------
 # webdriver
