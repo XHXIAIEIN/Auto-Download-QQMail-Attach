@@ -172,7 +172,7 @@ PASSWORD="132465798"
     
 2. **附件下载路径**（必填）  
 浏览器下载的文件会自动保存在这里。只需要填 ` ROOTPATH `， 剩下两个会在这个目录创建文件夹。  
-> 注：Win系统路径需要以 \\\ 作为分隔。如：` DOWNLOAD_FOLDER='D:\\Downloads\\' `     
+> 注：Win系统路径需要以 \\\ 作为分隔。如：` D:\\Downloads\\ `     
 >     MAC系统则需要 / 作为分隔符。 
 ```
 ROOTPATH = "D:\\Downloads\\2020"
