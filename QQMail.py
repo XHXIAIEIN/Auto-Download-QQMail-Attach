@@ -34,9 +34,8 @@
 #  pip install prettytable
 #...............................................................................
 #  MAC用户，安装brew后，在终端输入以下指令：
-#  brew install --cask chromedriver
 #  brew install --cask helium
-#  brew install --cask chromedriver
+#  brew install --cask prettytable
 #...............................................................................
 
 from helium import *
@@ -404,7 +403,6 @@ class C:
   BGPURPLE  =  '\033[45m'   # 紫底白字
   FLASHANI  =  '\033[5m'    # 闪烁白灰
 
-
 #-------------------------------------------------------------------------------
 # debug function 
 #-------------------------------------------------------------------------------
@@ -428,7 +426,6 @@ def SKIP_MAIL():
 def NEXT_MAIL():
     global SKIP_FLAG
     SKIP_FLAG = False
-
 
 #-------------------------------------------------------------------------------
 # prettytable 打印好看的表格
@@ -744,28 +741,24 @@ def load_folder_title():
     # 读取当前页面所有标题名称
     namelist = [item.web_element.text for item in find_all(S(MAIL_SELECTOR['folder_mail_title'][MAILDOMIN]))]
     maillist = find_all(S("input[name='mailid']"))
-  
-    # 根据投稿时间顺序下载附件
-    if bool(PAGES_TASK['reverse']): maillist = maillist[::-1]
+
+    if bool(PAGES_TASK['reverse']):
+        TITLE_TASK['step'] = TITLE_TASK['step'] if TITLE_TASK['relay'] < 1 else LOCALDATA['folder_title']-TITLE_TASK['relay'] 
+    else:
+        TITLE_TASK['start'] = TITLE_TASK['start'] if TITLE_TASK['relay'] > 1 else TITLE_TASK['relay']
     
+    LOCALDATA['title_index'] = LOCALDATA['title_index'] if TITLE_TASK['relay'] < 1 else TITLE_TASK['relay']
+
     # 开始遍历
     for i, e in enumerate(maillist, start=0):
-
         title = {}
-        title.update({'index'     : i})
+        title.update({'index'     : i if not bool(PAGES_TASK['reverse']) else LOCALDATA['folder_title']-i})
         title.update({'page'      : int(LOCALDATA['token_page'])+1})
         title.update({'name'      : e.web_element.get_attribute('fn')})
         title.update({'email'     : e.web_element.get_attribute('fa')})
         title.update({'mailid'    : e.web_element.get_attribute('value')})
         title.update({'timestamp' : time.localtime(float(int(e.web_element.get_attribute('totime'))/1000))})
         title.update({'title'     : namelist[i]})
-
-        if bool(can_print_prettytable): 
-            PRETTY_TABLE['title_list'].add_row([title['index'], title['page'], title['name'], title['title'], title['email'], time.strftime('%Y-%m-%d %H:%M:%S',title['timestamp'])])
-        
-        # 是否需要打印到控制台
-        if bool(can_print_title):
-            xprint(f"+ {title['index']:<4}: {title['page']}\t{title['email']:<24}\t{title['name']:<24}\t{title['title']}") 
 
         # 标题黑名单
         if TITLE_BACKLIST_KEYS != [''] and any([key in namelist[i] for key in TITLE_BACKLIST_KEYS]): 
@@ -778,27 +771,36 @@ def load_folder_title():
             xprint(f"{C.SILVER}[白名单] 邮件标题不包含白名单关键词，已跳过：{namelist[i]}{C.END}")
             if bool(can_print_prettytable): PRETTY_TABLE['title_backlist'].add_row([title['index'], title['page'], title['name'], title['title'], title['email'], time.strftime('%Y-%m-%d %H:%M:%S',title['timestamp'])])
             continue
-
+        
         # TITLE_TASK['start']
         if TITLE_TASK['start'] > 1 and title['index'] < TITLE_TASK['start']:
             xprint(f"{C.GREY}[TITLE_TASK: start] 跳过。{title['index']} / {TITLE_TASK['start']}{C.END}")
             continue
+
+        if bool(can_print_prettytable): 
+            PRETTY_TABLE['title_list'].add_row([title['index'], title['page'], title['name'], title['title'], title['email'], time.strftime('%Y-%m-%d %H:%M:%S',title['timestamp'])])
+        
+        # 是否需要打印到控制台
+        if bool(can_print_title):
+            xprint(f"+ {title['index']:<4}: {title['page']}\t{title['email']:<24}\t{title['name']:<24}\t{title['title']}") 
         
         LOCALDATA['title_list'].append(title)
 
         # TITLE_TASK['end']
-        if TITLE_TASK['end'] >= 1 and title['index'] > TITLE_TASK['end']:
+        if TITLE_TASK['end'] >= 1 and len(LOCALDATA['title_list']) > TITLE_TASK['end']:
             xprint(f"{C.BGPURPLE}[TITLE_TASK: end]{C.END} 任务结束。{TITLE_TASK['start']} / {TITLE_TASK['end']}")
-            can_next_page = 0
+            PAGES_TASK['autoNext'] = 0
             break
         
         # TITLE_TASK['step']
-        if TITLE_TASK['step'] >= 1 and title['index'] >= TITLE_TASK['start'] + TITLE_TASK['step']:
-            xprint(f"{C.BGPURPLE}[TITLE_TASK: step]{C.END} 任务结束。{TITLE_TASK['start']}(+{TITLE_TASK['step']}) -> {title['index']}")
-            can_next_page = 0
+        if TITLE_TASK['step'] >= 1 and len(LOCALDATA['title_list']) > TITLE_TASK['start'] + TITLE_TASK['step']:
+            xprint(f"{C.BGPURPLE}[TITLE_TASK: step]{C.END} 任务结束。{TITLE_TASK['start']}(+{TITLE_TASK['step']}) -> {len(LOCALDATA['title_list'])}")
+            PAGES_TASK['autoNext'] = 0
             break
-        
-
+    
+    # 根据投稿时间顺序下载附件
+    if bool(PAGES_TASK['reverse']): LOCALDATA['title_list'] = LOCALDATA['title_list'][::-1]
+    
 
 def foreach_folder_title():
 
@@ -826,7 +828,7 @@ def foreach_folder_title():
         if PAGES_TASK['end'] >= 1 and int(LOCALDATA['token_page'])+1 > PAGES_TASK['end']:
             xprint(f"{C.BGPURPLE}[PAGES_TASK: end]{C.END} 任务结束。{int(LOCALDATA['token_page'])+1} / {LOCALDATA['max_page']}")
             break
-
+        
         # 是否有翻页按钮
         if not bool(find_all(S('#nextpage'))): 
             xprint(f"\n{C.BGBLUE}翻页到底了{C.END} {int(LOCALDATA['token_page'])+1} / {LOCALDATA['max_page']}")
@@ -914,6 +916,7 @@ def foreach_read_mail():
 
         # 开始读取附件
         foreach_mail_attach(title)
+        
 
 #---------------------------------------------------------------------------
 # check attach exists
@@ -1029,8 +1032,7 @@ def foreach_mail_attach(title):
         # 统计附件数量
         LOCALDATA['attach_index'] += 1
 
-        # 为了保险起见，还是等一等。免得车开太快了
-        time.sleep(0.5)
+        time.sleep(1)
 
         # 初始化重命名模板
         if bool(can_move_folder) or bool(can_rename_file): ready_replace_name(attach, title)
@@ -1038,11 +1040,12 @@ def foreach_mail_attach(title):
         # 下载前检查文件是否已存在，如果存在跳过下载。
         if ready_download_but_file_exists == 'skip': check_file_exists(attach, title)
         
+
         # 如果文件已存在，则跳过
         if bool(SKIP_FLAG): continue
 
         # 打印日志
-        if bool(can_print_attch): 
+        if bool(can_print_attch) and not bool(can_move_folder) and not bool(can_rename_file): 
             xprint(f"+ {title['index']:<4}\t{LOCALDATA['attach_index']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
 
         # 下载
@@ -1057,7 +1060,7 @@ def foreach_mail_attach(title):
             waitting_download(attach, title)
 
             # 为了保险起见，还是等一等。免得车开太快了
-            time.sleep(2)
+            time.sleep(1.5)
 
             # 是否允许重命名文件
             if bool(can_rename_file): rename_file(LOCALDATA['rule_rename'][int(len(LOCALDATA['rule_rename']))-1])
@@ -1266,7 +1269,7 @@ def move_folder(foldername):
 
 def validateName(name):
     # '/ \ : * ? " < > |'
-    regex = r"[\/|\\|\:|\*|\?|\"|\<|\>|\||\.]"
+    regex = r"[\/|\\|\:|\*|\?|\"|\<|\>|\||\.|]"
     return re.sub(regex, "x", name)
 
 # 检查文件夹是否存在，不存在则创建
