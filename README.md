@@ -199,11 +199,14 @@ https://mail.qq.com/cgi-bin/frame_html?t=frame_html&sid={x}&url=/cgi-bin/mail_li
 > end    到第几个结束。举例：执行到第 20 封邮件时结束。(包含第20封邮件)   
 > step   执行多少次后结束。举例：从第 1 封邮件开始执行，往后处理 10 封结束，也就是在第 10 封邮件时结束下载。   
 
+> relay   初始编号，默认从 0 开始计数，若下载过程中断，可以通过它覆盖任务初始编号(title_index)  
+> reverse 翻页任务结束时，将邮件列表顺序反转，即根据{投稿时间}顺序下载附件。否则按默认{最新邮件}顺序下载。
+
 注：end 和 step 不同的地方是，end 代表着结束的终点，而 step 则是从开始后累计的数量。  
 
 ```
-Title_Task = { 'start':1, 'step':0, 'end': 0 }
-Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1 }
+Title_Task = { 'start':1, 'step':0, 'end': 0, 'relay': 0 }
+Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1, 'reverse': 0 }
 ```
   
 <br><br>    
