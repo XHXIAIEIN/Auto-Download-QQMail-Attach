@@ -5,7 +5,7 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2021/04/30
+# 更新：2021/05/13
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
 #===============================================================================
 
@@ -733,7 +733,6 @@ def init_folder_task():
         xprint(f"{C.GREEN}[自动修正]{C.END} 由于 LOCALDATA['token_page'] = {PAGES_TASK['token_page']}\t即将从第{C.GREEN}{LOCALDATA['title_index']}{C.END} 封邮件开始计数。")
         goto(f"https://{LOCALDATA['token_domin']}.qq.com/cgi-bin/mail_list?folderid={LOCALDATA['folder_id']}&page={LOCALDATA['token_page']}&sid={LOCALDATA['token_sid']}&nocheckframe=true")
 
-
 def load_folder_title():
 
     if DEBUG_MODE[0]: test(f"load_folder_title")
@@ -742,17 +741,12 @@ def load_folder_title():
     namelist = [item.web_element.text for item in find_all(S(MAIL_SELECTOR['folder_mail_title'][MAILDOMIN]))]
     maillist = find_all(S("input[name='mailid']"))
 
-    if bool(PAGES_TASK['reverse']):
-        TITLE_TASK['step'] = TITLE_TASK['step'] if TITLE_TASK['relay'] < 1 else LOCALDATA['folder_title']-TITLE_TASK['relay'] 
-    else:
-        TITLE_TASK['start'] = TITLE_TASK['start'] if TITLE_TASK['relay'] > 1 else TITLE_TASK['relay']
-    
-    LOCALDATA['title_index'] = LOCALDATA['title_index'] if TITLE_TASK['relay'] < 1 else TITLE_TASK['relay']
+    if TITLE_TASK['relay'] >= 1: LOCALDATA['title_index'] = TITLE_TASK['relay'] - 1
 
     # 开始遍历
     for i, e in enumerate(maillist, start=0):
         title = {}
-        title.update({'index'     : i if not bool(PAGES_TASK['reverse']) else LOCALDATA['folder_title']-i})
+        title.update({'index'     : TITLE_TASK['relay'] + i if not bool(PAGES_TASK['reverse']) else TITLE_TASK['relay']+LOCALDATA['folder_title']-TITLE_TASK['relay']+len(LOCALDATA['title_list'])})
         title.update({'page'      : int(LOCALDATA['token_page'])+1})
         title.update({'name'      : e.web_element.get_attribute('fn')})
         title.update({'email'     : e.web_element.get_attribute('fa')})
@@ -787,7 +781,7 @@ def load_folder_title():
         LOCALDATA['title_list'].append(title)
 
         # TITLE_TASK['end']
-        if TITLE_TASK['end'] >= 1 and len(LOCALDATA['title_list']) > TITLE_TASK['end']:
+        if TITLE_TASK['end'] >= 1 and len(LOCALDATA['title_list']) >= TITLE_TASK['end']:
             xprint(f"{C.BGPURPLE}[TITLE_TASK: end]{C.END} 任务结束。{TITLE_TASK['start']} / {TITLE_TASK['end']}")
             PAGES_TASK['autoNext'] = 0
             break
@@ -797,9 +791,6 @@ def load_folder_title():
             xprint(f"{C.BGPURPLE}[TITLE_TASK: step]{C.END} 任务结束。{TITLE_TASK['start']}(+{TITLE_TASK['step']}) -> {len(LOCALDATA['title_list'])}")
             PAGES_TASK['autoNext'] = 0
             break
-    
-    # 根据投稿时间顺序下载附件
-    if bool(PAGES_TASK['reverse']): LOCALDATA['title_list'] = LOCALDATA['title_list'][::-1]
     
 
 def foreach_folder_title():
@@ -855,11 +846,13 @@ def foreach_folder_title():
 
         scroll_down(S('#frm').height)
 
+    # 根据投稿时间顺序下载附件
+    if bool(PAGES_TASK['reverse']): LOCALDATA['title_list'] = LOCALDATA['title_list'][::-1]
+
     # 文件夹遍历完毕。打印好看的表格
     if bool(can_print_title_table):  
         if bool(can_print_prettytable): xprint(f"\n\n{PRETTY_TABLE['title_list']}\n")
         xprint(f"\n共有{len(LOCALDATA['title_list'])}封邮件。\n\n")
-
 
 #-------------------------------------------------------------------------------
 # WAITTING
@@ -1040,7 +1033,6 @@ def foreach_mail_attach(title):
         # 下载前检查文件是否已存在，如果存在跳过下载。
         if ready_download_but_file_exists == 'skip': check_file_exists(attach, title)
         
-
         # 如果文件已存在，则跳过
         if bool(SKIP_FLAG): continue
 
