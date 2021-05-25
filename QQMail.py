@@ -276,6 +276,8 @@ can_load_attach = 1
 # foldertitle     文件夹：邮件数量                       例:  500
 # folderpage      文件夹：总页数                         例:  20
 #···············································································
+# titlename       邮件标题                               例:  小明_简历_2021
+#···············································································
 # nameid          发信方的邮箱昵称                       例:  小明
 # address         发信方的邮箱地址                       例:  123456@qq.com, xiaomin233@vip.qq.com
 # emailid         发信方的邮箱账号，通常是QQ号           例:  123456, xiaomin233
@@ -1125,9 +1127,10 @@ def ready_replace_name(attach, title):
         '{titlecount}':       zerofill(len(LOCALDATA['title_list'])),                         # 总标 0 
         '{attchcount}':       zerofill(len(LOCALDATA['attach_list'])),                        # 总附 0 
         '{folderid}':         str(LOCALDATA['folder_id']),                                    # 129
-        '{foldername}':       validateName(LOCALDATA['folder_name']),                                       # 文件夹名称：我的文件夹  (注，如果昵称不符合命名规范，会替换成x)
+        '{foldername}':       validateName(LOCALDATA['folder_name']),                         # 文件夹名称：我的文件夹  (注，如果昵称不符合命名规范，会替换成x)
         '{foldertitle}':      str(LOCALDATA['folder_title']),                                 # 文件夹邮件数量：500
         '{folderpages}':      zerofill(LOCALDATA['max_page']),                                # 文件夹页数：002
+        '{titlename}':        validateName(title['title']),                                   # 邮件标题 (注，如果昵称不符合命名规范，会替换成x)
         '{nameid}':           validateName(title['name']),                                    # 发信人昵称 (注，如果昵称不符合命名规范，会替换成x)
         '{address}':          title['email'],                                                 # 邮箱地址：123456@qq.com
         '{mailid}':           title['email'].split("@")[0],                                   # 邮箱ID：123456
