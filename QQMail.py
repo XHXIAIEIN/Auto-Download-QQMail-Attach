@@ -134,7 +134,6 @@ USERDATA_FOLDER = os.path.join(ROOTPATH,'selenium')     # 浏览器的缓存数�
 
 FOLDER_ID = 200
 
-
 #-------------------------------------------------------------------------------
 # 指定下载计划。
 #-------------------------------------------------------------------------------
@@ -313,8 +312,8 @@ rule_rename = "{attchindex}_{filename2}"
  
 # 文件夹名称。
 # 示例1：{titleindex}_{address}({date4}) => 01_123456@qq.com_2020-12-07_14-30-59
-# 示例2：{titleindex}_{nameid}           => 02_小明
-rule_folder = "{titleindex}_{nameid}"
+# 示例2：{titleindex}_{emailid}           => 02_123456
+rule_folder = "{titleindex}_{emailid}"
 
 
 '''
@@ -336,7 +335,7 @@ LOCALDATA = {
   'token_page'    : 0,
   'folder_name'   : '',
   'folder_title'  : '',
-  'show_count'    : 25,
+  'show_count'    : 100,
   'max_page'      : 0,
   'title_index'   : 0,
   'attach_index'  : 0,
@@ -486,7 +485,7 @@ def init_webdriver():
 
     options = ChromeOptions()
     options.add_experimental_option('prefs', prefs)
-    options.add_argument('--window-size=1000,1200')
+    options.add_argument('--window-size=1000,1500')
     options.add_argument('--dns-prefetch-disable')
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
@@ -747,7 +746,7 @@ def load_folder_title():
     # 开始遍历
     for i, e in enumerate(maillist, start=0):
         title = {}
-        title.update({'index'     : TITLE_TASK['relay'] + i if not bool(PAGES_TASK['reverse']) else TITLE_TASK['relay']+LOCALDATA['folder_title']-TITLE_TASK['relay']+len(LOCALDATA['title_list'])})
+        title.update({'index'     : TITLE_TASK['relay'] + i if not bool(PAGES_TASK['reverse']) else TITLE_TASK['relay']+LOCALDATA['folder_title']-len(LOCALDATA['title_list'])  })
         title.update({'page'      : int(LOCALDATA['token_page'])+1})
         title.update({'name'      : e.web_element.get_attribute('fn')})
         title.update({'email'     : e.web_element.get_attribute('fa')})
@@ -806,7 +805,7 @@ def foreach_folder_title():
 
         # 读取当前页数
         LOCALDATA['token_page'] = int(S('#frm > div > .right').web_element.text.split('/')[0]) -1
-        xprint(f"\n{C.BGWHITE} ▶  {LOCALDATA['folder_name']} {int(LOCALDATA['token_page'])+1} / {LOCALDATA['max_page']}{C.END}  ")
+        # xprint(f"\n{C.BGWHITE} ▶  {LOCALDATA['folder_name']} {int(LOCALDATA['token_page'])+1} / {LOCALDATA['max_page']}{C.END}  ")
         
         # 读取邮件标题
         if bool(can_load_title): load_folder_title() 
@@ -823,7 +822,7 @@ def foreach_folder_title():
         
         # 是否有翻页按钮
         if not bool(find_all(S('#nextpage'))): 
-            xprint(f"\n{C.BGBLUE}翻页到底了{C.END} {int(LOCALDATA['token_page'])+1} / {LOCALDATA['max_page']}")
+            # xprint(f"\n{C.BGBLUE}翻页到底了{C.END} {int(LOCALDATA['token_page'])+1} / {LOCALDATA['max_page']}")
             break
 
         # 下一页。 exmail 的下一页没有 page 参数
@@ -846,14 +845,17 @@ def foreach_folder_title():
         FBI_WAITTING('#frm')
 
         scroll_down(S('#frm').height)
-
+    
     # 根据投稿时间顺序下载附件
-    if bool(PAGES_TASK['reverse']): LOCALDATA['title_list'] = LOCALDATA['title_list'][::-1]
+    if bool(PAGES_TASK['reverse']): 
+        LOCALDATA['title_list'] = LOCALDATA['title_list'][::-1]
+        PRETTY_TABLE['title_list'] = PRETTY_TABLE['title_list'][::-1]
 
     # 文件夹遍历完毕。打印好看的表格
     if bool(can_print_title_table):  
         if bool(can_print_prettytable): xprint(f"\n\n{PRETTY_TABLE['title_list']}\n")
         xprint(f"\n共有{len(LOCALDATA['title_list'])}封邮件。\n\n")
+
 
 #-------------------------------------------------------------------------------
 # WAITTING
@@ -955,8 +957,10 @@ def check_timeout_attach(title):
 
 def load_attach_info(i, e, title, exmail):
     if DEBUG_MODE[0]: test('load_attach_info')
-    attach={}
+    scroll_down(S("#pageEnd").y)
 
+    attach={}
+    
     if bool(is_exmail_user):
         fn = exmail['filename'][i]
         attach.update({'filename' : fn if bool(fn.find('<div class="full_title">')) else fn.split('>')[1].split('<')[0]})
@@ -1044,6 +1048,8 @@ def foreach_mail_attach(title):
         # 下载
         if bool(can_download_attach): download_attach(elements[i], i)
 
+        switch_to(find_all(Window())[0])
+
         # 统计附件数量
         LOCALDATA['attach_count'] += 1
 
@@ -1060,9 +1066,7 @@ def foreach_mail_attach(title):
 
             # 是否允许移动到文件夹
             if bool(can_move_folder): move_folder(LOCALDATA['rule_folder'][int(len(LOCALDATA['rule_folder']))-1])
-            
 
-    switch_to(find_all(Window())[0])
 
 #---------------------------------------------------------------------------
 # download
