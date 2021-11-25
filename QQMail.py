@@ -699,8 +699,8 @@ def init_folder_task():
     if DEBUG_MODE[0]: test('init_folder_task')
 
     xprint(f'----------------------------------------------')
-    xprint(f"PAGES_TASK:{C.UNLINK}{PAGES_TASK}{C.END}")
-    xprint(f'TITLE_TASK:{C.UNLINK}{TITLE_TASK}{C.END}')
+    xprint(f"PAGES_TASK:{PAGES_TASK}")
+    xprint(f'TITLE_TASK:{TITLE_TASK}')
     xprint(f'----------------------------------------------\n')
     
     # PAGES_TASK
@@ -1045,7 +1045,7 @@ def foreach_mail_attach(title):
 
         # 打印日志
         if bool(can_print_attch) and not bool(can_move_folder) and not bool(can_rename_file): 
-            xprint(f"+ {title['index']:<4}\t{LOCALDATA['attach_index']:04}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
+            xprint(f"+ {LOCALDATA['attach_index']:04}\t{title['index']:<4}: {title['email']:<24}\t{title['name']:<24}\t{attach['filename']}")
 
         # 下载
         if bool(can_download_attach): download_attach(elements[i], i)
