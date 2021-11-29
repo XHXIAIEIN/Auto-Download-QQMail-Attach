@@ -35,9 +35,9 @@ https://brew.sh/index_zh-cn
 简单的说，就是把下面这段指令复制粘贴到终端(Terminal) 
 
 ```
-brew install --cask chromedriver
 brew install --cask helium
 brew install --cask chromedriver
+brew install --cask prettytable
 ```
 
 <br>   
@@ -66,15 +66,18 @@ pip install prettytable
 
 <br>
 
+### chromedriver
+
+其实 helium 模块已经自带了 chromedriver，可以省略此步骤。    
+不过有时候 helium 的更新比较慢，可能浏览器的版本升级了，它还没升级，就会提示错误信息。  
+因此，你还需要手动安装一个 chromedriver  
+  
 <details><summary>WebDriver for Chrome （可跳过）</summary>
 
 <br>   
      
 **WebDriver for Chrome**  
 https://sites.google.com/a/chromium.org/chromedriver/downloads
-    
-因为现在用了 helium 模块，所以已经不需要再手动安装 chromedriver，因此可以省略此步骤。  
-但还是把安装方法留着吧，也许以后有路人用的上。
 
 <br>
 
@@ -88,13 +91,17 @@ https://sites.google.com/a/chromium.org/chromedriver/downloads
 > 右上角 - 设置 - 关于Google Chrome 
 >   
 > 注3：
-> **如何安装（环境变量）**：    
+> **如何安装**：    
 > 下载好之后，把 chromedriver.exe 放到随意一个文件夹，然后复制当前这个文件夹的路径。  
 > 通常我喜欢把这类工具专门放到一个叫 bin 的文件夹里。比如 ` D:\Program\bin `
+> 然后在环境变量里面加入这个路径。
 >   
-> 按下 Windows 键，输入 path ，会看到一个「编辑系统环境变量」，按下回车就能打开它。  
-> 打开右下角「环境变量」，在下面「系统变量」列表里，找到 Path 一行，双击编辑。  
-> 右上角有「新建」，它会在列表后面新建空的一行，接着把刚才的文件夹路径粘贴进去就可以了。
+> 注4：
+> **如何添加环境变量**：   
+> 按下 Windows 键，输入 path （或 "环境变量"），会看到「编辑系统环境变量」打开它。  
+> 找到窗口的右下角「环境变量」，看到上下有两个列表，一个是用户变量，一个是系统变量。
+> 看下面的「系统变量」列表中找到 Path 一行，双击编辑。  
+> 右上角「新建」，它会在列表后面新建空的一行，把刚才的文件夹路径粘贴进去就可以了。
    
 </details>  
  
