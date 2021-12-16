@@ -48,9 +48,7 @@ Windows 用户安装稍微复杂一点点，不过大家都习惯了这些蛋疼
 1. **Python 3**   
 https://www.python.org/  
 
-> 下载最新版即可，跟着引导安装，点页面中那两个带着小盾牌图标的大按钮。
-> - [x] 1. Install Now
-> - [x] 2. Disable path length limit
+> 下载最新版即可，跟着引导安装。
 
 <br>   
      
@@ -63,46 +61,57 @@ pip install selenium
 pip install helium
 pip install prettytable
 ```
+  
+> 注：若因网络代理问题无法下载，可尝试使用国内的镜像源。举例：
 
+```
+pip install helium  -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+```
+  
 <br>
 
 ### chromedriver
 
 其实 helium 模块已经自带了 chromedriver，可以省略此步骤。    
 不过有时候 helium 的更新比较慢，可能浏览器的版本升级了，它还没升级，就会提示错误信息。  
-因此，你还需要手动安装一个 chromedriver  
+这种情况，你就需要手动安装 chromedriver  
   
-<details><summary>WebDriver for Chrome （可跳过）</summary>
+<details><summary>WebDriver for Chrome</summary>
 
 <br>   
      
 **WebDriver for Chrome**  
-https://sites.google.com/a/chromium.org/chromedriver/downloads
+https://sites.google.com/chromium.org/driver/
 
 <br>
-
-> 注1：  
-> **下载对应版本号**：  
-> 比如你Chrome 版本是 90.0，就下载 90.0 版本。  
-> 以后浏览器有更新，也是需要重新下载对应版本的 chromedriver。否则会报错。  
->   
-> 注2：
-> **如何查看 Chrome 当前版本号**：  
-> 右上角 - 设置 - 关于Google Chrome 
->   
-> 注3：
-> **如何安装**：    
-> 下载好之后，把 chromedriver.exe 放到随意一个文件夹，然后复制当前这个文件夹的路径。  
-> 通常我喜欢把这类工具专门放到一个叫 bin 的文件夹里。比如 ` D:\Program\bin `
-> 然后在环境变量里面加入这个路径。
->   
-> 注4：
-> **如何添加环境变量**：   
-> 按下 Windows 键，输入 path （或 "环境变量"），会看到「编辑系统环境变量」打开它。  
-> 找到窗口的右下角「环境变量」，看到上下有两个列表，一个是用户变量，一个是系统变量。
-> 看下面的「系统变量」列表中找到 Path 一行，双击编辑。  
-> 右上角「新建」，它会在列表后面新建空的一行，把刚才的文件夹路径粘贴进去就可以了。
+  
+### 下载对应版本号  
+  
+#### 太长不看版  
+普通用户，直接下载 Latest stable release 版本，即最新正式版。  
+![Snipaste_2021-12-16_15-42-17](https://user-images.githubusercontent.com/45864744/146328881-7f5c3f9e-88e0-40b8-9deb-9fb8219342a9.png)
+  
+  
+#### 啰里啰唆版  
+比如你 Chrome 版本是 96.0，就下载 96.0 版本。  
+以后浏览器有更新，也是需要重新下载对应版本的 chromedriver。否则会报错。  
    
+如何查看 Chrome 当前版本号：浏览器右上角菜单 - 设置 - 关于Google Chrome 
+     
+<br>
+  
+### 如何安装    
+将下载完成的 chromedriver.exe 放到随意一个文件夹，
+例如通常我喜欢把这类工具专门放到一个叫 bin 的文件夹里，比如 ` D:\Program\bin ` 然后复制这个文件夹的路径。
+打开**环境变量**，在 ` Path ` 配置填写这个文件夹。
+     
+### 如何添加环境变量   
+按下 Windows 键，输入 path （或输入 "环境变量"），会看到「编辑系统环境变量」。  
+找到它窗口右下角的「环境变量」，整个窗口有两个列表，上面是是用户变量，下面是系统变量。  
+我们看下面的「系统变量」列表，往下翻，找到 「Path」一行，双击编辑。  
+找到右上角「新建」，它会在列表后面新建空的一行，把刚才的文件夹路径粘贴进去就可以了。
+   
+  
 </details>  
  
 <br><br>  
