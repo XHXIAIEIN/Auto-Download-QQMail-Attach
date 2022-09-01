@@ -5,7 +5,7 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2021/11/29
+# 更新：2022/09/01
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
 #===============================================================================
 
@@ -126,7 +126,7 @@ PASSWORD="134625798"
 #   Mac 用户用  / 作为路径分隔符。如：'~/Downloads/email'
 #...............................................................................
 
-ROOTPATH = "D:\\Downloads\\2020"
+ROOTPATH = "D:\\Downloads\\2022"
 DOWNLOAD_FOLDER = os.path.join(ROOTPATH,'download')     # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,'selenium')     # 浏览器的缓存数据
 
@@ -190,6 +190,27 @@ ATTACH_BACKLIST_FILETYPE = ['']
 # ATTACH_WHITELIST_FILETYPE = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 ATTACH_WHITELIST_FILETYPE = ['']
  
+
+#···············································································
+# 星标 / 标签
+#···············································································
+ 
+# 是否需要检查无附件/过期附件
+can_check_no_attach = 1
+can_check_timeout_attach = 1
+
+# 没有附件或附件已过期设为星标
+can_star_no_attach = 1
+can_star_timeout_attach = 1
+ 
+# 没有附件添加标签
+can_tag_no_attach = 0
+str_tag_no_attach = '没有附件'
+ 
+# 过期附件添加标签
+can_tag_timeout_attach = 0
+str_tag_timeout_attach = '过期附件'
+ 
  
 #-------------------------------------------------------------------------------
 # * Advanced Config 高级选项
@@ -218,28 +239,7 @@ ready_download_but_file_exists = 'skip' or 'continue'
  
 # 下载等待时长(单位：秒)。超过时长后则放弃后续操作，如移动文件夹或重命名。
 downloading_timeout = 300
- 
 
-#···············································································
-# 星标 / 标签
-#···············································································
- 
-# 是否需要检查无附件/过期附件
-can_check_no_attach = 1
-can_check_timeout_attach = 1
-
-# 没有附件或附件已过期设为星标
-can_star_no_attach = 1
-can_star_timeout_attach = 1
- 
-# 没有附件添加标签
-can_tag_no_attach = 0
-str_tag_no_attach = '没有附件'
- 
-# 过期附件添加标签
-can_tag_timeout_attach = 0
-str_tag_timeout_attach = '过期附件'
- 
  
 #···············································································
 # 控制台信息
@@ -374,7 +374,7 @@ MAIL_SELECTOR = {
   'login_username'           : ['#u'                              , '#inputuin'],
   'login_password'           : ['#p'                              , '#pp'],
   'login_button'             : ['#login_button'                   , '#btlogin'],
-  'login_autologin'          : ['#p_low_login_enable'             , '#auto_login_in_five_days_pwd'],
+  'login_autologin'          : ['#auto_login_qq'                  , '#auto_login_in_five_days_pwd'],
   'check_tag_scroll'         : ['#mainFrameContainer'             , '#contenttable'],
   'create_tag_scroll'        : ['#tag'                            , '#contenttable'],
   'create_tag_menu'          : ['#tag_QMMenu'                     , '#tag_i'],
@@ -552,10 +552,10 @@ def login_qqmail():
         write(PASSWORD, S(MAIL_SELECTOR['login_password'][MAILDOMIN]))
         click(S(MAIL_SELECTOR['login_button'][MAILDOMIN]))
     
-        # 等待拼图验证
+        # 等待安全验证
         once = True
-        while S("#tcaptcha_iframe").exists():
-            if once: xprint(f"{C.FLASHANI}等待用户手动完成拼图认证...{C.END}"); once = False;
+        while not S("#mainFrameContainer").exists():
+            if once: xprint(f"{C.FLASHANI}等待用户手动完成认证...{C.END}"); once = False;
             time.sleep(1)
         wait_until(S('#mainFrameContainer').exists)
 
@@ -613,7 +613,7 @@ def check_folder_in_setting():
     if DEBUG_MODE[0]: test('check_folder_in_setting')
     xprint(f"{C.RED}你没有创建过文件夹。{C.END}")
     xprint(f"{C.RED}你填写想下载的文件夹也不是首页收件箱。{C.END}")
-    xprint(f"{C.RED}你到底想干嘛？？{C.END}")
+    xprint(f"{C.RED}你到底做什么？{C.END}")
     xprint(f"\n\n{C.GOLD}如果你打算继续执行，将会为你转去下载{C.GREEN}收件箱{C.GOLD}的附件。{C.END}")
     os.system("PAUSE")
     LOCALDATA['folder_id'] = 1
