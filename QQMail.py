@@ -126,7 +126,7 @@ PASSWORD="134625798"
 #   Mac 用户用  / 作为路径分隔符。如：'~/Downloads/email'
 #...............................................................................
 
-ROOTPATH = "D:\\Downloads\\2022"
+ROOTPATH = "D:\\XHXIAIEIN\\Desktop\\2022"
 DOWNLOAD_FOLDER = os.path.join(ROOTPATH,'download')     # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,'selenium')     # 浏览器的缓存数据
 
@@ -190,27 +190,6 @@ ATTACH_BACKLIST_FILETYPE = ['']
 # ATTACH_WHITELIST_FILETYPE = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 ATTACH_WHITELIST_FILETYPE = ['']
  
-
-#···············································································
-# 星标 / 标签
-#···············································································
- 
-# 是否需要检查无附件/过期附件
-can_check_no_attach = 1
-can_check_timeout_attach = 1
-
-# 没有附件或附件已过期设为星标
-can_star_no_attach = 1
-can_star_timeout_attach = 1
- 
-# 没有附件添加标签
-can_tag_no_attach = 0
-str_tag_no_attach = '没有附件'
- 
-# 过期附件添加标签
-can_tag_timeout_attach = 0
-str_tag_timeout_attach = '过期附件'
- 
  
 #-------------------------------------------------------------------------------
 # * Advanced Config 高级选项
@@ -239,7 +218,28 @@ ready_download_but_file_exists = 'skip' or 'continue'
  
 # 下载等待时长(单位：秒)。超过时长后则放弃后续操作，如移动文件夹或重命名。
 downloading_timeout = 300
+ 
 
+#···············································································
+# 星标 / 标签
+#···············································································
+ 
+# 是否需要检查无附件/过期附件
+can_check_no_attach = 1
+can_check_timeout_attach = 1
+
+# 没有附件或附件已过期设为星标
+can_star_no_attach = 1
+can_star_timeout_attach = 1
+ 
+# 没有附件添加标签
+can_tag_no_attach = 0
+str_tag_no_attach = '没有附件'
+ 
+# 过期附件添加标签
+can_tag_timeout_attach = 0
+str_tag_timeout_attach = '过期附件'
+ 
  
 #···············································································
 # 控制台信息
@@ -534,11 +534,16 @@ def login_qqmail():
     if DEBUG_MODE[0]: test('login_qqmail')
 
     while S(MAIL_SELECTOR['login_container'][MAILDOMIN]).exists():
-        if S("#login_wx_iframe").exists(): click(Text('QQ登录'));
-        if Link('帐号密码登录').exists(): click(Link('帐号密码登录'));
+
+        if S("#login_wx_iframe").exists(): 
+            click(Text('QQ登录'));
+
+        # 帐号密码登录
+        if S('#switcher_plogin').exists(): 
+            click(S('#switcher_plogin'));
 
         # 勾选下次自动登录
-        if S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).web_element.get_attribute('class') == 'uncheck': 
+        if S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).web_element.get_attribute('class') != 'xm_login_card_checked': 
             click(S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]))
 
         # 快速登录
@@ -551,13 +556,14 @@ def login_qqmail():
         write(QQNUMBER, S(MAIL_SELECTOR['login_username'][MAILDOMIN]))
         write(PASSWORD, S(MAIL_SELECTOR['login_password'][MAILDOMIN]))
         click(S(MAIL_SELECTOR['login_button'][MAILDOMIN]))
-    
+
         # 等待安全验证
         once = True
-        while not S("#mainFrameContainer").exists():
+        while S("#login_frame").exists():
             if once: xprint(f"{C.FLASHANI}等待用户手动完成认证...{C.END}"); once = False;
             time.sleep(1)
         wait_until(S('#mainFrameContainer').exists)
+
 
 def login_exmail():
     if DEBUG_MODE[0]: test('login_exmail')
@@ -613,7 +619,7 @@ def check_folder_in_setting():
     if DEBUG_MODE[0]: test('check_folder_in_setting')
     xprint(f"{C.RED}你没有创建过文件夹。{C.END}")
     xprint(f"{C.RED}你填写想下载的文件夹也不是首页收件箱。{C.END}")
-    xprint(f"{C.RED}你到底做什么？{C.END}")
+    xprint(f"{C.RED}你到底想干嘛？？{C.END}")
     xprint(f"\n\n{C.GOLD}如果你打算继续执行，将会为你转去下载{C.GREEN}收件箱{C.GOLD}的附件。{C.END}")
     os.system("PAUSE")
     LOCALDATA['folder_id'] = 1
@@ -670,10 +676,16 @@ def check_tag_exists_in_setting():
     # 进入设置页面
     goto_setting()
     scroll_down(S(MAIL_SELECTOR['check_tag_scroll'][MAILDOMIN]).y)
-    # 读取列表
-    tags = [e.text for e in get_driver().find_elements_by_xpath(MAIL_SELECTOR['create_tag_setting_xpath'][MAILDOMIN])]
-    if bool(can_tag_no_attach): check_tag_exists(str_tag_no_attach, tags, 'setting', '没有附件')
-    if bool(can_tag_timeout_attach): check_tag_exists(str_tag_timeout_attach, tags, 'setting', '包含过期附件')
+
+    # 如果从未创建过标签
+    if S('#folder_tag_none').exists():
+        if bool(can_tag_no_attach): create_tag_in_setting('没有附件')
+        if bool(can_tag_timeout_attach): create_tag_in_setting('过期附件')
+    else:
+        # 读取列表
+        tags = [e.text for e in get_driver().find_elements_by_xpath(MAIL_SELECTOR['create_tag_setting_xpath'][MAILDOMIN])]
+        if bool(can_tag_no_attach): check_tag_exists(str_tag_no_attach, tags, 'setting', '没有附件')
+        if bool(can_tag_timeout_attach): check_tag_exists(str_tag_timeout_attach, tags, 'setting', '过期附件')
 
 
 #-------------------------------------------------------------------------------
@@ -1271,7 +1283,7 @@ def move_folder(foldername):
             xprint(f"{C.BGBLUE}[move_folder] 文件夹 {foldername} 已存在文件 {filename} {C.END}")
         else:
             rename_file(filepath, expectpath)
-            shutil.move(expectpath, newfolder)
+            shutil.move(expectpath, folderpath)
             xprint(f"{C.GREEN}[move_folder] {foldername}\t\t\t{filename} {C.END}")
     else:
         shutil.move(filepath, expectpath)
