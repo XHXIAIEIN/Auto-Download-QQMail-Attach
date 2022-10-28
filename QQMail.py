@@ -370,7 +370,7 @@ MAIL_SELECTOR = {
   'title'                    : ['登录QQ邮箱'                      , '腾讯企业邮箱-登录入口'],
   'login_index'              : ['mail.qq.com'                     , 'exmail.qq.com/login'],
   'login_frame'              : ['#login_frame'                    , '#loginForm'],
-  'login_container'          : ['.login_container'                , '.login_content_wrap'],
+  'login_container'          : ['.xm_login_card'                  , '.login_scan_panel'],
   'login_username'           : ['#u'                              , '#inputuin'],
   'login_password'           : ['#p'                              , '#pp'],
   'login_button'             : ['#login_button'                   , '#btlogin'],
