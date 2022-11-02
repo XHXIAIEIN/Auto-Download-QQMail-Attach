@@ -5,7 +5,7 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2022/10/28
+# 更新：2022/11/02
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
 #===============================================================================
 
@@ -22,6 +22,9 @@
 #  WebDriver for Chrome
 #  https://sites.google.com/chromium.org/driver/
 #...............................................................................
+#  将下载好的 chromedriver 添加到环境变量中。
+#...............................................................................
+
 
 #...............................................................................
 #  1.使用到的工具库
@@ -53,9 +56,10 @@
 #...............................................................................
 
 from helium import *
+import selenium
 from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.action_chains import ActionChains
-import math,time,os,re,codecs,shutil,hashlib,filecmp,asyncio
+import math,time,os,re,codecs,sys,shutil,filecmp
 import urllib.parse
 import prettytable
 
@@ -126,9 +130,10 @@ PASSWORD="134625798"
 #   Mac 用户用  / 作为路径分隔符。如：'~/Downloads/email'
 #...............................................................................
 
-ROOTPATH = "D:\\XHXIAIEIN\\Desktop\\2022"
+ROOTPATH = "D:\\XHXIAIEIN\\Downloads\\2022"
 DOWNLOAD_FOLDER = os.path.join(ROOTPATH,'download')     # 附件实际下载目录
 USERDATA_FOLDER = os.path.join(ROOTPATH,'selenium')     # 浏览器的缓存数据
+
 
 #...............................................................................
 #  邮箱文件夹ID
@@ -233,7 +238,7 @@ can_star_no_attach = 1
 can_star_timeout_attach = 1
  
 # 没有附件添加标签
-can_tag_no_attach = 0
+can_tag_no_attach = 1
 str_tag_no_attach = '没有附件'
  
 # 过期附件添加标签
@@ -367,7 +372,7 @@ LOCALDATA = {
 
 # 两种邮箱的元素选择器
 MAIL_SELECTOR = {
-  'title'                    : ['登录QQ邮箱'                      , '腾讯企业邮箱-登录入口'],
+  'title'                    : ['登录QQ邮箱'                       , '腾讯企业邮箱-登录入口'],
   'login_index'              : ['mail.qq.com'                     , 'exmail.qq.com/login'],
   'login_frame'              : ['#login_frame'                    , '#loginForm'],
   'login_container'          : ['.xm_login_card'                  , '.login_scan_panel'],
@@ -517,9 +522,15 @@ def init_webdriver():
     # 启动浏览器
     try:
         chrome = start_chrome(options=options)
-    except Exception as e:
-        print(f"{C.RED}无法打开浏览器。检查是否已运行了另一个脚本。{C.END}")
-        print(f"\n\n{C.RED}{e}{C.END}\n\n")
+    except Exception as e: 
+        if type(e) is selenium.common.exceptions.SessionNotCreatedException:
+            print(f"{C.RED}ChromeDriver 版本已经更新，请前往 https://sites.google.com/chromium.org/driver/ 下载最新的版本，并添加到环境变量。{C.END}")
+        elif type(e) is selenium.common.exceptions.WebDriverException:
+            print(f"{C.RED}已经运行了一个实例，无法同时开启多个，请关闭脚本后重新尝试。{C.END}")
+        else:
+            print(sys.exc_info()[0:2])
+        
+        print(f"\n{C.RED}{e}{C.END}\n\n")
         os.system('PAUSE')
     
     set_driver(chrome)
@@ -585,7 +596,13 @@ def login_exmail():
 
 def update_token_sid():
     if DEBUG_MODE[0]: test('update_token_sid')
-    LOCALDATA['token_sid'] = get_driver().current_url.split('sid=')[1].split('&')[0]
+    try:
+        LOCALDATA['token_sid'] = get_driver().current_url.split('sid=')[1].split('&')[0]
+    except Exception as e:
+        xprint(f"{C.RED} ...{C.END}");
+        return
+        
+
 
 
 #-------------------------------------------------------------------------------
@@ -721,6 +738,8 @@ def update_folder_info():
 
 
 # 明明是很简单的东西，因为注释太多看起来好可怕。。哈哈
+# 其实就是检查 PAGES_TASK 和 TITLE_TASK 的数值是不是在正常范围/
+# 以及在首次打开时自动翻页或跳过前面的。
 def init_folder_task():
     if DEBUG_MODE[0]: test('init_folder_task')
 
@@ -1100,6 +1119,7 @@ def foreach_mail_attach(title):
 # download
 #---------------------------------------------------------------------------
 
+# 下载
 def download_attach(e, i):
     if DEBUG_MODE[0]: test('download_attach')
     if bool(is_exmail_user):
@@ -1110,6 +1130,7 @@ def download_attach(e, i):
     else: 
         ActionChains(get_driver()).click(get_driver().find_elements_by_link_text('下载')[i]).perform()
 
+# 等待下载
 def waitting_download(attach, title):
     if DEBUG_MODE[0]: test(f"waitting_download ▼ {time.strftime('%H:%M:%S',time.localtime(time.time()))}")
     wait_time = 0
@@ -1129,6 +1150,7 @@ def waitting_download(attach, title):
         wait_time += 2
 
     if DEBUG_MODE[0]: test(f"waitting_download ▲ {time.strftime('%H:%M:%S',time.localtime(time.time()))}")
+    
     
 #---------------------------------------------------------------------------
 # rename rule
@@ -1186,11 +1208,10 @@ def ready_replace_name(attach, title):
         LOCALDATA['rule_folder'][folder_index] = LOCALDATA['rule_folder'][folder_index].replace(i, j)
 
 
-
 def check_file_matching(path, byte):
     return os.path.isfile(path) and os.path.getsize(path) == byte
 
-
+  
 def check_file_exists(attach, title):
 
     NEXT_MAIL()
@@ -1367,9 +1388,14 @@ def thread_webdriver():
     # 如果打开了多个窗口，则切换到邮箱主页
     if len(find_all(Window())) > 1: switch_to(MAIL_SELECTOR['title'][MAILDOMIN])
 
-    # 首次进入邮箱时，检查是否已经登录。即是否没有登录页面的元素
-    if S(MAIL_SELECTOR['login_frame'][MAILDOMIN]).exists(): login_qqmail() if not bool(is_exmail_user) else login_exmail()
-
+    # 首次进入邮箱时，检查是否已经登录。判断方式是，检测不到登录组件的元素
+    while S(MAIL_SELECTOR['login_container'][MAILDOMIN]).exists():
+        try:
+            # 使用普通QQ邮箱登录方式，还是企业邮箱登录方式
+            if S(MAIL_SELECTOR['login_frame'][MAILDOMIN]).exists(): login_qqmail() if not bool(is_exmail_user) else login_exmail()
+        except Exception:
+            time.sleep(1)
+    
     # update token_sid
     update_token_sid()
 
@@ -1404,13 +1430,17 @@ def thread_webdriver():
 
     if bool(can_export_titledata_to_csv) and bool(can_load_title): table_to_csv(PRETTY_TABLE['title_list'], os.path.join(ROOTPATH, f"_邮件统计{script_start_time}.csv"))
     if bool(can_export_attchdata_to_csv) and bool(can_load_email): table_to_csv(PRETTY_TABLE['attach_list'], os.path.join(ROOTPATH, f"_附件统计{script_start_time}.csv"))
+
+    os.system('PAUSE')
     
 
 #-------------------------------------------------------------------------------
 # main
 #-------------------------------------------------------------------------------
 
-def main(): thread_webdriver()
+def main(): 
+    # 万一哪天学会了怎么用多线程呢？
+    thread_webdriver()
 
 #-------------------------------------------------------------------------------
 # END
