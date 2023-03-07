@@ -1400,7 +1400,7 @@ def thread_webdriver():
     update_token_sid()
 
     # 获取标签列表
-    if bool(can_tag_no_attach) or bool(can_tag_timeout_attach): check_tag_exists_in_list() if S('#tagfoldersDiv').exists() else check_tag_exists_in_setting()
+    # if bool(can_tag_no_attach) or bool(can_tag_timeout_attach): check_tag_exists_in_list() if S('#tagfoldersDiv').exists() else check_tag_exists_in_setting()
 
     # 进入目标文件夹
     update_folder_info()
