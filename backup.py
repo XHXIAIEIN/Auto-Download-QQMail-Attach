@@ -36,7 +36,6 @@
 #  MacOS用户：
 #  运行终端(Terminal)输入以下指令：
 #...............................................................................
-#  python -m pip install webdriver-manager
 #  python -m pip install helium
 #  python -m pip install rich
 #...............................................................................
@@ -65,8 +64,6 @@ from rich import print
 from rich.live import Live
 from rich.console import Console
 from rich.table import Column, Table
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import (SessionNotCreatedException, WebDriverException)
 from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.common.by import By
@@ -830,23 +827,18 @@ def read_attach():
 
     # 附件目标文件夹路径
     target_folder = os.path.join(PROFILE.DOWNLOAD_FOLDER, title_data['title'])
-
-    # 创建下载线程
-    loop = asyncio.get_event_loop()
-    tasks = []
-
-    # 下载当前邮件的附件
-    for item in attach_data:
-        task = loop.create_task(download_file(item['filedown']))
-        tasks.append(task)
-
-    loop.run_until_complete(asyncio.wait(tasks))
+    
+    # 下载本页附件
+    tasks = [download_file(item['filedown']) for item in attach_data]
+    
+    # 下一页
     next_mail()
+
     
 async def download_file(url):
     # 跳转至下载地址
     go_to(url)
-    await asyncio.sleep(1)
+    time.sleep(1)
 
 def move_file(filename, target_path, stop, data):
 
