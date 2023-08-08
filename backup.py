@@ -4,7 +4,7 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2023/03/20
+# 更新：2023/08/08
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
 #===============================================================================
 
@@ -48,7 +48,6 @@
 #  按下 Win + R 打开 cmd，在命令提示符输入以下指令：
 #...............................................................................
 #  python -m pip install --upgrade pip
-#  pip install webdriver-manager
 #  pip install selenium
 #  pip install helium
 #  pip install rich
@@ -57,19 +56,22 @@
 #  pip install helium -i https://pypi.tuna.tsinghua.edu.cn/simple
 #...............................................................................
 
-from helium import *
-from urllib import parse
+import os
+import os
+import shutil
+import time
+import traceback
 from datetime import datetime
+from urllib import parse
+
+from helium import *
 from rich import print
-from rich.live import Live
 from rich.console import Console
 from rich.table import Column, Table
-from selenium.common.exceptions import (SessionNotCreatedException, WebDriverException)
+from selenium.common.exceptions import (SessionNotCreatedException,WebDriverException)
 from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-import sys,csv,os,time,pathlib,pickle,asyncio,random,urllib,shutil,threading,traceback
 
 '''
 #===============================================================================
@@ -120,9 +122,6 @@ class PROFILE:
 
     QQNUMBER='123456'
     PASSWORD='123456'
-    
-    # QQNUMBER='name@company.onexmail.com'
-    # PASSWORD='123456'
 
     #---------------------------------------------------------------------------
     # 📌 附件下载到本地哪个位置
@@ -133,19 +132,18 @@ class PROFILE:
     #---------------------------------------------------------------------------
 
     # 附件下载到本地哪个位置
-    ROOTPATH = r'D:\QQMail\2023'
+    ROOTPATH = r'D:\XHXIAIEIN\QQMail'
 
     # 临时文件路径
     DOWNLOAD_FOLDER = os.path.join(ROOTPATH,'download')     # 附件实际下载目录
     USERDATA_FOLDER = os.path.join(ROOTPATH,'selenium')     # 浏览器的缓存数据
-    PROFILE_FOLDER  = os.path.join(ROOTPATH,'log')          # 日志缓存数据
 
     #---------------------------------------------------------------------------
     # 📌 要下载的邮箱文件夹ID
     #---------------------------------------------------------------------------
     #  首页收件箱的文件夹ID是 1
     #---------------------------------------------------------------------------
-    FOLDER_ID = 131
+    FOLDER_ID = 123
 
     #---------------------------------------------------------------------------
     # （可选）禁止显示网页图片
@@ -200,11 +198,6 @@ class PROFILE:
     #---------------------------------------------------------------------------
     # （可选）Advanced Config 高级选项
     #---------------------------------------------------------------------------
-
-    #...........................................................................
-    # 接力
-    #...........................................................................
-    can_continue_session = 1
 
     #...........................................................................
     # 下载
@@ -294,31 +287,31 @@ MAILDOMIN = PROFILE.IS_EXMAIL_USER
 # 本地缓存数据
 LOCALDATA = {
   'token_domin'   : ['mail', 'exmail'][MAILDOMIN],      # 地址参数：域名
-  'token_sid'     : '',                                 # 地址参数：密钥
-  'token_page'    : 0,                                  # 地址参数：页数
-  'folder_id'     : PROFILE.FOLDER_ID,                  # 文件夹的ID
+  'token_sid'     : '',                                 # 地址参数：身份密钥
+  'token_page'    : 0,                                  # 地址参数：文件夹页数
+  'folder_id'     : PROFILE.FOLDER_ID,                  # 地址参数：文件夹的ID
   'folder_name'   : '',                                 # 文件夹名称
-  'page_count'    : 0,                                  # 文件夹总页数
-  'show_count'    : 100,                                # 每页显示邮件数量
-  'title_count'   : 0,                                  # 文件夹邮件数量
-  'attach_count'  : 0,                                  # 文件夹附件数量
+  'page_count'    : 0,                                  # 文件夹总页数（首次进文件夹读取）
+  'title_count'   : 0,                                  # 文件夹总邮件数量（首次进文件夹读取）
+  'attach_count'  : 0,                                  # 文件夹总附件数量
   'title_list'    : [],
   'attach_list'   : [],
   'history_data'  : {},
 }
 
-TEMPDATA = {
+# 文件夹当前页缓存数据
+FOLDER_DATA = {
+    'tiele_count'    :  0,                              # 收集阶段，已处理的邮件序号
+    'title_index'   :  0,                               # 当前处理邮件序
     'page'          :  1,                               # 当前处理页
     'title'         :  1,                               # 当前邮件总序
     'title_at'      :  1,                               # 当前邮件页序
     'attach'        :  1,                               # 当前附件总序
-    'attach_at'     :  1,                               # 当前附件页序
+    'attach_at'     :  1                                # 当前附件页序
 }
 
 # 临时缓存文件名
 CONFIGDATA = {
-    'profile'       :  os.path.join(PROFILE.PROFILE_FOLDER, START_TIME, 'profile.data'),  # 配置文件
-    'logfile'       :  os.path.join(PROFILE.PROFILE_FOLDER, START_TIME, 'log.txt'),       # 控制台日志
     'titlefile'     :  os.path.join(PROFILE.ROOTPATH, f'title_{START_TIME}.csv'),         # 邮件统计
     'attachfile'    :  os.path.join(PROFILE.ROOTPATH, f'attach_{START_TIME}.csv'),        # 附件统计
 }
@@ -338,14 +331,16 @@ RICHTABLE = {
 #-------------------------------------------------------------------------------
 
 MAIL_SELECTOR = {
-    'login_title'              : ['登录QQ邮箱'                               , '腾讯企业邮箱-登录入口'],
+    'login_title'              : ['登录QQ邮箱'                              , '腾讯企业邮箱-登录入口'],
     'login_url'                : ['mail.qq.com'                             , 'exmail.qq.com/login'],
-    'login_verify'             : ['#login'                                  , '#loginForm'],
+    'login_verify'             : ['#useraddrcontainer'                      , '#useraddrcontainer'],
+    'login_tcaptcha'           : ['#login'                                  , '#loginForm'],
     'login_pwd_panel'          : ['#switcher_plogin'                        , '.js_show_pwd_panel'],
-    'login_autologin'          : ['#auto_login_qq'                          , '#auto_login_in_five_days_pwd'],
+    'login_autologin'          : ['#QQMailSdkTool_auto_login'               , '#auto_login_in_five_days_pwd'],
     'login_username'           : ['#u'                                      , '#inputuin'],
     'login_password'           : ['#p'                                      , '#pp'],
     'login_button'             : ['#login_button'                           , '#btlogin'],
+    'login_frame'              : ['#web_login'                              , '#loginForm'],
     'mainFrame_verify'         : ['#mainFrameContainer'                     , '#mainFrameContainer'],
     'mainFrame_scroll'         : ['#qqmail_mailcontainer'                   , '#mainFrameContainer'],
     'check_tag_scroll'         : ['#mainFrameContainer'                     , '#contenttable'],
@@ -355,7 +350,7 @@ MAIL_SELECTOR = {
     'create_tag_input'         : ['#QMconfirm_QMDialog_txt'                 , '#QMconfirm_i_txt'],
     'create_tag_confirm'       : ['#QMconfirm_QMDialog_confirm'             , '#QMconfirm_i_confirm'],
     'create_tag_setting_xpath' : ["//a[starts-with(#id,'folder_tag_') and contains(#id, '_name')]", "//tr[starts-with(#id,'tag_')]/td[1]/div[2]/a"],
-    'folder_mail_title'        : ['u.tt'                                    , 'u.black'],
+    'folder_title_frame'       : ['u.tt'                                    , 'u.black'],
     'attach_info_class'        : ['.ico_big a'                              , '.down_big'],
     'login_error_503'          : ['.errorInfo'                              , '.errorInfo']
 }
@@ -398,6 +393,7 @@ def error(text):
 # webdriver
 #-------------------------------------------------------------------------------
 
+
 def launch_webdriver():
 
     IS_MACOS_USER = False if os.name == 'nt' else True
@@ -414,7 +410,6 @@ def launch_webdriver():
     options.add_argument('--window-size=1000,1000')      # 设置浏览器窗口大小
     options.add_argument('--disable-remote-fonts')       # 禁用远程字体，提升加载速度
     options.add_argument('--hide-scrollbars')            # 隐藏滚动条，提升处理速度
-    options.add_argument('--no-sandbox')                 # 禁用沙盒模式，提升操作权限
     options.add_experimental_option('excludeSwitches', ['enable-logging'])  # 禁用日志输出
     options.add_experimental_option('prefs', prefs)
 
@@ -432,13 +427,14 @@ def launch_webdriver():
     caps = DesiredCapabilities.CHROME
     caps['pageLoadStrategy'] = 'none'
 
+    # 启动 Webdriver
     try:
         driver = Chrome(options=options, desired_capabilities=caps, executable_path=chromedriver)
     except SessionNotCreatedException:
-        error('ChromeDriver 版本已经更新，请前往 https://sites.google.com/chromium.org/driver/ 下载最新 Stable 版本，并放在此文件的相同目录。')
+        error('ChromeDriver 版本已经更新，请前往 https://sites.google.com/chromium.org/driver/ 下载最新 Stable 版本，解压后将 chromedriver.exe 并放在此文件的相同目录。')
         return
     except WebDriverException:
-        error('引用 WebDriver 遇到了错误。请关闭脚本后重新尝试。')
+        error('引用 WebDriver 遇到了错误。请前往 https://sites.google.com/chromium.org/driver/ 下载最新 Stable 版本，解压后将 chromedriver.exe 放在此文件的相同目录。')
         return
     except UnboundLocalError:
         error('当前已经开启了一个实例，无法同时运行多个任务，请关闭脚本后重新尝试。')
@@ -446,11 +442,13 @@ def launch_webdriver():
     except Exception as e:
         error('启动浏览器时，遇到了未知的错误，请删除本地文件夹内的 selenium 文件夹重试。')
         print(traceback.format_exception_only(e))
-
-    set_driver(driver)
+    finally:
+        set_driver(driver)
+    
+    # 跳转至邮箱主页
     go_to(MAIL_SELECTOR['login_url'][MAILDOMIN])
+    time.sleep(2)
     launch_mail()
-
 
 #-------------------------------------------------------------------------------
 # login
@@ -458,114 +456,75 @@ def launch_webdriver():
 
 def launch_mail():
     say(f"* 进入邮箱主页。", 'SILVER')
-    wait_until(S('body').exists)
     #...........................................................................
     # 出错啦
     #...........................................................................
     if S(MAIL_SELECTOR['login_error_503'][MAILDOMIN]).exists():
-        say(f"* 登录出现异常，尝试删除 {PROFILE.ROOTPATH} 路径内的 selenium 文件夹。", 'SILVER')
+        say(f"⚠ 登录出现异常，等待自动重试。", 'SILVER')
+        time.sleep(3)
+        launch_mail()
+        return False
     #...........................................................................
     # 已经登录
     #...........................................................................
-    if not S(MAIL_SELECTOR['login_verify'][MAILDOMIN]).exists():
-        # 已经进入主页
-        wait_until(S(MAIL_SELECTOR['mainFrame_verify'][MAILDOMIN]).exists)
+    if S(MAIL_SELECTOR['login_verify'][MAILDOMIN]).exists():
         if S(MAIL_SELECTOR['mainFrame_verify'][MAILDOMIN]).exists():
             say(f"* 已经登录。", 'SILVER')
             update_token_sid()
+            open_folder()
             return True
-        say(f"* 检测不到登录框", 'SILVER')
+        say(f"⏳ 检测不到登录框，等待自动重试", 'SILVER')
+        time.sleep(2)
+        launch_mail()
         return False
     #...........................................................................
-    # 登录
+    # 等待登录
     #...........................................................................
-    # 如果当前面板为微信登录，切换到QQ登录
-    if S('#wxLoginTab').exists() and 'xm_login_card_tab_item_Active' in S('#wxLoginTab').web_element.get_attribute('class'):
-        S('#qqLoginTab').web_element.click()
+    while not S(MAIL_SELECTOR['login_verify'][MAILDOMIN]).exists():
 
-    # 点击账号密码登录
-    if  S('#switcher_plogin').exists() and 'switch_btn_focus' not in S('#switcher_plogin').web_element.get_attribute('class'):
-        S('#switcher_plogin').web_element.click()
-    
-    # 点击下次自动登录
-    if S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).exists():
-        S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).web_element.click()
-    
-    # 输入账号密码
-    write(PROFILE.QQNUMBER, S(MAIL_SELECTOR['login_username'][MAILDOMIN]))
-    time.sleep(0.03)
-    write(PROFILE.PASSWORD, S(MAIL_SELECTOR['login_password'][MAILDOMIN]))
+        # 如果当前面板为微信登录，切换到QQ登录
+        if S('#wxLoginTab').exists() and 'xm_login_card_tab_item_Active' in S('#wxLoginTab').web_element.get_attribute('class'):
+            S('#qqLoginTab').web_element.click()
 
-    # 点击登录
-    S(MAIL_SELECTOR['login_button'][MAILDOMIN]).web_element.click()
+        # 点击账号密码登录
+        if  S('#switcher_plogin').exists() and 'switch_btn_focus' not in S('#switcher_plogin').web_element.get_attribute('class'):
+            S('#switcher_plogin').web_element.click()
 
-    # 等待安全验证
-    notify_verify, notify_tcaptcha, notify_sms = True,True,True
-    while S(MAIL_SELECTOR['login_verify'][MAILDOMIN]).exists():
-        if notify_verify: say('等待用户手动完成认证...', 'FLASHANI'); notify_verify = False;
-        if notify_tcaptcha and S('#newVcodeArea').exists(): say('等待完成安全验证', 'FLASHANI'); notify_tcaptcha = False;
-        if notify_sms and S('#verify').exists(): say('等待完成短信认证', 'FLASHANI'); notify_sms = False;
+        # 勾选下次自动登录
+        if S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).exists():
+            S(MAIL_SELECTOR['login_autologin'][MAILDOMIN]).web_element.click()
+        
+        # 输入账号密码
+        if S(MAIL_SELECTOR['login_frame'][MAILDOMIN]).exists():
+            write(PROFILE.QQNUMBER, S(MAIL_SELECTOR['login_username'][MAILDOMIN]))
+            write(PROFILE.PASSWORD, S(MAIL_SELECTOR['login_password'][MAILDOMIN]))
+            # 点击登录
+            S(MAIL_SELECTOR['login_button'][MAILDOMIN]).web_element.click()
+
+        # 等待安全验证
+        notify_verify, notify_tcaptcha, notify_sms = True,True,True
+
+        while S(MAIL_SELECTOR['login_tcaptcha'][MAILDOMIN]).exists():
+            if notify_verify: say('等待用户手动完成认证...', 'FLASHANI'); notify_verify = False;
+            if notify_tcaptcha and S('#newVcodeArea').exists(): say('等待完成安全验证', 'FLASHANI'); notify_tcaptcha = False;
+            if notify_sms and S('#verify').exists(): say('等待完成短信认证', 'FLASHANI'); notify_sms = False;
+            time.sleep(1)
+        
         time.sleep(1)
-
+    #...........................................................................
+    # 登录成功
+    #...........................................................................
     update_token_sid()
     say(f"登录成功！token_sid: {LOCALDATA['token_sid']}")
-    check_profile()
+    open_folder()
+
+#-------------------------------------------------------------------------------
+# token_sid
+#-------------------------------------------------------------------------------
 
 # 更新 token_sid
 def update_token_sid():
     LOCALDATA['token_sid'] = get_querystring(get_driver().current_url)['sid']
-
-#-------------------------------------------------------------------------------
-# profile
-#-------------------------------------------------------------------------------
-
-# 清空历史缓存数据
-def create_profile():
-    # 生成缓存文件夹路径，根据脚本运行的日期。
-    path = PROFILE.PROFILE_FOLDER
-    sessionos_path = os.path.join(path, START_TIME)
-
-    # 如果缓存文件夹不存在，创建文件夹
-    if not os.path.exists(path):
-        os.makedirs(path)
-        os.makedirs(sessionos_path)
-        return
-
-    # 根据配置，如果不使用历史接力，则删除已有文件夹，重新创建。
-    if not bool(PROFILE.can_continue_session):
-        shutil.rmtree(path)
-        os.makedirs(path)
-        os.makedirs(sessionos_path)
-
-def check_profile():
-    # 如果预设文件已经存在，直接开始读取邮件，无需重新读取文件夹数据
-    if pathlib.Path(CONFIGDATA['profile']).is_file():
-        say('预设文件已存在，正在恢复历史进度...')
-        load_profile()
-        return
-    open_folder()
-
-def load_profile():
-    # 从文件读取文件夹信息
-    global LOCALDATA
-    try:
-        with open(CONFIGDATA['profile'], mode='rb') as file:
-            LOCALDATA = pickle.load(file)
-            update_token_sid()
-            file.close()
-            init_read()
-    except PermissionError:
-        error(f"{CONFIGDATA['profile']} 文件被占用，请关闭后重试。")
-        return
-
-def write_profile():
-    try:
-        with open(CONFIGDATA['profile'], mode='wb') as file:
-            pickle.dump(LOCALDATA, file)
-            file.close()
-    except PermissionError:
-        error(f"{CONFIGDATA['profile']} 文件被占用，请关闭后重试。")
-        return
 
 #-------------------------------------------------------------------------------
 # folder
@@ -585,65 +544,59 @@ def open_folder():
         say('这个文件夹没有邮件，请检查文件夹ID是否填写正确。', 'RED')
         return
 
-    # 通过翻页进入，直接读取标题信息
+    #...........................................................................
+    # 通过翻页进入，直接读取标题信息，不再初始化
+    #...........................................................................
     if LOCALDATA['token_page'] > 0:
-        read_title()
+        read_folder_title()
         return
-
+    
+    #...........................................................................
     # 首次进入文件夹，先获取文件夹基本信息
+    #...........................................................................
     LOCALDATA['folder_name'] = get_driver().title.split(' - ')[1]                                             # 文件夹名称
-    LOCALDATA['title_count'] = int(S('#_ut_c').web_element.text)                                              # 文件夹邮件数量
-    LOCALDATA['page_count']  = int(S('#frm > div > .right').web_element.text.split('/')[1].split(' 页')[0])   # 文件夹页数
-    LOCALDATA['show_count']  = len(find_all(S(MAIL_SELECTOR['folder_mail_title'][MAILDOMIN])))                # 文件夹显示邮件
-
-    try:
-        # 将信息写入表头
-        with open(CONFIGDATA['titlefile'], mode='w', newline='', encoding='utf-8-sig') as file:
-            writer = csv.DictWriter(file, fieldnames=FIELD_TITLE)
-            writer.writeheader()
-            file.close()
-    except PermissionError:
-        error(f"{CONFIGDATA['titlefile']}文件被占用，请关闭后重试。")
-        return
-
-    say('----------------------------------------------------------------')
-    say(f"进入文件夹: {LOCALDATA['folder_name']}")
-    say('----------------------------------------------------------------')
-
-    read_title()
+    LOCALDATA['title_count'] = int(S('#_ut_c').web_element.text)                                              # 文件夹总邮件数量
+    LOCALDATA['page_count']  = int(S('#frm > div > .right').web_element.text.split('/')[1].split(' 页')[0])   # 文件夹总页数
+    say(f"* 进入文件夹: {LOCALDATA['folder_name']}")
+    read_folder_title()
 
 #-------------------------------------------------------------------------------
 # next_page
 #-------------------------------------------------------------------------------
 
 def next_page():
-    
-    # 是否有翻页按钮
+    # 没有翻页按钮，表示已到最后一页
     if not S('#nextpage').exists():
+        say(f"* 文件夹邮件整理完成，正在合并数据")
         init_read()
-        return
-    
-    # 获取下一页
-    next_btn = S('#nextpage').web_element
-    LOCALDATA['token_page'] = int(get_querystring(next_btn.get_attribute('href'))['page'])
 
-    say(f"----------------------------- {LOCALDATA['token_page']+1}/{LOCALDATA['page_count']} ------------------------------")
-    open_folder()
+    # 获取下一页的按钮
+    while S('#nextpage').exists():
+        next_btn = S('#nextpage').web_element
+        LOCALDATA['token_page'] = int(get_querystring(next_btn.get_attribute('href'))['page'])
+        open_folder()
 
 #-------------------------------------------------------------------------------
 # title
 #-------------------------------------------------------------------------------
 
-def read_title():
+def read_folder_title():
 
     # 滚动到底部，避免下方元素没有加载完成
     scroll_down(S('#list').y)
 
+    # 更新当前页的邮件数量
+    folder_title_frame = len(find_all(S(MAIL_SELECTOR['folder_title_frame'][MAILDOMIN])))
+
+    say(f"* 正在收集第{LOCALDATA['token_page']+1}/{LOCALDATA['page_count']}页邮件信息，本页有 {folder_title_frame} 封邮件。({len(LOCALDATA['title_list'])}/{LOCALDATA['title_count']})")
+
+    #...........................................................................
     # 利用表达式的方法直接分类打包邮件数据
-    # 但处理速度比起传统 for...in 方式不见得有快多少。
+    # 虽然处理速度比起传统 for...in 方式不见得有快多少，主要是看着整齐，舒服。
+    #...........................................................................
     
     folder_title = {}
-    folder_title['index']     =  [TEMPDATA['title'] + i for i in range(LOCALDATA['show_count'])]                                                         # 邮件序号 
+    folder_title['index']     =  [FOLDER_DATA['tiele_count'] + i for i in range(folder_title_frame)]                                                     # 邮件序号 
     folder_title['timestamp'] =  [datetime.fromtimestamp(int(item.web_element.get_attribute('totime'))/1000).strftime("%Y-%m-%d %H:%M:%S") for item in find_all(S('.cx input'))] # 发件时间
     folder_title['address']   =  [item.web_element.get_attribute('e') for item in find_all(S('nobr span'))]                                              # 发件人邮箱
     folder_title['title']     =  [item.web_element.text for item in find_all(S('u.tt'))]                                                                 # 主题
@@ -652,28 +605,17 @@ def read_title():
     folder_title['mailid']    =  [item.web_element.get_attribute('mailid') for item in find_all(S('nobr'))]                                              # 邮件ID
     folder_title['star']      =  [bool(item.web_element.get_attribute('star')) for item in find_all(S('.cx input'))]                                     # 是否星标
     folder_title['unread']    =  [bool(item.web_element.get_attribute('unread')) for item in find_all(S('.cx input'))]                                   # 是否已读
-    folder_title['page']      =  [int(S('#frm > div > .right').web_element.text.split('/')[0]) for i in range(LOCALDATA['show_count'])]                  # 当前页数
+    folder_title['page']      =  [int(S('#frm > div > .right').web_element.text.split('/')[0]) for i in range(folder_title_frame)]                       # 当前页数
     
-    # 合并数组并转换成字典
-    folder_data = [{key: folder_title[key][i] for key in folder_title} for i in range(len(folder_title['index']))]
+    # 合并数据
+    folder_data = [{key: folder_title[key][i] for key in folder_title} for i in range(folder_title_frame)]
 
     # 在 'title_list' 以文件夹页进行分组。
     LOCALDATA['title_list'].append(folder_data)
     
     # 附件数量计数器
-    TEMPDATA['title'] += len(folder_data)
-    
-    try:
-        # 将邮件信息写入 csv
-        with open(CONFIGDATA['titlefile'], mode='a', newline='', encoding='utf-8-sig') as file:
-            writer = csv.DictWriter(file, fieldnames=FIELD_TITLE)
-            for data in folder_data:
-                writer.writerow(data)
-            file.close()
-    except PermissionError:
-        error(f"{CONFIGDATA['titlefile']} 文件被占用，请关闭后重试。")
-        return
-    
+    FOLDER_DATA['tiele_count'] += folder_title_frame
+
     # 打印到控制台 
     for item in folder_data:
         if item['attach']:
@@ -681,44 +623,30 @@ def read_title():
         else:
             RICHTABLE['tittle_table'].add_row(f"{item['index']}", f"{item['page']}", item['address'], f"{item['name']}", f"{item['title']}", "没有附件", style='red')
 
-    next_page()
+    #...........................................................................
+    # 翻页
+    #...........................................................................
+    next_page()  
+    
 
 #-------------------------------------------------------------------------------
 # mail
 #-------------------------------------------------------------------------------
 
 def init_read():
-
-    try:    
-        # 首次将信息写入表头
-        with open(CONFIGDATA['attachfile'], mode='w', newline='', encoding='utf-8-sig') as file:
-            writer = csv.DictWriter(file, fieldnames=FIELD_ATTACH)
-            writer.writeheader()
-    except PermissionError:
-        error(f"{CONFIGDATA['attachfile']}文件被占用，请关闭后重试。")
-        return
-    
     # 临时数据初始化
-    TEMPDATA['page'] = 0
-    TEMPDATA['title'] = 0
-    TEMPDATA['attach'] = 1
-
+    FOLDER_DATA['page'] = 0
+    FOLDER_DATA['title_index'] = 0
+    FOLDER_DATA['attach'] = 1
     LOCALDATA['attach_list'].append([])
-
-    # 阶段性存档
-    write_profile()
-
-    say('----------------------------------------------------------------')
-    say('开始读取邮件')
-    say('----------------------------------------------------------------')
-
+    say('* 开始读取邮件')
     open_mail()
 
 
 def open_mail():
 
     # 带入临时数据
-    item = LOCALDATA['title_list'][TEMPDATA['page']][TEMPDATA['title']]
+    item = LOCALDATA['title_list'][FOLDER_DATA['page']][FOLDER_DATA['title_index']]
 
     # 跳转至邮件
     go_to(f"https://{LOCALDATA['token_domin']}.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={LOCALDATA['token_sid']}&url=/cgi-bin/readmail?t=readmail%26mailid={item['mailid']}%26mode=pre")
@@ -735,31 +663,33 @@ def open_mail():
         next_mail()
         return
     
+    # 读取当前邮件的附件信息
     read_attach()
 
 
 def next_mail():
 
     # 当前页邮件总数
-    title_count = len(LOCALDATA['title_list'][TEMPDATA['page']])
+    title_count = len(LOCALDATA['title_list'][FOLDER_DATA['page']])
+
     LOCALDATA['attach_list'].append([])
 
-    # 处理下一封邮件
-    TEMPDATA['title'] = max(0, min(TEMPDATA['title']+1, title_count))
+    # 下一封邮件
+    FOLDER_DATA['title_index'] = max(0, min(FOLDER_DATA['title_index']+1, title_count))
     
     # 本页处理完成
-    if TEMPDATA['title'] == title_count:
+    if FOLDER_DATA['title_index'] >= title_count:
         
         # 翻页
-        TEMPDATA['page'] = max(0, min(TEMPDATA['page']+1, LOCALDATA['page_count']))
+        FOLDER_DATA['page'] = max(0, min(FOLDER_DATA['page']+1, LOCALDATA['page_count']))
         
         # 翻页到底
-        if TEMPDATA['page'] == LOCALDATA['page_count']:
+        if FOLDER_DATA['page'] == LOCALDATA['page_count']:
             say_end()
             return
         
         # 更新数据
-        TEMPDATA['title_index'] = 0
+        FOLDER_DATA['title_index'] = 0
 
     open_mail()
 
@@ -778,7 +708,7 @@ def read_attach():
     #...........................................................................  
 
     # 带入临时数据
-    title_data = LOCALDATA['title_list'][TEMPDATA['page']][TEMPDATA['title']]
+    title_data = LOCALDATA['title_list'][FOLDER_DATA['page']][FOLDER_DATA['title_index']]
 
     # 踩坑：这里用 S() 选择不到元素，只能通过 selenium 常规的办法 
     attach_element = get_driver().find_elements(By.CSS_SELECTOR, MAIL_SELECTOR['attach_info_class'][MAILDOMIN])
@@ -786,7 +716,7 @@ def read_attach():
     # 踩坑：超大附件的首个 idx 属性值为空。
     attach_info = [{ 
         'title_index'    : title_data['index'],
-        'attach_index'   : TEMPDATA['attach'] + int(item.get_attribute('idx') or 0),
+        'attach_index'   : FOLDER_DATA['attach'] + int(item.get_attribute('idx') or 0),
         'timestamp'      : title_data['timestamp'],
         'address'        : title_data['address'],
         'title'          : title_data['title'],
@@ -802,24 +732,10 @@ def read_attach():
     attach_data = [{key: value for key, value in data.items()} for data in attach_info]
     
     # 让 'attach_list' 以文件夹页进行分组。
-    LOCALDATA['attach_list'][TEMPDATA['title']].append(attach_data)
+    LOCALDATA['attach_list'][FOLDER_DATA['title_index']].append(attach_data)
 
     # 附件数量计数器
-    TEMPDATA['attach'] += len(attach_data)
-
-    #...........................................................................
-    # 记录当前进度
-    #...........................................................................  
-
-    # 将当前邮件附件信息写入 csv
-    try:
-        with open(CONFIGDATA['attachfile'], mode='a', newline='', encoding='utf-8-sig') as file:
-            writer = csv.DictWriter(file, fieldnames=FIELD_ATTACH)
-            for data in attach_data:
-                writer.writerow(data)
-    except PermissionError:
-        error('文件被占用，请关闭后重试。')
-        return
+    FOLDER_DATA['attach'] += len(attach_data)
     
     #...........................................................................
     # 下载附件
@@ -827,19 +743,18 @@ def read_attach():
 
     # 附件目标文件夹路径
     target_folder = os.path.join(PROFILE.DOWNLOAD_FOLDER, title_data['title'])
-    
-    # 下载本页附件
     tasks = [download_file(item['filedown']) for item in attach_data]
-    
-    # 下一页
+
     next_mail()
 
-    
-async def download_file(url):
-    # 跳转至下载地址
+
+# 跳转至下载地址
+def download_file(url):
     go_to(url)
     time.sleep(1)
 
+
+# (TODO): 移动文件
 def move_file(filename, target_path, stop, data):
 
     # 如果目标文件夹不存在，则创建
@@ -861,6 +776,7 @@ def move_file(filename, target_path, stop, data):
             shutil.move(filepath, folderpath)
             RICHTABLE['attach_table'].add_row(f"{data['title_index']}", f"{data['page']}", data['address'], data['name'], data['title'], data['filename'], '完成',style='green')
             break
+
 
 # 频繁提示，自动刷新至页面出现
 def FBI_WAITTING(id):
@@ -890,23 +806,22 @@ def say_end():
     say('----------------------------------------------------------------')
     say('结束')
     go_to(f"https://{LOCALDATA['token_domin']}.qq.com/cgi-bin/mail_list?folderid={LOCALDATA['folder_id']}&page=0&sid={LOCALDATA['token_sid']}")
-    print('---------------------------\n脚本运行结束。', end='')
+    print('----------------------------------------------------------------\n脚本运行结束。', end='')
     os.system('PAUSE')
     kill_browser()
+    exit()
     
 def raise_error():
     os.system('PAUSE')
     kill_browser()
-
 
 #-------------------------------------------------------------------------------
 # MAIN
 #-------------------------------------------------------------------------------
 
 def main():
-    create_profile()
     launch_webdriver()
-    print('start')
+    print('-')
    
 #-------------------------------------------------------------------------------
 # START
