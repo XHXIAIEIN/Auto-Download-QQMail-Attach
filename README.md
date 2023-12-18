@@ -1,3 +1,8 @@
+注：
+如果对高级功能（如分类命名、白名单黑名单等）没需求的用户，尝试下载 Mail.py 
+
+---
+
 支持Mac和Windows系统，支持腾讯企业邮箱。  
 https://zhuanlan.zhihu.com/p/51543237
   
