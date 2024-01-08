@@ -4,16 +4,8 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
+# 更新：2024/01/06
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
-#===============================================================================
-
-#===============================================================================
-# 更新：2023/12/18
-# 版本说明：
-# 这个版本是简单重置版，仅保证基本下载功能。
-# 填写账号、下载路径、需要下载的文件夹ID后，可开箱即用。
-# 下载文件夹内所有邮件的附件。
-# 若邮件没有附件，会自动添加星标。
 #===============================================================================
 
 '''
@@ -23,30 +15,42 @@
 '''
 
 #-------------------------------------------------------------------------------
-# 🎈 必要的软件 1
+# 🎈 必要的软件 1: Python
 #-------------------------------------------------------------------------------
 #  - python3:   
 #  https://www.python.org/downloads/
 #  
-#  打开页面，点击网页最醒目的黄色按钮。"Download Python 3.xxx"
+#  打开页面，点击网页最醒目的黄色按钮。"Download Python 3.xxx" (xxx 为最新版本号)
 #  
-#  Windows 安装补充：
-#  安装 python3 时，需要勾选安装页面底部选项 ⌈Add Python 3.xx to PATH⌋
+#  Windows 安装补充1：
+#  安装 python3 时，需勾选安装页面底部选项 ⌈Add Python 3.xx to PATH⌋
 #...............................................................................
 
 
 #-------------------------------------------------------------------------------
-# 🎈 必要的软件 2 （重要！！！）
+# 🎈 必要的软件 2: Chromedriver 
 #-------------------------------------------------------------------------------
 #  - chromedriver: 
 #  https://googlechromelabs.github.io/chrome-for-testing/#stable
 # 
-#  打开页面，看绿色表格最后的几行，找到中间 chromedriver，win64 那行。
-#  将 URL 地址复制到浏览器地址栏，按下回车，即可下载。可能有点慢，因为需要科学上网。
-#  下载后，解压出来，放这个脚本文件相同的目录。
+#  目前，脚本会自动下载，Chromedriver 并解压到这个脚本文件相同的目录。
+#  但由于网络问题，可能会下载失败（因为需要开启网络代理）
+#  当自动下载失败时，你需要手动下载 chromedriver 文件。
+#  这个步骤可能稍微复杂一点，但请耐心阅读。
 #  
-#  举例：下载的地址是这样的，只有链接中间的版本号数字不同
-#  https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/120.0.6099.71/win64/chromedriver-win64.zip
+#  打开这个页面，你会看到一个绿色的表格。
+#  https://googlechromelabs.github.io/chrome-for-testing/#stable
+#  表格中有很多内容，但你需要找到 chromedriver 即可。
+#  如果你运行了脚本，会告诉你下载哪个版本。
+#  
+#  1. 先看第 1 列的 Binary，位于表格第 6 行之后。
+#  2. 再看第 2 列的 Platform，找到你对应的操作系统。
+#           Windows 系统，下载 win64 版本；
+#           MacOS 系统，Intel处理器下载 mac-x64 版本，M1/M2 处理器下载 mac-arm64 版本。
+#  3. 将 URL 地址复制到浏览器地址栏，按下回车，即可下载。
+#
+#  安装补充：
+#  下载完成后，将压缩包进行解压，放到和这个脚本文件相同的目录。
 #...............................................................................
 
 
@@ -68,18 +72,13 @@
 #...............................................................................
 #  MacOS用户：
 #  运行终端(Terminal)输入以下指令：
-#  python pip install helium
-#  python pip install helium
-#
-#  注：需先安装 Homebrew
-#  https://brew.sh/index_zh-cn
+#   
+#  python -m pip install helium
+#  python -m pip install selenium
 #...............................................................................
 
-import os
-import re
-import shutil
-import time
-import traceback
+# 以下是本脚本使用到的官方库
+import os, re, sys, time, shutil, requests, zipfile, traceback
 from datetime import datetime
 from urllib import parse
 from urllib.parse import unquote
@@ -140,11 +139,19 @@ class PROFILE:
     # 是否为腾讯企业邮箱用户。如果是，请改为 1。
     IS_EXMAIL_USER = 0
 
-    QQNUMBER='123456'
-    PASSWORD='123456'
+    QQNUMBER='134625798'
+    PASSWORD='123456789'
+
+    #---------------------------------------------------------------------------
+    # 📌 附件下载到本地哪个位置
+    #---------------------------------------------------------------------------
+    #  Win 用户举例：r'd:/download/email'
+    #  Mac 用户举例：r'~/Downloads/email'
+    #  注，需保留最前面的 r 符号。
+    #---------------------------------------------------------------------------
 
     # 附件下载到本地哪个位置
-    ROOTPATH = r'D:\QQMail\'
+    ROOTPATH = r'D:\XHXIAIEIN\Desktop\2024'
 
     # 临时文件路径
     DOWNLOAD_FOLDER = os.path.join(ROOTPATH,'download')     # 附件实际下载目录
@@ -166,6 +173,57 @@ class PROFILE:
     # 下载附件时，可以禁止显示图片，可以显著提升网页处理的速度，预估可以快3倍。
     #---------------------------------------------------------------------------
     can_disabled_images = 0
+
+    #---------------------------------------------------------------------------
+    # （可选）下载计划。                                TODO: 当前版本已移除该功能
+    #---------------------------------------------------------------------------
+    #  start:     从邮件列表第n个开始。（包含n，即列表第一个就是n。）默认值：1
+    #  end:       到邮件列表第n个结束。（包含n，即列表最后一个是n。）默认值：0
+    #  step:      从start开始计算，累计下载n个后结束。（即需下载n个）默认值：0
+    #---------------------------------------------------------------------------
+
+    # 邮件列表
+    TITLE_TASK = { 'start':1, 'step':0, 'end': 0 }
+
+    # 翻页规则
+    PAGES_TASK = { 'start':1, 'step':0, 'end':0 }
+
+    #---------------------------------------------------------------------------
+    # （可选）邮件主题，关键词过滤                     TODO: 当前版本已移除该功能
+    #---------------------------------------------------------------------------
+
+    # 黑名单关键词。邮件主题如果包含了任意一个关键词，就忽略不下载。
+    # 示例：TITLE_BACKLIST_KEYS = ['发信方已撤回邮件','QQ会员业务通知邮件']
+    TITLE_BACKLIST_KEYS = ['发信方已撤回邮件']
+
+    # 白名单关键词。邮件主题必须包含白名单里的所有关键词。关键词越多，匹配规则越严格。
+    # 示例：TITLE_BACKLIST_KEYS = ['反馈','回复']
+    TITLE_WHITELIST_KEYS = ['']
+
+    # 黑名单关键词。标签如果包含了任意一个关键词，就忽略不下载。
+    # 示例：TITLE_BACKLIST_KEYS = ['已阅']
+    TAG_BACKLIST_KEYS = ['发信方已撤回邮件']
+
+    #---------------------------------------------------------------------------
+    # （可选）邮件主题，关键词过滤                     TODO: 当前版本已移除该功能
+    #---------------------------------------------------------------------------
+
+    # 文件类型黑名单。忽略指定类型的文件。不包含'.'
+    # 示例：ATTACH_BACKLIST_FILETYPE = ['.psd','.txt']
+    ATTACH_BACKLIST_FILETYPE = ['']
+
+    # 文件类型白名单。只下载指定类型的文件，不包含 '.'
+    # 满足任意一个关键词即允许下载。
+    # ATTACH_WHITELIST_FILETYPE = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+    ATTACH_WHITELIST_FILETYPE = ['']
+
+
+    #---------------------------------------------------------------------------
+    # （可选）Advanced Config 高级选项
+    #---------------------------------------------------------------------------
+    
+    # 是否需要下载 chromedriver
+    can_download_chromedriver = 1
 
     #...........................................................................
     # 下载
@@ -192,6 +250,7 @@ class PROFILE:
 
     #...........................................................................
     # 星标 / 标签
+    # 如果标签不存在，则自动创建
     #...........................................................................
 
     # 是否处理星标/已读/未读邮件
@@ -208,15 +267,15 @@ class PROFILE:
     can_star_timeout_attach = 1
 
     # 没有附件添加标签
-    can_tag_no_attach = 0
+    can_tag_no_attach = 1
     str_tag_no_attach = '没有附件'
 
     # 过期附件添加标签
-    can_tag_timeout_attach = 0
+    can_tag_timeout_attach = 1
     str_tag_timeout_attach = '过期附件'
 
     # 不规范命名的附件添加标签
-    can_tag_filename_attach = 0
+    can_tag_filename_attach = 1
     str_tag_filename_attach = '重命名'
 
     #...........................................................................
@@ -247,8 +306,9 @@ class PROFILE:
 #-------------------------------------------------------------------------------
 # Webdriver Path
 #-------------------------------------------------------------------------------
-chromedriver = os.path.join(os.getcwd(), 'chromedriver.exe')
-
+os_platform = sys.platform
+chromedriver = 'chromedriver.exe' if os_platform.startswith('win') else 'chromedriver'
+chromedriver_path = os.path.join(os.getcwd(), chromedriver)
 
 #-------------------------------------------------------------------------------
 # 本地变量
@@ -365,10 +425,29 @@ def error(text):
 # webdriver
 #-------------------------------------------------------------------------------
 
+def download_chromedriver():
+    try:
+        # 获取 chromedriver 最新版本号
+        response = requests.get("https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json")
+        version_info = response.json()
+
+        stable_version = version_info["channels"]["Stable"]["version"]
+        say(f"chromedriver最新版本为: {stable_version}")
+
+        # 根据操作系统，获取对应的 chromedriver 下载地址
+        download_url = f"https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/{stable_version}/{os_platform}/chromedriver-{os_platform}.zip"
+        zip_filename = f"chromedriver-{os_platform}.zip"
+        download_file(download_url, zip_filename)
+
+        # 解压至当前目录
+        extract_zip(zip_filename)
+        say(f"chromedriver 已下载完成。")
+    except Exception as e:
+        say(f"由于网络问题，chromedriver 下载失败。请手动下载。", "RED")
 
 def launch_webdriver():
 
-    IS_MACOS_USER = False if os.name == 'nt' else True
+    IS_MACOS_USER = False if os_platform.startswith('win') else True
 
     prefs = {
         'download.directory_upgrade': True,
@@ -381,9 +460,10 @@ def launch_webdriver():
     options.add_argument('–user-data-dir={}'.format(PROFILE.DOWNLOAD_FOLDER))
     options.add_argument('--lang=zh-CN')                 # 设置默认字符集编码
     options.add_argument('--window-size=960,1200')       # 设置浏览器窗口大小
-    options.add_argument('--disable-remote-fonts')       # 禁用远程字体，提升加载速度
-    options.add_argument('--hide-scrollbars')            # 隐藏滚动条，提升处理速度
-    options.add_experimental_option('excludeSwitches', ['enable-logging'])  # 禁用日志输出
+    options.add_argument('--disable-remote-fonts')       # 禁用远程字体，提升加载速度。
+    options.add_argument('--hide-scrollbars')            # 隐藏滚动条。避免影响到元素的定位。
+    options.add_argument('--ignore-certificate-errors')  # 忽略证书错误: [ERROR:ssl_client_socket_impl.cc] handshake failed; returned -1, SSL error code 1, net_error -100
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])  # 禁用日志输出: DevTools listening on ws://127.0.0.1...
     options.add_experimental_option('prefs', prefs)
 
     # 浏览器本地缓存文件夹
@@ -402,12 +482,13 @@ def launch_webdriver():
 
     # 启动 Webdriver
     try:
-        driver = Chrome(options=options, desired_capabilities=caps, executable_path=chromedriver)
+        driver = Chrome(options=options, desired_capabilities=caps, executable_path=chromedriver_path)
+        set_driver(driver)
     except SessionNotCreatedException:
-        error('ChromeDriver 版本已经更新，请前往 https://sites.google.com/chromium.org/driver/ 下载最新 Stable 版本，解压后将 chromedriver.exe 并放在此文件的相同目录。')
+        error('ChromeDriver 版本已经更新，请前往 https://googlechromelabs.github.io/chrome-for-testing/#stable 下载最新 Stable 版本，解压后将 chromedriver.exe 并放在此文件的相同目录。')
         return
     except WebDriverException:
-        error('引用 WebDriver 遇到了错误。请前往 https://sites.google.com/chromium.org/driver/ 下载最新 Stable 版本，解压后将 chromedriver.exe 放在此文件的相同目录。')
+        error(f"请前往 https://googlechromelabs.github.io/chrome-for-testing/#stable 手动下载 chromedriver-{os_platform}.zip，解压至此脚本文件的相同目录。")
         return
     except UnboundLocalError:
         error('当前已经开启了一个实例，无法同时运行多个任务，请关闭脚本后重新尝试。')
@@ -415,8 +496,6 @@ def launch_webdriver():
     except Exception:
         error('启动浏览器时，遇到了未知的错误，请删除本地文件夹内的 selenium 文件夹重试。')
         traceback.print_exc()
-    finally:
-        set_driver(driver)
     
     # 跳转至邮箱主页
     go_to(MAIL_SELECTOR['login_url'][MAILDOMIN])
@@ -427,6 +506,8 @@ def launch_webdriver():
     except ElementNotInteractableException:
         time.sleep(2)
         launch_mail()
+    except WebDriverException:
+        say(f"由于浏览器窗口被关闭，脚本自动退出。如果不是手动关闭的，请重新运行脚本再试一次。")
 
 #-------------------------------------------------------------------------------
 # login
@@ -486,8 +567,9 @@ def launch_mail():
             if notify_verify: say('等待用户手动完成认证...', 'FLASHANI'); notify_verify = False;
             if notify_tcaptcha and S('#newVcodeArea').exists(): say('等待完成安全验证', 'FLASHANI'); notify_tcaptcha = False;
             if notify_sms and S('#verify').exists(): say('等待完成短信认证', 'FLASHANI'); notify_sms = False;
-            time.sleep(1)
-        
+            if S('#err_m').exists(): say('由于安全限制，请使用手机QQ扫码登录。', 'RED'); time.sleep(1); S('#switcher_qlogin').web_element.click(); continue;
+            if S(MAIL_SELECTOR['mainFrame_scroll'][MAILDOMIN]).exists(): say('已进入邮箱主页', 'FLASHANI'); break;
+
         time.sleep(1)
     #...........................................................................
     # 登录成功
@@ -660,29 +742,46 @@ def open_mail():
     FBI_WAITTING('#pageEnd')
     scroll_down(S("#pageEnd").y)
 
+    title_data = LOCALDATA['title_list'][FOLDER_DATA['page']][FOLDER_DATA['title_index']]
+
+    #...........................................................................
+    # 没有附件
+    #...........................................................................  
+    if not S("#attachment").exists():
+        # 设为星标
+        if bool(PROFILE.can_star_no_attach):
+            add_mail_star()
+
+        # 添加标签
+        if bool(PROFILE.can_tag_no_attach):
+            add_mail_tag(PROFILE.str_tag_no_attach)
+        
+        return
+    
+    #...........................................................................
+    # 超大附件过期，已被发送者删除 (全部)
+    #...........................................................................  
+    if not S('.down_big').exists():
+        say(f"{title_data['index']}\t{title_data['page']}\t{title_data['title']}\t\t附件已被发送者删除", 'RED')
+        # 设为星标
+        if bool(PROFILE.can_star_timeout_attach):
+            add_mail_star()
+
+        # 添加'过期附件'标签
+        if bool(PROFILE.can_tag_timeout_attach):
+            add_mail_tag(PROFILE.str_tag_timeout_attach)
+
+        return;
+
     #...........................................................................
     # 读取当前邮件的附件信息
-    #...........................................................................  
+    #........................................................................... 
 
-    if S("#attachment").exists():
-        try:
-            read_attach()
-        except:
-            time.sleep(1)
-            open_mail()
-        return
-
-    #...........................................................................
-    # 若没有附件，进行标记
-    #...........................................................................  
-
-    # 设为星标
-    if bool(PROFILE.can_star_no_attach):
-        add_mail_star()
-
-    # 添加标签
-    if bool(PROFILE.can_tag_no_attach):
-        add_mail_tag(PROFILE.str_tag_no_attach)
+    try:
+        read_attach()
+    except:
+        time.sleep(1)
+        open_mail()
 
 #-------------------------------------------------------------------------------
 # attach
@@ -690,19 +789,18 @@ def open_mail():
 
 def read_attach():
 
+    # 带入临时数据
+    title_data = LOCALDATA['title_list'][FOLDER_DATA['page']][FOLDER_DATA['title_index']]
+ 
     #...........................................................................
     # 读取页面附件信息
     #...........................................................................  
 
-    # 带入临时数据
-    title_data = LOCALDATA['title_list'][FOLDER_DATA['page']][FOLDER_DATA['title_index']]
-
     # 踩坑：这里用 S() 选择不到元素，只能通过 selenium 常规的办法 
     WebDriverWait(get_driver(), 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, MAIL_SELECTOR['attach_info_class'][MAILDOMIN])))
     attach_element = get_driver().find_elements(By.CSS_SELECTOR, MAIL_SELECTOR['attach_info_class'][MAILDOMIN])
-
     time.sleep(0.08)
-    
+
     # 踩坑：超大附件的首个 idx 属性值为空。
     attach_info = []
 
@@ -741,14 +839,14 @@ def read_attach():
 
     for item in attach_data:
 
-        # 下载前，获取当前文件夹数量。
-        # 踩坑：若文件包含乱码，则不会计入文件数量，导致数量对不上，但实际数量是正确的
+        # 软计数，已执行下载的附件数量
+        # 踩坑：若文件包含乱码，则不会计入文件数量，导致数量对不上，但实际数量是正确的。(尚未解决)
         file_count = count_files_in_folder(PROFILE.DOWNLOAD_FOLDER)
 
-        # 下载前，检测文件名是否规范
+        # 下载前，检测文件名是否规范，是否包含QQ号，若没有，则添加 '重命名' 标签。
         if bool(PROFILE.can_tag_filename_attach) and not verify_filename_matching(item['filename']):
             add_mail_tag(PROFILE.str_tag_filename_attach)
-            say(f"* {item['attach_index']}\t{FOLDER_DATA['attach_count']}\t{item['title_index']}\t{item['fileindex']}\t{item['filename']} 不规范的附件名。")
+            say(f"* {item['attach_index']}\t{FOLDER_DATA['attach_count']}\t{item['title_index']}\t{item['fileindex']}\t{item['filename']} 不规范的附件名。", 'GOLD')
         
         # 下载前，检测文件是否已存在，若已存在则跳过。
         if bool(PROFILE.can_check_file_exists) and PROFILE.ready_download_but_exists == 'skip' and verify_file_matching(item['filename'], item['filebyte']):
@@ -771,9 +869,10 @@ def read_attach():
 # file
 #-------------------------------------------------------------------------------
 
-# 根据邮件提供的文件属性，判断文件名是否规范
+# 根据邮件提供的文件属性，判断文件名是否规范。
+# 这里为简单判断，文件名是否包含6以上的数字，来区分是否包含QQ号。
 def verify_filename_matching(filename):
-    pattern = r'\d{5,}'
+    pattern = r'\d{6,}'
     return bool(re.search(pattern, filename))
 
 # 根据邮件提供的文件属性，判断文件是否存在，且文件大小相同
@@ -838,17 +937,71 @@ def FBI_WAITTING(id):
         else:time.sleep(1)
         wait+=1
 
-# 添加标签，若标签已经存在则跳过
+# 添加标签，若标签已经存在则跳过，若标签不存在，则新建标签。
 def add_mail_tag(tagname):
     if S('#tagContainer').exists() and tagname in S('#tagContainer').web_element.text:
         return
     click(Text('标记为...'))
+    if tagname not in S('#select_QMMenu__menuall_').web_element.text:
+        say(f"标签 {tagname} 不存在，正在创建标签。", 'SILVER')
+        new_mail_tag(tagname)
+        return
     click(Text(tagname, below=Text('取消标签')))
 
 # 添加星标，若已星标则忽略
 def add_mail_star():
     if S('#img_star').web_element.get_attribute('class') == 'qm_ico_flagoff': 
         click(S('#img_star'))
+
+# 新建标签
+def new_mail_tag(tagname):
+    click(Text('新建标签'))
+    write(tagname, S('#QMconfirm_QMDialog_txt'))
+    click(Text('确定'))
+
+# 获取操作系统类型
+def get_os_type():
+    platform = os_platform
+    if platform.startswith('linux'):
+        return 'linux64'
+    elif platform == 'darwin':
+        return 'mac-arm64' if os.uname().machine == 'arm64' else 'mac-x64'
+    elif platform in ['win32', 'cygwin']:
+        return 'win32'
+    elif platform == 'win64':
+        return 'win64'
+    else:
+        raise ValueError(f"未知的操作系统: {platform}")
+
+# 解压压缩包
+def extract_zip(zip_filename, extract_to="."):
+    with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
+        zip_ref.extractall(extract_to)
+
+# 移动文件
+def move_file(src, dest):
+    shutil.move(src, dest)
+
+# 删除文件
+def remove_file(filename):
+    try:
+        os.remove(filename)
+    except:
+        say(f"{filename} 删除失败。", "RED")
+
+# 下载文件，并显示进度条
+def download_file(url, filename):
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        total_length = int(r.headers.get('content-length', 0))
+        dl = 0
+        with open(filename, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    dl += len(chunk)
+                    f.write(chunk)
+                    done = int(50 * dl / total_length)
+                    print(f"\r正在下载 {filename} [{'=' * done}{' ' * (50-done)}] {dl}/{total_length} bytes", end='')
 
 #-------------------------------------------------------------------------------
 # END
@@ -872,6 +1025,9 @@ def raise_error():
 #-------------------------------------------------------------------------------
 
 def main():
+    if bool(PROFILE.can_download_chromedriver) and not os.path.exists(chromedriver_path):
+        say(f"正在自动下载chromedriver...")
+        download_chromedriver()
     launch_webdriver()
     print('-')
    
@@ -880,5 +1036,5 @@ def main():
 #-------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    os.system('cls')
+    os.system('cls' if os.name == 'nt' else 'clear')
     main()
