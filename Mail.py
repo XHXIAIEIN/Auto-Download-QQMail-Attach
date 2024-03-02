@@ -4,7 +4,7 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2024/01/06
+# 更新：2024/03/02
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQEmail-Attach
 #===============================================================================
 
@@ -85,7 +85,7 @@ from urllib.parse import unquote
 
 from helium import *
 from selenium.webdriver import Chrome, ChromeOptions
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import (SessionNotCreatedException,WebDriverException,ElementNotInteractableException)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -223,7 +223,7 @@ class PROFILE:
     #---------------------------------------------------------------------------
     
     # 是否需要下载 chromedriver
-    can_download_chromedriver = 1
+    can_download_chromedriver = 0
 
     #...........................................................................
     # 下载
@@ -476,13 +476,12 @@ def launch_webdriver():
         say(f"* 已禁用显示网页图片", 'SILVER')
         options.add_argument('--blink-settings=imagesEnabled=false')
 
-    # 调整网页加载方式，不等待页面完全加载完成
-    caps = DesiredCapabilities.CHROME
-    caps['pageLoadStrategy'] = 'none'
-
+    # desired_capabilities 已经在 selenium 4.0 版本中被废除
+    service = ChromeService(executable_path=chromedriver_path)
+    
     # 启动 Webdriver
     try:
-        driver = Chrome(options=options, desired_capabilities=caps, executable_path=chromedriver_path)
+        driver = Chrome(options=options, service=service)
         set_driver(driver)
     except SessionNotCreatedException:
         error('ChromeDriver 版本已经更新，请前往 https://googlechromelabs.github.io/chrome-for-testing/#stable 下载最新 Stable 版本，解压后将 chromedriver.exe 并放在此文件的相同目录。')
