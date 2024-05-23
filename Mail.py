@@ -4,7 +4,7 @@
 # * 声明
 #===============================================================================
 # 作者：XHXIAIEIN
-# 更新：2024/04/20
+# 更新：2024/05/20
 # 主页：https://github.com/XHXIAIEIN/Auto-Download-QQMail-Attach
 #===============================================================================
 
@@ -22,8 +22,8 @@
 #  
 #  打开页面，点击网页最醒目的黄色按钮。"Download Python 3.xxx" (xxx 为最新版本号)
 #  
-#  Windows 安装补充1：
-#  安装 python3 时，需勾选安装页面底部选项 ⌈Add Python 3.xx to PATH⌋
+#  Windows 安装补充：
+#  安装时，需勾选安装页面底部选项 ⌈Add Python 3.xx to PATH⌋
 #...............................................................................
 
 
@@ -33,21 +33,13 @@
 #  - chromedriver: 
 #  https://googlechromelabs.github.io/chrome-for-testing/#stable
 # 
-#  目前，脚本会自动下载，Chromedriver 并解压到这个脚本文件相同的目录。
-#  但由于网络问题，可能会下载失败（因为需要开启网络代理）
-#  当自动下载失败时，你需要手动下载 chromedriver 文件。
-#  这个步骤可能稍微复杂一点，但请耐心阅读。
-#  
-#  打开这个页面，你会看到一个绿色的表格。
-#  https://googlechromelabs.github.io/chrome-for-testing/#stable
-#  表格中有很多内容，但你需要找到 chromedriver 即可。
-#  如果你运行了脚本，会告诉你下载哪个版本。
-#  
-#  1. 先看第 1 列的 Binary，位于表格第 6 行之后。
-#  2. 再看第 2 列的 Platform，找到你对应的操作系统。
-#           Windows 系统，下载 win64 版本；
+#  打开这个页面，会看到一个绿色的表格。
+#  找到其中的 chromedriver，
+#  1. 先看第 1 列的 chromedriver，会发现有很多不同的平台。
+#  2. 再看第 2 列的 Platform，找到你对应的操作系统：
+#           Windows 系统，下载 win64 或 win32 版本；
 #           MacOS 系统，Intel处理器下载 mac-x64 版本，M1/M2 处理器下载 mac-arm64 版本。
-#  3. 将 URL 地址复制到浏览器地址栏，按下回车，即可下载。
+#  3. 再看第 3 列的 URL，将地址复制到浏览器地址栏，按下回车，即可下载。
 #
 #  安装补充：
 #  下载完成后，将压缩包进行解压，放到和这个脚本文件相同的目录。
@@ -72,40 +64,16 @@
 
 # 以下是本脚本使用到的官方库
 from selenium import webdriver
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-import concurrent.futures
 from urllib import parse
-from urllib.parse import unquote
-import os, re, sys, time, csv, shutil, requests, zipfile, traceback
-
-'''
-#===============================================================================
-# * 使用提示
-#===============================================================================
-'''
-
-#...............................................................................
-#  运行脚本之前，你需要先做几件事。
-#...............................................................................
-#  1 修改脚本参数
-#    阅读下方的自定义参数区，根据你的需要对参数进行修改。
-#    其中，带 📌 符号的为必填项。其他均为可选，如果不明白它代表什么，可以跳过它。
-#...............................................................................
-#  2 邮箱文件夹
-#    把你想要下载的邮件移动到一个新的文件夹里，并找到这个文件夹ID。
-#    文件夹ID是个数字，如123, 135, 247。
-#
-#    1. 展开左侧面板 [我的文件夹] 列表，找到你想下载的文件夹，右键-新窗口打开。（注，不是选择"我的文件夹"）
-#    2. 在新窗口的网站地址找到参数 folderid
-#    如：mail.qq.com/cgi-bin/frame_html?t=frame_html&sid=xxx&url=/cgi-bin/mail_list?folderid={ 数字 }%26page=0
-#..........................
-
+import os, re, sys, time, shutil, csv
 
 '''
 #===============================================================================
@@ -116,13 +84,13 @@ import os, re, sys, time, csv, shutil, requests, zipfile, traceback
 class PROFILE:
 
     # 要下载的邮箱文件夹ID
-    FOLDER_ID = 139
+    FOLDER_ID = 123
 
     # 附件下载到本地哪个位置
-    ROOTPATH = r'D:\XHXIAIEIN\Desktop\2024'
+    ROOTPATH = r'D:\QQMailDownload\2024'
 
     # 临时文件路径
-    DOWNLOAD_FOLDER = os.path.join(ROOTPATH, 'download')
+    DOWNLOAD_FOLDER = os.path.join(ROOTPATH, 'download2')
     USERDATA_FOLDER = os.path.join(ROOTPATH, 'selenium')
 
     #---------------------------------------------------------------------------
@@ -134,7 +102,7 @@ class PROFILE:
     #---------------------------------------------------------------------------
 
     # 邮件列表
-    TITLE_TASK = { 'start':1, 'step':0, 'end': 0 }
+    TITLE_TASK = { 'start':1, 'step':0, 'end':0 }
 
     # 翻页规则
     PAGES_TASK = { 'start':1, 'step':0, 'end':0 }
@@ -159,10 +127,39 @@ class PROFILE:
 
     # 直接跳过没有附件的邮件。
     # 启用后，自动添加 "没有附件" 标签的功能将失效。
-    SKIP_NO_ATTACH = 0
+    SKIP_NO_ATTACH = 1
 
     # 下载前，检测本地是否存在相同文件（检测方法：对比文件名及文件大小是否一致）。
     SKIP_EXISTS_FILE = 1
+
+    # 每个邮件将创建一个文件夹，将附件下载到其中。
+    CREATE_FOLDER_EACH_TITLE = 1
+    CREATE_FOLDER_NAME = "{titleindex}_{fromname}"
+
+    # 是否需要下载附件
+    CAN_DOWNLOAD_ATTACH = 1
+    
+    # 同时下载文件数量
+    MAX_CONCURRENT_DOWNLOADS = 5
+
+    # 单个文件下载超时(秒)
+    DOWNLOAD_TIME_OUT = 60
+    
+    # 没有附件添加星标
+    CAN_STAR_NO_ATTACH = 1
+
+    # TODO
+    # # 没有附件添加标签
+    # CAN_TAG_NO_ATTACH = 1
+    # STR_TAG_NO_ATTACH = '没有附件'
+
+    # # 过期附件添加标签
+    # CAN_TAG_TIMEOUT_ATTACH = 1
+    # STR_TAG_TIMEOUT_ATTACH = '过期附件'
+
+    # # 不规范命名的附件添加标签
+    # CAN_TAG_FILENAME_ATTACH = 1
+    # STR_TAG_FILENAME_ATTACH = '重命名'
 
 
 '''
@@ -174,6 +171,9 @@ class PROFILE:
 #-------------------------------------------------------------------------------
 # 本地变量
 #-------------------------------------------------------------------------------
+
+# 启动时间
+start_time = datetime.now().strftime("%Y-%m-%d")
 
 # 本地缓存数据
 LOCALDATA = {
@@ -206,6 +206,64 @@ TEMP_DATA = {
 
 driver = None
 
+# 加载已有的临时数据文件（如果存在）
+def load_temporary_data():
+    global LOCALDATA
+
+    LOCALDATA['temp_title_path'] = os.path.join(PROFILE.ROOTPATH, f"{PROFILE.FOLDER_ID}_title_data.csv")
+    LOCALDATA['temp_attach_path'] = os.path.join(PROFILE.ROOTPATH, f"{PROFILE.FOLDER_ID}_attach_data.csv")
+
+    # 检查文件是否存在
+    title_file_exists = os.path.isfile(LOCALDATA['temp_title_path'])
+    attach_file_exists = os.path.isfile(LOCALDATA['temp_attach_path'])
+
+    # 文件不存在
+    if not title_file_exists and not attach_file_exists:
+        return False
+
+    # 如果任一文件存在，提示用户处理方式
+    if title_file_exists or attach_file_exists:
+        print('----------------------------------------')
+        print("检测到存在临时数据文件:")
+        if title_file_exists: print(f"标题数据: {LOCALDATA['temp_title_path']}")
+        if attach_file_exists: print(f"附件数据: {LOCALDATA['temp_attach_path']}")
+        print('----------------------------------------')
+        print("请输入 1 或 0 指令选择处理方式:")
+        print("1. 进度继续，直接下载附件")
+        print("0. 重新开始，删除缓存数据")
+
+        # 获取用户输入
+        user_input = input("请输入指令，留空则默认使用现有数据: ").strip() or '1'
+        print('----------------------------------------')
+        if user_input == '1':
+            # 使用文件数据替换当前数据
+            if title_file_exists:
+                with open(LOCALDATA['temp_title_path'], 'r', newline='', encoding='utf-8') as title_file:
+                    reader = csv.DictReader(title_file)
+                    title_list = list(reader)
+                    filtered_titles = apply_download_schedule(title_list, PROFILE.TITLE_TASK)
+                    LOCALDATA['title_list'] = filtered_titles
+                    print(f"读取 {len(filtered_titles)} 条邮件数据。")
+            if attach_file_exists:
+                with open(LOCALDATA['temp_attach_path'], 'r', newline='', encoding='utf-8') as attach_file:
+                    reader = csv.DictReader(attach_file)
+                    attach_list = list(reader)
+                    filtered_attachments = apply_download_schedule(attach_list, PROFILE.TITLE_TASK)
+                    LOCALDATA['attach_list'] = filtered_attachments
+                    print(f"读取 {len(filtered_attachments)} 份附件数据。")
+        elif user_input == '0':
+            # 删除临时数据文件
+            if title_file_exists:
+                os.remove(LOCALDATA['temp_title_path'])
+            if attach_file_exists:
+                os.remove(LOCALDATA['temp_attach_path'])
+            print("已删除缓存数据。")
+        else:
+            print("指令无效。")
+        
+        print('----------------------------------------')
+
+
 # 启动浏览器
 def launch_webdriver():
     global driver
@@ -227,18 +285,27 @@ def launch_webdriver():
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
 
-    driver = webdriver.Chrome(options=options)
+    # 检查 chromedriver 是否存在
+    chromedriver_path = os.path.join(os.getcwd(), 'chromedriver.exe')
+    service = None
+    if os.path.isfile(chromedriver_path):
+        service = ChromeService(executable_path=chromedriver_path)
+    driver = Chrome(options=options, service=service)
     driver.get(f"https://mail.qq.com/cgi-bin/loginpage")
 
     driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
     login_panel = wait_until(driver, '#login')
 
     print(f"等待登录")
-    while login_panel:
-        login_panel = wait_until(driver, '#login')
+    start_wait_time = time.time()
+    while wait_until(driver, '#login'):
+        if time.time() - start_wait_time > 15:
+            print("等待时间似乎有一段时间，如果页面已经登录，请尝试刷新页面。")
+            break
         time.sleep(1)
 
-    mainframe = wait_until(driver, '#mainFrameContainer')
+    # 等待主页面加载
+    wait_until(driver, '#mainFrameContainer')
     LOCALDATA['token_sid'] = get_querystring(driver.current_url, 'sid')
     print(f"登录成功！token_sid: {LOCALDATA['token_sid']}")
 
@@ -264,6 +331,8 @@ def open_folder():
 
 
 def get_title_list():
+    global LOCALDATA
+
     driver.get(f"https://mail.qq.com/cgi-bin/mail_list?folderid={LOCALDATA['folder_id']}&page={LOCALDATA['token_page']}&sid={LOCALDATA['token_sid']}&nocheckframe=true")
     wait_until(driver, '#qqmail_mailcontainer')
 
@@ -272,11 +341,11 @@ def get_title_list():
 
     # 解析当前页的邮件数据
     title_elements = find_all(driver, 'input[fa]')
-    data = load_folder_title(title_elements)
-    LOCALDATA['title_list'].extend(data)
+    title_data = load_folder_title(title_elements)
+    LOCALDATA['title_list'].extend(title_data)
 
     # 保存数据到临时文件
-    save_to_csv(LOCALDATA['title_list'], 'temp_title_data.csv')
+    save_to_csv(LOCALDATA['title_list'], LOCALDATA['temp_title_path'])
     LOCALDATA['token_page'] += 1
 
 
@@ -285,7 +354,7 @@ def load_title_data(element, index):
     parent = element.find_element(By.XPATH, 'ancestor::tbody')
     page = LOCALDATA['token_page']
     index = TEMP_DATA['title']
-    name = element.get_attribute('fn')
+    fromname = element.get_attribute('fn')
     address = element.get_attribute('fa')
     timestamp = element.get_attribute('totime')
     mailid = element.get_attribute('value')
@@ -295,14 +364,10 @@ def load_title_data(element, index):
     attach = 1 if find_all(parent, '.cij.Ju') else 0
     tags = get_title_tag(parent) if find_all(parent, '.TagDiv') else ''
 
-    # 处理无附件情况 TODO
-    if not attach: 
-        print(f"- {page} {index} {title} 没有附件")
-
     data = [{
         'page': page,
         'index': index,
-        'name': name,
+        'fromname': fromname,
         'title': title,
         'address': address,
         'pageat': index,
@@ -315,7 +380,6 @@ def load_title_data(element, index):
     }]
 
     return data
-
 
 # 处理文件夹邮件的数据
 def load_folder_title(elements):
@@ -330,14 +394,13 @@ def load_folder_title(elements):
         TEMP_DATA['title'] += 1
     return data_list
 
-
 #-------------------------------------------------------------------------------
 # Mail
 #-------------------------------------------------------------------------------
 
 def can_open_email(data):
     if PROFILE.SKIP_NO_ATTACH and not bool(data['attach']):
-        print(f"- {data['index']} {data['title']} 没有附件")
+        print(f"- {data['index']} {data['title']} 没有附件，已跳过。")
         return False
     if contains_keywords(data['title'], PROFILE.TITLE_BACKLIST_KEYS):
         print(f"- {data['index']} {data['title']} 标题名称包含黑名单")
@@ -346,33 +409,45 @@ def can_open_email(data):
 
 
 def open_mail():
-    print('开始读取邮件')
-    global driver
+    print('开始读取邮件，收集附件信息')
+    global driver, LOCALDATA
     with ThreadPoolExecutor() as executor:
-        with open('temp_title_data.csv', 'r', newline='', encoding='utf-8') as csvfile:
+        with open(LOCALDATA['temp_title_path'], 'r', newline='', encoding='utf-8') as csvfile:
             folder = csv.DictReader(csvfile)
             for title in folder:
+                # 检验邮件名是否包含黑名单关键词，以及附件情况。
                 if can_open_email(title):
                     driver.get(f"https://mail.qq.com/cgi-bin/frame_html?t=newwin_frame&sid={LOCALDATA['token_sid']}&url=/cgi-bin/readmail?t=readmail%26mailid={title['mailid']}%26mode=pre")
                     wait_until(driver, '#pageEnd')
                     driver.switch_to.frame("mainFrame")
-                    # 获取附件元素
-                    attach_elements = find_all(driver, '.ico_big a')
-                    attach_tasks = []
-                    for item in attach_elements:
-                        attach_info = load_attach_data(item, title)
-                        LOCALDATA['attach_list'].append(attach_info)
-                        attach_tasks.append(attach_info)
-                    TEMP_DATA['attach'] += len(attach_elements)
-                    save_to_csv(LOCALDATA['attach_list'], 'temp_attach_data.csv')
-    download_attach_list(attach_info)
+                    driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
+                    # 处理没有附件，是否需要加星标和标签
+                    if not title['attach']:
+                        print(f"- 没有附件: 第{title['index']}封邮件位于第{title['page']}页. | {title['name']} {title['title']} {title['address']}")
+                        # 设为星标
+                        if bool(PROFILE.CAN_STAR_NO_ATTACH):
+                            add_mail_star()
+                        # 添加标签
+                        if bool(PROFILE.CAN_TAG_NO_ATTACH):
+                            add_mail_tag(PROFILE.STR_TAG_NO_ATTACH)
+                    else:
+                        # 获取附件元素
+                        attach_elements = find_all(driver, '.ico_big a')
+                        attach_tasks = []
+                        # 获取每个附件信息
+                        for item in attach_elements:
+                            attach_info = load_attach_data(item, title)
+                            LOCALDATA['attach_list'].append(attach_info)
+                            attach_tasks.append(attach_info)
+                        TEMP_DATA['attach'] += len(attach_elements)
+                        save_to_csv(LOCALDATA['attach_list'], LOCALDATA['temp_attach_path'])
 
 # 读取单个附件的信息
 def load_attach_data(element, title_data):
     title_index = title_data['index']
     attach_index = TEMP_DATA['attach'] + int(element.get_attribute('idx') or 0)
     fileindex = int(element.get_attribute('idx') or 0)
-    name = title_data['name']
+    fromname = title_data['fromname']
     filename = element.get_attribute('filename')
     filebyte = int(element.get_attribute('filebyte'))
     fileview = element.get_attribute('viewmode')
@@ -386,7 +461,7 @@ def load_attach_data(element, title_data):
     data = {
         'title_index': title_index,
         'attach_index': attach_index,
-        'name': name,
+        'fromname': fromname,
         'filename': filename,
         'filebyte': filebyte,
         'fileview': fileview,
@@ -406,18 +481,21 @@ def load_attach_data(element, title_data):
 # Task
 #-------------------------------------------------------------------------------
 
+# 检测什么时候结束翻页
 def page_task_exit():
-    page_out = LOCALDATA['token_page'] > LOCALDATA['page_count']
+    page_out = LOCALDATA['token_page'] >= LOCALDATA['page_count']
     page_step_out = PROFILE.PAGES_TASK['step'] > 0 and PROFILE.PAGES_TASK['start'] + LOCALDATA['token_page'] > PROFILE.PAGES_TASK['step']
     page_end_out = PROFILE.PAGES_TASK['end'] > 0 and LOCALDATA['token_page'] > PROFILE.PAGES_TASK['end']
     title_task_out = not TEMP_DATA['nextpage']
     return page_out or page_step_out or page_end_out or title_task_out
 
+# 检测什么时候停止收集邮件标题
 def title_task_exit():
     title_step_out = PROFILE.TITLE_TASK['step'] > 0 and PROFILE.TITLE_TASK['start'] + TEMP_DATA['title'] >= PROFILE.TITLE_TASK['step']
     title_end_out = PROFILE.TITLE_TASK['end'] > 0 and PROFILE.TITLE_TASK['start'] + TEMP_DATA['title'] >= PROFILE.TITLE_TASK['end']
     return title_step_out or title_end_out
 
+# 检测字符串是否包含关键词
 def contains_keywords(title, list):
     if not list:
         return
@@ -425,7 +503,6 @@ def contains_keywords(title, list):
         if key in title:
             return True
     return False
-
 
 #-------------------------------------------------------------------------------
 # file
@@ -439,35 +516,85 @@ def verify_filename_matching(filename):
 
 
 # 根据邮件提供的文件属性，判断文件是否存在，且文件大小相同
-def verify_file_matching(filename, byte):
-    try:
-        path = os.path.join(PROFILE.DOWNLOAD_FOLDER, filename)
-        if not os.path.isfile(path):
-            return True
-        verify = os.path.getsize(path) == byte
-        return not verify
-    except:
-        return True
+def verify_file_matching(filename, expected_byte):
+    path = os.path.join(PROFILE.DOWNLOAD_FOLDER, filename)
+    if os.path.isfile(path):
+        actual_byte = os.path.getsize(path)
+        return True, actual_byte == expected_byte
+    return False, False
 
-
+# 从列表下载所有附件
 def download_attach_list(attach_list):
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(download_file, item) for item in attach_list]
+    if not bool(attach_list):
+        return
+    with ThreadPoolExecutor(max_workers=PROFILE.MAX_CONCURRENT_DOWNLOADS) as executor:
+        futures = [executor.submit(download_thread, item) for item in attach_list]
         for future in as_completed(futures):
-            data = future.result()
-            if data:
-                print(f"- {data['attach_index']} {data['title_index']} {data['filename']}")
+            result = future.result()
 
 
-def download_file(attach_data):
-    # 检查文件是否已经存在
-    if PROFILE.SKIP_EXISTS_FILE and skip_file_matching(attach_data['filename'], attach_data['filebyte']):
-        return None
-    global driver
-    original_window = driver.current_window_handle
-    driver.get(attach_data['filedown'])
-    driver.switch_to.window(original_window)
+def download_thread(attach_data):
+    print(f"即将下载: 第{attach_data['attach_index']}个附件，来自第{attach_data['title_index']}封邮件。 {attach_data['filename']}。{attach_data['fromname']}-{attach_data['title']}")
+    # 根据是否跳过文件，决定是否下载文件和输出提示信息
+    if PROFILE.SKIP_EXISTS_FILE:
+        download_and_wait(attach_data['filedown'], attach_data)
+    else:
+        download_file(attach_data['filedown'])
     return attach_data
+
+
+# 实际下载一个文件
+def download_file(url):
+    global driver
+    driver.get(url)
+    time.sleep(0.5)
+
+# 下载并等待
+def download_and_wait(file_url, attach_data):
+    download_file(file_url)
+    target_file = os.path.join(PROFILE.DOWNLOAD_FOLDER, attach_data['filename'])
+    timeout = PROFILE.DOWNLOAD_TIME_OUT
+    while timeout > 0:
+        if skip_file_matching(target_file, attach_data['filebyte']):
+            print(f"下载完成: {target_file}")
+            # 是否需要移动到文件夹
+            if PROFILE.CREATE_FOLDER_EACH_TITLE:
+                move_file_to_folder(attach_data['filename'], attach_data)
+                return True
+        time.sleep(1)
+        timeout -= 1
+    print(f"下载超时: {attach_data['filename']} ({read_bytes(attach_data['filebyte'])})")
+    return False
+
+# 移动到文件夹
+def move_file_to_folder(filename, attach_data):
+
+    folder_root = PROFILE.DOWNLOAD_FOLDER
+    folder_name = StringSub(PROFILE.CREATE_FOLDER_NAME, attach_data)
+
+    folder_path = os.path.join(folder_root, folder_name)
+    
+    if not os.path.exists(folder_path):
+        try:
+            os.makedirs(folder_path)
+        except FileExistsError:
+            pass
+
+    old_path = os.path.join(folder_root, filename)
+    new_path = os.path.join(folder_path, filename)
+
+    # 避免目标路径重名冲突
+    if os.path.exists(new_path):
+        base, extension = os.path.splitext(filename)
+        i = 1
+        while os.path.exists(new_path):
+            new_path = os.path.join(folder_path, f"{base}_{i}{extension}")
+            i += 1
+    
+    try:
+        shutil.move(old_path, new_path)
+    except Exception as e:
+        print(f"无法移动文件 {filename}: {e}")
 
 #-------------------------------------------------------------------------------
 # Utility
@@ -477,14 +604,12 @@ def find(elements, selector):
     try:
         return elements.find_element(By.CSS_SELECTOR, selector)
     except:
-        print(f"找不到 {selector} 元素")
         return None
 
 def find_all(elements, selector):
     try:
         return elements.find_elements(By.CSS_SELECTOR, selector)
     except:
-        print(f"找不到 {selector} 元素")
         return None
 
 def wait_until(elements, selector, timeout=8):
@@ -493,16 +618,20 @@ def wait_until(elements, selector, timeout=8):
     except:
         return None
 
-# 频繁提示，自动刷新至页面出现
+def check_file_download(path, expected_name, expected_byte):
+    file_path = os.path.join(path, expected_name)
+    return os.path.exists(expected_name) and os.path.getsize(expected_name) == expected_byte
+
+# 频繁提示，自动刷新至元素消失
 def FBI_WAITTING(id):
     global driver
-    if find(driver, id):
+    if not find(driver, id):
         return
     wait = 0
-    while not find(driver, id):
-        if wait == 0: time.sleep(10); driver.navigate().refresh();()
-        elif wait == 2: time.sleep(6); driver.navigate().refresh();()
-        elif wait%3 == 0: time.sleep(3); driver.navigate().refresh();()
+    while find(driver, id):
+        if wait == 0: time.sleep(10); driver.navigate().refresh()
+        elif wait == 2: time.sleep(6); driver.navigate().refresh()
+        elif wait%3 == 0: time.sleep(3); driver.navigate().refresh()
         else:time.sleep(1)
         wait+=1
 
@@ -510,11 +639,11 @@ def FBI_WAITTING(id):
 # 添加标签，若标签已经存在则跳过，若标签不存在，则新建标签。
 def add_mail_tag(tagname):
     global driver
-    if find(driver,'#tagContainer') and tagname in find(driver, '#tagContainer').web_element.text:
+    if find(driver,'#tagContainer') and tagname in find(driver, '#tagContainer').text:
         return
     driver.find_element(By.LINK_TEXT, '标记为...').click()
-    if tagname not in find(driver,'#select_QMMenu__menuall_').web_element.text:
-        print(f"标签 {tagname} 不存在，正在创建标签。", 'SILVER')
+    if tagname not in find(driver,'#select_QMMenu__menuall_').text:
+        print(f"标签 {tagname} 不存在，正在创建标签。")
         new_mail_tag(tagname)
         return
     driver.find_element(By.LINK_TEXT, '标记为...').click()
@@ -525,11 +654,11 @@ def add_mail_tag(tagname):
 # 添加星标，若已星标则忽略
 def add_mail_star():
     global driver
-    if find(driver, '#img_star').web_element.get_attribute('class') == 'qm_ico_flagoff':
+    if find(driver, '#img_star').get_attribute('class') == 'qm_ico_flagoff':
         driver.find_element(By.CSS_SELECTOR, '#img_star').click()
 
 
-# 新建标签
+# 新建新的标签
 def new_mail_tag(tagname):
     global driver
     driver.find_element(By.LINK_TEXT, '新建标签').click()
@@ -557,42 +686,25 @@ def get_querystring(url, item):
 
 
 # 将数据储存到csv文件中
-def save_to_csv(data_list, filename):
+def save_to_csv(data_list, filepath):
     if not data_list:
-        print("Data is empty.")
         return
     keys = data_list[0].keys()
-    with open(filename, 'w', newline='', encoding='utf-8') as f:
+    with open(filepath, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, keys)
         writer.writeheader()
         for data in data_list:
             data = {key: data[key] for key in keys}
             writer.writerow(data)
-
-# 加载已有的临时数据文件（如果存在）
-def load_temporary_data():
-    temp_title_data = 'temp_title_data.csv'
-    temp_attach_data = 'temp_attach_data.csv'
-
-    if not os.path.isfile(temp_title_data) and not os.path.isfile(temp_attach_data):
-        return False
-
-    # 读取标题缓存
-    if os.path.isfile(temp_title_data):
-        print(f"接力：从 {temp_title_data} 的进度继续")
-        with open(temp_title_data, 'r', newline='', encoding='utf-8') as title_file:
-            reader = csv.DictReader(title_file)
-            for row in reader:
-                LOCALDATA['title_list'].append(row)
-
-    # 读取附件缓存
-    if os.path.isfile(temp_attach_data):
-        print(f"接力：从 {temp_attach_data} 的进度继续")
-        with open(temp_attach_data, 'r', newline='', encoding='utf-8') as attach_file:
-            reader = csv.DictReader(attach_file)
-            for row in reader:
-                LOCALDATA['attach_list'].append(row)
     
+
+# 根据下载计划的配置, 筛选符合的下载范围
+def apply_download_schedule(data_list, task):
+    start = task.get('start', 1) - 1 or 0
+    end = task.get('end') or len(data_list)
+    step = task.get('step') or len(data_list)
+    selected_data = data_list[start:min(start + step, end)]
+    return selected_data
 
 # 读取文件夹的作品数量，通过比较文件名前面10个字符
 def get_unique_filenames(folder_path):
@@ -605,25 +717,100 @@ def get_unique_filenames(folder_path):
 
 # 根据邮件提供的文件属性，判断文件是否存在，且文件大小相同
 def skip_file_matching(filename, filesize):
-    filepath = os.path.join(PROFILE.DOWNLOAD_FOLDER, filename)
-    return os.path.exists(filepath) and os.path.getsize(filepath) == filesize
+    folder_root = PROFILE.DOWNLOAD_FOLDER
+    filepath = os.path.join(folder_root, filename)
+    # 检查文件名和文件大小是否匹配
+    if os.path.isfile(filepath) and os.path.getsize(filepath) == filesize:
+        return True
+    # 替换特殊字符，移除不可打印字符
+    legal_filename = validateName(filename)
+    # 尝试是否和原始文件匹配
+    if os.path.isfile(legal_filename) and os.path.getsize(legal_filename) == filesize:
+        return True
+    return False
+
+#提取文件名
+def get_filename(string):
+    return string.split(".")[0] if len(string.split('.')) <= 1 else '.'.join(string.split('.')[0:-1])
+
+# 去除不可见字符
+def validateName(filename):
+    legal_filename = re.sub(r'[\/|\\|\:|\*|\?|\"|\<|\>|\||\.|]', '', filename)
+    legal_filename = re.sub(r'[\\/:"*?<>|]+', '', filename)
+    legal_filename = ''.join(filter(lambda x: x.isprintable(), legal_filename))
+    return legal_filename
 
 # 补零
-def zerofill(num):
-    return str(num).zfill(4)
+def zerofill(n):
+    n = n if type(n) == type(1) else int(n)
+    z = 2
+    if n >= 10000:
+        z=5
+    elif n>=1000 and n<10000:
+        z=4
+    elif n>=100 and n<1000: 
+        z=3
+    else:
+        z=2
+    return str(n).zfill(z)
 
 
-# 重命名文件或文件夹函数
-def rename_path(old_name, new_name, is_folder=False):
-    try:
-        os.rename(old_name, new_name)
-        if is_folder:
-            print("重命名文件夹:", old_name, "to", new_name)
-        else:
-            print("重命名文件:", old_name, "to", new_name)
-    except Exception as e:
-        print("重命名时遇到了错误:", e)
+# 输出文件大小
+def read_bytes(bytes):
+    if bytes == 0:
+        return "0KB"
+    size = ("B", "KB", "MB", "GB", "TB")
+    i = 0
+    while bytes >= 1024 and i < len(size)-1:
+        bytes /= 1024.0
+        i += 1
+    return "{:.2f} {}".format(bytes, size[i])
 
+def StringSub(string, data):
+    timestamp = time.localtime(float(int(data['timestamp']) / 1000))
+
+    # 重命名规则模板
+    rule = { 
+        '{folderid}': str(PROFILE.FOLDER_ID),                                # 文件夹ID
+        '{filename}': get_filename(validateName(data['filename'])),          # 文件名 file
+        '{filenameEx}': validateName(data['filename']),                      # 文件名 file.jpg
+        '{filetype}': data['filename'].split('.')[-1].lower(),               # 文件类型 jpg
+        '{titleindex}': str(data['title_index']),                            # 标题顺序
+        '{attchindex}': str(data['attach_index']),                           # 附件顺序
+        '{page}': str(data['page']),                                         # 邮件位于第几页
+        '{pageat}': str(data['pageat']),                                     # 邮件位于第几页的第几封
+        '{titlecount}': str(len(LOCALDATA['title_list'])),                   # 总邮件数量
+        '{attchcount}': str(len(LOCALDATA['attach_list'])),                  # 总标题数量
+        '{tokenpage}': str(LOCALDATA['token_page']),                         # 当前位于第几页
+        '{foldername}': validateName(LOCALDATA['folder_name']),              # 文件夹名称
+        '{foldertitle}': str(LOCALDATA['title_list']),                       # 文件夹邮件数量：500
+        '{pagecount}': str(LOCALDATA['page_count']),                         # 文件夹页数：002
+        '{titlename}': validateName(data['title']),                          # 邮件标题
+        '{fromname}': validateName(data['fromname']),                        # 发信人昵称
+        '{mailid}': data['address'].split("@")[0],                           # 邮箱ID：123456
+        '{mailaddress}': data['address'],                                    # 邮箱地址：123456@qq.com
+        '{year}': time.strftime("%Y", timestamp),                            # 年：2020
+        '{month}': time.strftime("%m", timestamp),                           # 月：11
+        '{day}': time.strftime("%d", timestamp),                             # 日：04
+        '{week}': time.strftime("%a", timestamp),                            # 周：Wed
+        '{ampm}': time.strftime("%p", timestamp),                            # 午：PM
+        '{hours}': time.strftime("%H", timestamp),                           # 时：14
+        '{minutes}': time.strftime("%M", timestamp),                         # 分：30
+        '{seconds}': time.strftime("%S", timestamp),                         # 秒：59
+        '{time1}': time.strftime("%H%M", timestamp),                         # 1430
+        '{time2}': time.strftime("%H-%M-%S", timestamp),                     # 14-30-59
+        '{time3}': time.strftime("%H'%M'%S", timestamp),                     # 14'30'59
+        '{date1}': time.strftime("%m%d", timestamp),                         # 1207
+        '{date2}': time.strftime("%Y%m%d", timestamp),                       # 20201207
+        '{date3}': time.strftime("%Y-%m-%d", timestamp),                     # 2020-12-07
+        '{fulldate1}': time.strftime("%Y-%m-%d_%H-%M-%S", timestamp),        # 2020-12-07_14-30-59
+        '{fulldate2}': time.strftime("%Y%m%d_%H'%M'%S", timestamp),          # 20201207_14'30'59
+    }
+
+    for i, j in rule.items(): 
+        string = string.replace(i, j)
+    
+    return string
 
 #-------------------------------------------------------------------------------
 # START
@@ -636,15 +823,21 @@ def main():
         if not LOCALDATA['title_list']:
             while not page_task_exit():
                 get_title_list()
+        else:
+            print(f"从缓存数据开始，获取{len(LOCALDATA['title_list'])}封邮件的附件列表。")
         open_mail()
     else:
-        download_attach_list(LOCALDATA['attach_list'])
+        print('从缓存数据开始，直接下载附件列表的文件')
     
+    # 下载附件列表的附件
+    if PROFILE.CAN_DOWNLOAD_ATTACH:
+        download_attach_list(LOCALDATA['attach_list'])
 
 
 if __name__ == '__main__':
     os.system('cls')
     main()
     print('完成。')
+    print("邮件总数: ", LOCALDATA['title_count'])
     print("预估文件夹存在的作品数: ", get_unique_filenames(PROFILE.DOWNLOAD_FOLDER))
     input('')
