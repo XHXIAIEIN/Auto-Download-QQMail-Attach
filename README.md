@@ -50,7 +50,7 @@ https://googlechromelabs.github.io/chrome-for-testing/#stable
 可能有点慢，因为需要科学上网。
 下载后，解压出来，放这个脚本文件相同的目录。
 
-举例：下载的地址是这样的，只有链接中间的版本号数字不同
+举例：下载的地址是这样的，只有链接中间的版本号数字不同  
 https://storage.googleapis.com/chrome-for-testing-public/126.0.6478.61/win64/chromedriver-win64.zip
 
 <br><br>
