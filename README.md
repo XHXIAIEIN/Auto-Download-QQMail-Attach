@@ -118,8 +118,8 @@ USERDATA_FOLDER = os.path.join(ROOTPATH,"selenium")     # 不需要修改。浏�
 注：end 和 step 不同的地方是，end 代表着结束的终点，而 step 则是从开始后累计的数量。  
 
 ```
-Title_Task = { 'start':1, 'step':0, 'end': 0, 'relay': 0 }
-Pages_Task = { 'start':1, 'step':0, 'end':0, 'autoNext': 1, 'reverse': 0 }
+Title_Task = { 'start':1, 'step':0, 'end': 0}
+Pages_Task = { 'start':1, 'step':0, 'end':0 }
 ```
 
 4. **关键词过滤：邮件主题** （可选）   
