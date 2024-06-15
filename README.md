@@ -24,10 +24,11 @@
 ## 详细安装步骤
 
 1. **Python 3**   
-首先，下载 [Python 3](https://www.python.org/)，打开页面，点击网页最醒目的黄色按钮。"Download Python 3.xxx" (xxx 为最新版本号)
+https://www.python.org/
+打开页面，点击网页最醒目的黄色按钮。"Download Python 3.xxx" (xxx 为最新版本号)
 下载最新版即可，跟着引导安装。
 
-2. **pip install x**  
+3. **pip install x**  
 如果你已经安装好了 python 环境，按下 Win + R，输入 cmd，打开控制台。    
 接着输入下方的指令：
 
