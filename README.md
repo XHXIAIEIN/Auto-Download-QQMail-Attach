@@ -23,26 +23,23 @@
 
 ## 详细安装步骤
 
-1. **Python 3**   
+### 1. **Python 3**   
 https://www.python.org/
 打开页面，点击网页最醒目的黄色按钮。"Download Python 3.xxx" (xxx 为最新版本号)
 下载最新版即可，跟着引导安装。
 
-3. **pip install x**  
+### 2. **pip install x**  
 如果你已经安装好了 python 环境，按下 Win + R，输入 cmd，打开控制台。    
 接着输入下方的指令：
-
 ```
 pip install selenium
 ```
-
-> 注：若因网络代理问题无法下载，可尝试使用国内的镜像源。举例：
-
+若因网络代理问题无法下载，可尝试使用国内的镜像源。举例：
 ```
 pip install selenium -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
 ```
 
-3.  **chromedriver**
+### 3. **chromedriver**
 https://googlechromelabs.github.io/chrome-for-testing/#stable
 
 这一步，可能相对比较麻烦，和看起来可怕，但请耐心操作。
