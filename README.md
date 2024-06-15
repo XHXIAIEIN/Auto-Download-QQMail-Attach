@@ -10,6 +10,13 @@
   
 --
 
+## 使用步骤
+
+0. 下载必要的软件: [Python](https://www.python.org/downloads/), [Chromedriver](https://googlechromelabs.github.io/chrome-for-testing/#stable)
+1. 下载此脚本: [Mail.py](https://raw.githubusercontent.com/XHXIAIEIN/Auto-Download-QQMail-Attach/master/Mail.py), 将它下载到桌面。
+3. 使用 [VSCode](https://code.visualstudio.com/Download)(建议) 编辑脚本文件，修改其中的自定义参数：邮箱文件夹ID
+4. 运行脚本，手动扫码登录，等待完成即可。
+
 ## 小伙子，你干得不错！
 
 如果这个脚本对你非常有帮助，节省了你的时间，提升了你的工作效率，让生活变得更美丽....
