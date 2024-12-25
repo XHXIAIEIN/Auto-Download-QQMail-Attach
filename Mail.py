@@ -294,18 +294,22 @@ def launch_webdriver():
     driver.get(f"https://mail.qq.com/cgi-bin/loginpage")
 
     driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
-    login_panel = wait_until(driver, '#login')
-
+    
     print(f"等待登录")
     start_wait_time = time.time()
-    while wait_until(driver, '#login'):
-        if time.time() - start_wait_time > 15:
-            print("等待时间似乎有一段时间，如果页面已经登录，请尝试刷新页面。")
+    while True:
+        if not wait_until(driver, '#login', timeout=1):
             break
+        if time.time() - start_wait_time > 15:
+            print("登录超时,请检查登录状态后刷新页面重试")
+            sys.exit(1)
         time.sleep(1)
 
     # 等待主页面加载
-    wait_until(driver, '#mainFrameContainer')
+    if not wait_until(driver, '#mainFrameContainer'):
+        print("加载主页面失败")
+        sys.exit(1)
+        
     LOCALDATA['token_sid'] = get_querystring(driver.current_url, 'sid')
     print(f"登录成功！token_sid: {LOCALDATA['token_sid']}")
 
