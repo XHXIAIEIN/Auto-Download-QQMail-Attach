@@ -15,9 +15,45 @@
 (function() {
     'use strict'
 
+    const STYLES = `
+    .ah-panel{position:fixed;right:40px;top:60px;width:640px;max-height:80vh;background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,0.15);display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;z-index:10000;}
+    .ah-header{display:flex;justify-content:space-between;align-items:center;padding:20px;border-bottom:1px solid #e5e7eb;}
+    .ah-title h2{margin:0;font-size:18px;font-weight:600;color:#111827;}
+    .ah-stats{font-size:12px;color:#6b7280;margin-top:4px;}
+    .ah-actions{display:flex;gap:8px;align-items:center;}
+    .ah-actions button{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;}
+    .ah-actions button.primary{background:#2563eb;color:#fff;border-color:#2563eb;}
+    .ah-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+    .ah-body.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
+    .ah-item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;}
+    .ah-name{font-weight:500;font-size:14px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ah-size{font-size:12px;color:#6b7280;}
+    .ah-status{font-size:12px;color:#374151;}
+    .ah-progress{height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden;}
+    .ah-progress-bar{background:#2563eb;height:100%;width:0%;}
+    .ah-footer{padding:16px 20px;border-top:1px solid #e5e7eb;font-size:12px;color:#374151;display:flex;justify-content:space-between;}
+    .ah-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10001;}
+    .ah-dialog{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);padding:20px;width:320px;}
+    .ah-dialog h3{margin-top:0;margin-bottom:12px;font-size:16px;font-weight:600;color:#111827;}
+    .ah-dialog label{display:block;font-size:14px;color:#374151;margin-bottom:8px;}
+    .ah-dialog input{width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;margin-top:4px;}
+    .ah-dialog .actions{text-align:right;margin-top:16px;}
+    .ah-dialog button{background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;margin-left:8px;}
+    .ah-dialog button.primary{background:#2563eb;color:#fff;border-color:#2563eb;}
+    `;
+
+    function insertStyles(){
+        if(document.getElementById('ah-style')) return;
+        const style=document.createElement('style');
+        style.id='ah-style';
+        style.textContent=STYLES;
+        document.head.appendChild(style);
+    }
+
     // 核心模块
     const Core = {
         init() {
+            insertStyles()
             this.addToolbarButton()
             this.initEventListeners()
         },
@@ -333,34 +369,25 @@
         
         createPanel() {
             const panel = document.createElement('div')
-            panel.className = 'attachment-helper-panel'
+            panel.className = 'ah-panel'
             panel.style.display = 'none'
             panel.innerHTML = `
-                <div class="attachment-helper-header">
-                    <div class="attachment-helper-title">
+                <div class="ah-header">
+                    <div class="ah-title">
                         <h2 id="current-folder-name">当前文件夹</h2>
-                        <div class="attachment-helper-stats">
-                            <span id="mail-count">0 封邮件</span>
-                            <span id="attachment-count">0 个附件</span>
-                        </div>
+                        <div class="ah-stats"><span id="mail-count">0 封邮件</span> · <span id="attachment-count">0 个附件</span></div>
                     </div>
-                    <div class="attachment-helper-actions">
-                        <div class="attachment-helper-view-options">
-                            <button class="xmail-ui-button" data-view="list">列表视图</button>
-                            <button class="xmail-ui-button" data-view="grid">网格视图</button>
-                            <button class="xmail-ui-button" data-view="preview">预览视图</button>
-                        </div>
-                        <div class="attachment-helper-settings">
-                            <button class="xmail-ui-button" id="download-settings-btn">下载设置</button>
-                        </div>
-                        <button class="xmail-ui-button xmail-ui-button-primary" id="start-download-btn">开始下载</button>
-                        <button class="xmail-ui-button" id="close-panel-btn">关闭</button>
+                    <div class="ah-actions">
+                        <button data-view="list">列表</button>
+                        <button data-view="grid">网格</button>
+                        <button data-view="preview">预览</button>
+                        <button id="download-settings-btn">设置</button>
+                        <button class="primary" id="start-download-btn">开始下载</button>
+                        <button id="close-panel-btn">关闭</button>
                     </div>
                 </div>
-                <div class="attachment-helper-body" id="attachment-list"></div>
-                <div class="attachment-helper-footer">
-                    <div id="download-stats"></div>
-                </div>
+                <div class="ah-body list-view" id="attachment-list"></div>
+                <div class="ah-footer"><div id="download-stats"></div></div>
             `
             document.body.appendChild(panel)
             this.panel = panel
@@ -391,6 +418,8 @@
         
         switchView(view) {
             this.currentView = view
+            const container = this.panel.querySelector('#attachment-list')
+            container.className = `ah-body ${view}-view`
             this.renderAttachments()
         },
         
@@ -398,13 +427,14 @@
             const container = this.panel.querySelector('#attachment-list')
             container.innerHTML = ''
             DownloadManager.tasks.forEach(task => {
+                const percent = task.total ? Math.round((task.progress / task.total) * 100) : 0
                 const div = document.createElement('div')
-                div.className = `attachment-item ${this.currentView}`
+                div.className = `ah-item ${this.currentView}`
                 div.innerHTML = `
-                    <span class="attachment-name">${task.attachment.name}</span>
-                    <span class="attachment-size">${(task.attachment.size/1024).toFixed(1)}KB</span>
-                    <span class="attachment-status">${task.status}</span>
-                    <span class="attachment-progress" data-id="${task.attachment.attachid}"></span>
+                    <div class="ah-name" title="${task.attachment.name}">${task.attachment.name}</div>
+                    <div class="ah-size">${(task.attachment.size/1024).toFixed(1)} KB</div>
+                    <div class="ah-status">${task.status}</div>
+                    <div class="ah-progress"><div class="ah-progress-bar" data-id="${task.attachment.attachid}" style="width:${percent}%"></div></div>
                 `
                 container.appendChild(div)
             })
@@ -412,10 +442,10 @@
         },
         
         updateDownloadProgress(task) {
-            const progressEl = this.panel.querySelector(`.attachment-progress[data-id="${task.attachment.attachid}"]`)
-            if (progressEl) {
+            const bar = this.panel.querySelector(`.ah-progress-bar[data-id="${task.attachment.attachid}"]`)
+            if (bar) {
                 const percent = task.total ? Math.round((task.progress / task.total) * 100) : 0
-                progressEl.textContent = `${percent}%`
+                bar.style.width = percent + '%'
             }
         },
         
@@ -423,7 +453,6 @@
             const stats = DownloadManager.getStats()
             const statsEl = this.panel.querySelector('#download-stats')
             statsEl.textContent = `总数: ${stats.total}, 已完成: ${stats.completed}, 失败: ${stats.failed}, 进度: ${stats.progress}%`
-            this.renderAttachments()
         },
         
         async startDownload() {
@@ -492,21 +521,25 @@
 
         show() {
             const tpl = `
-                <div class="ah-settings-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;">
-                    <div class="ah-settings-panel" style="background:#fff;padding:20px;border-radius:8px;min-width:260px;">
+                <div class="ah-overlay">
+                    <div class="ah-dialog">
                         <h3>下载设置</h3>
-                        <label>并发数: <input id="ah-setting-concurrency" type="number" min="1" max="10" value="${this.options.concurrency}"></label>
-                        <label>命名模板: <input id="ah-setting-template" type="text" value="${this.options.naming.template}"></label>
-                        <div style="margin-top:10px; text-align:right;">
-                            <button id="ah-setting-save" class="xmail-ui-button xmail-ui-button-primary">保存</button>
-                            <button id="ah-setting-cancel" class="xmail-ui-button">取消</button>
+                        <label>并发数
+                            <input id="ah-setting-concurrency" type="number" min="1" max="10" value="${this.options.concurrency}">
+                        </label>
+                        <label>命名模板
+                            <input id="ah-setting-template" type="text" value="${this.options.naming.template}">
+                        </label>
+                        <div class="actions">
+                            <button id="ah-setting-save" class="primary">保存</button>
+                            <button id="ah-setting-cancel">取消</button>
                         </div>
                     </div>
                 </div>`
             const wrapper = document.createElement('div')
             wrapper.innerHTML = tpl
             document.body.appendChild(wrapper.firstElementChild)
-            const overlay = document.querySelector('.ah-settings-overlay')
+            const overlay = document.querySelector('.ah-overlay')
             overlay.addEventListener('click', (e) => {
                 if (e.target.id === 'ah-setting-save') {
                     const cc = parseInt(document.getElementById('ah-setting-concurrency').value, 10) || 3
