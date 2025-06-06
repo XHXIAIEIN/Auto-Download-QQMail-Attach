@@ -52,21 +52,52 @@
 
     // 核心模块
     const Core = {
-        init() {
+        async init() {
             insertStyles()
-            this.addToolbarButton()
+            await this.addToolbarButton()
             this.initEventListeners()
         },
 
-        addToolbarButton() {
-            const toolbar = document.querySelector('.xmail-ui-ellipsis-toolbar')
-            if (!toolbar) return
+        async addToolbarButton() {
+            console.log('[QQMailDownloader] 开始添加工具栏按钮...')
 
-            const button = document.createElement('button')
-            button.className = 'xmail-ui-button xmail-ui-button-primary'
-            button.innerHTML = '<i class="xmail-ui-icon xmail-ui-icon-download"></i> 附件下载助手'
-            button.id = 'attachment-helper-btn'
-            toolbar.appendChild(button)
+            const toolbarSelector = '.mail-list-page-toolbar .right-wrap .xmail-ui-ellipsis-toolbar .ui-ellipsis-toolbar-btns'
+
+            try {
+                const toolbar = await this.waitForElement(toolbarSelector)
+                console.log('[QQMailDownloader] 找到工具栏元素')
+
+                if (toolbar.querySelector('.qqmail-downloader-btn')) {
+                    console.log('[QQMailDownloader] 按钮已存在，跳过添加')
+                    return
+                }
+
+                console.log('[QQMailDownloader] 开始创建按钮')
+
+                const downloadBtn = document.createElement('div')
+                downloadBtn.className = 'xmail-ui-btn ui-btn-size32 ui-btn-border ui-btn-them-clear-gray qqmail-downloader-btn'
+                downloadBtn.style.marginRight = '8px'
+                downloadBtn.innerHTML = `
+                    <span class="xmail-ui-icon ui-btn-icon" style="width: 20px; height: 20px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor">
+                            <path d="M8 2v8m0 0l3-3m-3 3L5 7m-2 4v2h10v-2"/>
+                        </svg>
+                    </span>
+                    <div class="ui-btn-text">下载附件</div>
+                `
+
+                downloadBtn.onclick = () => {
+                    console.log('[QQMailDownloader] 按钮被点击')
+                    UI.togglePanel()
+                }
+
+                toolbar.appendChild(downloadBtn)
+                console.log('[QQMailDownloader] 按钮添加成功')
+
+            } catch (error) {
+                console.error('[QQMailDownloader] 添加按钮失败:', error)
+                throw error
+            }
         },
 
         initEventListeners() {
@@ -85,6 +116,19 @@
         getFolderId() {
             const match = location.href.match(/folderid=([^&]+)/)
             return match ? match[1] : ''
+        },
+
+        waitForElement(selector, timeout = 10000) {
+            return new Promise((resolve, reject) => {
+                const start = Date.now()
+                const check = () => {
+                    const el = document.querySelector(selector)
+                    if (el) return resolve(el)
+                    if (Date.now() - start > timeout) return reject(new Error('Element not found: ' + selector))
+                    requestAnimationFrame(check)
+                }
+                check()
+            })
         }
     }
 
