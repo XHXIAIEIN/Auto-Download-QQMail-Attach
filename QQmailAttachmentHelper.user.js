@@ -174,6 +174,26 @@
             return mailDetail?.attach || []
         },
 
+        async loadFolderData(folderId) {
+            const mails = await this.getAllMails(folderId)
+            const attachments = []
+            for (let mIndex = 0; mIndex < mails.length; mIndex++) {
+                const mail = mails[mIndex]
+                const atts = await this.getAttachments(mail.id)
+                atts.forEach((att, idx) => {
+                    attachments.push(Object.assign({}, att, {
+                        mailid: mail.id,
+                        subject: mail.subject,
+                        fromEmail: mail.from,
+                        mailIndex: mIndex + 1,
+                        attachIndex: idx + 1,
+                        totalAttachments: atts.length
+                    }))
+                })
+            }
+            return { mails, attachments }
+        },
+
         async fetchApi(url) {
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
@@ -405,6 +425,9 @@
     const UI = {
         panel: null,
         currentView: 'preview',
+        loaded: false,
+        mails: [],
+        attachments: [],
         
         init() {
             this.createPanel()
@@ -450,13 +473,30 @@
                 }
             })
         },
+
+        async loadData() {
+            const folderId = Core.getFolderId()
+            if (!folderId) return
+            this.panel.querySelector('#mail-count').textContent = '加载中...'
+            this.panel.querySelector('#attachment-count').textContent = ''
+            const { mails, attachments } = await DataService.loadFolderData(folderId)
+            this.mails = mails
+            this.attachments = attachments
+            const mailCountEl = this.panel.querySelector('#mail-count')
+            const attCountEl = this.panel.querySelector('#attachment-count')
+            if (mailCountEl) mailCountEl.textContent = `${mails.length} 封邮件`
+            if (attCountEl) attCountEl.textContent = `${attachments.length} 个附件`
+            this.loaded = true
+        },
         
         togglePanel(force) {
             if (!this.panel) this.init()
-            if (typeof force === 'boolean') {
-                this.panel.style.display = force ? 'block' : 'none'
-            } else {
-                this.panel.style.display = this.panel.style.display === 'none' ? 'block' : 'none'
+            const willShow = typeof force === 'boolean'
+                ? force
+                : this.panel.style.display === 'none'
+            this.panel.style.display = willShow ? 'block' : 'none'
+            if (willShow && !this.loaded) {
+                this.loadData().then(() => this.renderAttachments())
             }
         },
         
@@ -500,32 +540,20 @@
         },
         
         async startDownload() {
-            const folderId = Core.getFolderId()
-            const mailList = await DataService.getAllMails(folderId)
-            DownloadManager.init(Settings.options)
-            let attachmentIndex = 0
-            let attachmentTotal = 0
-            for (const mail of mailList) {
-                const attachments = await DataService.getAttachments(mail.id)
-                attachmentTotal += attachments.length
-                attachments.forEach(att => {
-                    const info = Object.assign({}, att, {
-                        mailid: mail.id,
-                        subject: mail.subject,
-                        fromEmail: mail.from,
-                        mailIndex: mailList.indexOf(mail) + 1,
-                        attachIndex: ++attachmentIndex,
-                        totalAttachments: attachments.length
-                    })
-                    if (DataService.filterAttachment(info, Settings.options)) {
-                        DownloadManager.addTask(info)
-                    }
-                })
+            if (!this.loaded) {
+                await this.loadData()
             }
-            // update counts in UI
+            DownloadManager.init(Settings.options)
+            let attachmentTotal = 0
+            this.attachments.forEach(att => {
+                attachmentTotal++
+                if (DataService.filterAttachment(att, Settings.options)) {
+                    DownloadManager.addTask(att)
+                }
+            })
             const mailCountEl = this.panel.querySelector('#mail-count')
             const attCountEl = this.panel.querySelector('#attachment-count')
-            if (mailCountEl) mailCountEl.textContent = `${mailList.length} 封邮件`
+            if (mailCountEl) mailCountEl.textContent = `${this.mails.length} 封邮件`
             if (attCountEl) attCountEl.textContent = `${attachmentTotal} 个附件`
             this.renderAttachments()
         }
