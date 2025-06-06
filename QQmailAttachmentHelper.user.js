@@ -15,22 +15,90 @@
 (function() {
     'use strict'
 
+    const STYLES = `
+    .ah-panel{position:fixed;right:40px;top:60px;width:640px;max-height:80vh;background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,0.15);display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;z-index:10000;}
+    .ah-header{display:flex;justify-content:space-between;align-items:center;padding:20px;border-bottom:1px solid #e5e7eb;}
+    .ah-title h2{margin:0;font-size:18px;font-weight:600;color:#111827;}
+    .ah-stats{font-size:12px;color:#6b7280;margin-top:4px;}
+    .ah-actions{display:flex;gap:8px;align-items:center;}
+    .ah-actions button{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;}
+    .ah-actions button.primary{background:#2563eb;color:#fff;border-color:#2563eb;}
+    .ah-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+    .ah-body.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
+    .ah-body.preview-view .ah-item{flex-direction:row;align-items:center;gap:12px;}
+    .ah-item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;}
+    .ah-name{font-weight:500;font-size:14px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ah-size{font-size:12px;color:#6b7280;}
+    .ah-status{font-size:12px;color:#374151;}
+    .ah-progress{height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden;}
+    .ah-progress-bar{background:#2563eb;height:100%;width:0%;}
+    .ah-footer{padding:16px 20px;border-top:1px solid #e5e7eb;font-size:12px;color:#374151;display:flex;justify-content:space-between;}
+    .ah-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10001;}
+    .ah-dialog{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);padding:20px;width:320px;}
+    .ah-dialog h3{margin-top:0;margin-bottom:12px;font-size:16px;font-weight:600;color:#111827;}
+    .ah-dialog label{display:block;font-size:14px;color:#374151;margin-bottom:8px;}
+    .ah-dialog input{width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;margin-top:4px;}
+    .ah-dialog .actions{text-align:right;margin-top:16px;}
+    .ah-dialog button{background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;margin-left:8px;}
+    .ah-dialog button.primary{background:#2563eb;color:#fff;border-color:#2563eb;}
+    `;
+
+    function insertStyles(){
+        if(document.getElementById('ah-style')) return;
+        const style=document.createElement('style');
+        style.id='ah-style';
+        style.textContent=STYLES;
+        document.head.appendChild(style);
+    }
+
     // 核心模块
     const Core = {
-        init() {
-            this.addToolbarButton()
+        async init() {
+            insertStyles()
+            await this.addToolbarButton()
             this.initEventListeners()
         },
 
-        addToolbarButton() {
-            const toolbar = document.querySelector('.xmail-ui-ellipsis-toolbar')
-            if (!toolbar) return
+        async addToolbarButton() {
+            console.log('[QQMailDownloader] 开始添加工具栏按钮...')
 
-            const button = document.createElement('button')
-            button.className = 'xmail-ui-button xmail-ui-button-primary'
-            button.innerHTML = '<i class="xmail-ui-icon xmail-ui-icon-download"></i> 附件下载助手'
-            button.id = 'attachment-helper-btn'
-            toolbar.appendChild(button)
+            const toolbarSelector = '.mail-list-page-toolbar .right-wrap .xmail-ui-ellipsis-toolbar .ui-ellipsis-toolbar-btns'
+
+            try {
+                const toolbar = await this.waitForElement(toolbarSelector)
+                console.log('[QQMailDownloader] 找到工具栏元素')
+
+                if (toolbar.querySelector('.qqmail-downloader-btn')) {
+                    console.log('[QQMailDownloader] 按钮已存在，跳过添加')
+                    return
+                }
+
+                console.log('[QQMailDownloader] 开始创建按钮')
+
+                const downloadBtn = document.createElement('div')
+                downloadBtn.className = 'xmail-ui-btn ui-btn-size32 ui-btn-border ui-btn-them-clear-gray qqmail-downloader-btn'
+                downloadBtn.style.marginRight = '8px'
+                downloadBtn.innerHTML = `
+                    <span class="xmail-ui-icon ui-btn-icon" style="width: 20px; height: 20px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor">
+                            <path d="M8 2v8m0 0l3-3m-3 3L5 7m-2 4v2h10v-2"/>
+                        </svg>
+                    </span>
+                    <div class="ui-btn-text">下载附件</div>
+                `
+
+                downloadBtn.onclick = () => {
+                    console.log('[QQMailDownloader] 按钮被点击')
+                    UI.togglePanel()
+                }
+
+                toolbar.appendChild(downloadBtn)
+                console.log('[QQMailDownloader] 按钮添加成功')
+
+            } catch (error) {
+                console.error('[QQMailDownloader] 添加按钮失败:', error)
+                throw error
+            }
         },
 
         initEventListeners() {
@@ -49,6 +117,19 @@
         getFolderId() {
             const match = location.href.match(/folderid=([^&]+)/)
             return match ? match[1] : ''
+        },
+
+        waitForElement(selector, timeout = 10000) {
+            return new Promise((resolve, reject) => {
+                const start = Date.now()
+                const check = () => {
+                    const el = document.querySelector(selector)
+                    if (el) return resolve(el)
+                    if (Date.now() - start > timeout) return reject(new Error('Element not found: ' + selector))
+                    requestAnimationFrame(check)
+                }
+                check()
+            })
         }
     }
 
@@ -65,6 +146,19 @@
             }
         },
 
+        async getAllMails(folderId) {
+            let page = 0
+            const result = []
+            while (true) {
+                const list = await this.getMailList(folderId, page)
+                if (!list.length) break
+                result.push(...list)
+                if (list.length < 50) break
+                page++
+            }
+            return result
+        },
+
         async getMailDetail(mailId) {
             const sid = Core.getSid()
             try {
@@ -79,6 +173,26 @@
         async getAttachments(mailId) {
             const mailDetail = await this.getMailDetail(mailId)
             return mailDetail?.attach || []
+        },
+
+        async loadFolderData(folderId) {
+            const mails = await this.getAllMails(folderId)
+            const attachments = []
+            for (let mIndex = 0; mIndex < mails.length; mIndex++) {
+                const mail = mails[mIndex]
+                const atts = await this.getAttachments(mail.id)
+                atts.forEach((att, idx) => {
+                    attachments.push(Object.assign({}, att, {
+                        mailid: mail.id,
+                        subject: mail.subject,
+                        fromEmail: mail.from,
+                        mailIndex: mIndex + 1,
+                        attachIndex: idx + 1,
+                        totalAttachments: atts.length
+                    }))
+                })
+            }
+            return { mails, attachments }
         },
 
         async fetchApi(url) {
@@ -233,11 +347,12 @@
         tasks: [],
         activeDownloads: 0,
         maxConcurrent: 3,
-        
+
         init(options) {
             this.options = options
             this.tasks = []
             this.activeDownloads = 0
+            this.maxConcurrent = options.concurrency || 3
         },
         
         addTask(attachment) {
@@ -311,6 +426,9 @@
     const UI = {
         panel: null,
         currentView: 'preview',
+        loaded: false,
+        mails: [],
+        attachments: [],
         
         init() {
             this.createPanel()
@@ -319,34 +437,25 @@
         
         createPanel() {
             const panel = document.createElement('div')
-            panel.className = 'attachment-helper-panel'
+            panel.className = 'ah-panel'
             panel.style.display = 'none'
             panel.innerHTML = `
-                <div class="attachment-helper-header">
-                    <div class="attachment-helper-title">
+                <div class="ah-header">
+                    <div class="ah-title">
                         <h2 id="current-folder-name">当前文件夹</h2>
-                        <div class="attachment-helper-stats">
-                            <span id="mail-count">0 封邮件</span>
-                            <span id="attachment-count">0 个附件</span>
-                        </div>
+                        <div class="ah-stats"><span id="mail-count">0 封邮件</span> · <span id="attachment-count">0 个附件</span></div>
                     </div>
-                    <div class="attachment-helper-actions">
-                        <div class="attachment-helper-view-options">
-                            <button class="xmail-ui-button" data-view="list">列表视图</button>
-                            <button class="xmail-ui-button" data-view="grid">网格视图</button>
-                            <button class="xmail-ui-button" data-view="preview">预览视图</button>
-                        </div>
-                        <div class="attachment-helper-settings">
-                            <button class="xmail-ui-button" id="download-settings-btn">下载设置</button>
-                        </div>
-                        <button class="xmail-ui-button xmail-ui-button-primary" id="start-download-btn">开始下载</button>
-                        <button class="xmail-ui-button" id="close-panel-btn">关闭</button>
+                    <div class="ah-actions">
+                        <button data-view="list">列表</button>
+                        <button data-view="grid">网格</button>
+                        <button data-view="preview">预览</button>
+                        <button id="download-settings-btn">设置</button>
+                        <button class="primary" id="start-download-btn">开始下载</button>
+                        <button id="close-panel-btn">关闭</button>
                     </div>
                 </div>
-                <div class="attachment-helper-body" id="attachment-list"></div>
-                <div class="attachment-helper-footer">
-                    <div id="download-stats"></div>
-                </div>
+                <div class="ah-body list-view" id="attachment-list"></div>
+                <div class="ah-footer"><div id="download-stats"></div></div>
             `
             document.body.appendChild(panel)
             this.panel = panel
@@ -362,35 +471,86 @@
                     this.switchView(e.target.dataset.view)
                 } else if (e.target.id === 'download-settings-btn') {
                     Settings.show()
+                } else if (DownloadManager.tasks.length === 0 && this.currentView === 'preview') {
+                    const item = e.target.closest('.ah-item')
+                    if (item) {
+                        const mailId = item.dataset.mailId
+                        const attachId = item.dataset.attachId
+                        if (mailId && attachId) {
+                            const url = `https://wx.mail.qq.com/cgi-bin/download?sid=${Core.getSid()}&mailid=${mailId}&attach=${attachId}`
+                            window.open(url, '_blank')
+                        }
+                    }
                 }
             })
+        },
+
+        async loadData() {
+            const folderId = Core.getFolderId()
+            if (!folderId) return
+            this.panel.querySelector('#mail-count').textContent = '加载中...'
+            this.panel.querySelector('#attachment-count').textContent = ''
+            const { mails, attachments } = await DataService.loadFolderData(folderId)
+            this.mails = mails
+            this.attachments = attachments
+            const mailCountEl = this.panel.querySelector('#mail-count')
+            const attCountEl = this.panel.querySelector('#attachment-count')
+            if (mailCountEl) mailCountEl.textContent = `${mails.length} 封邮件`
+            if (attCountEl) attCountEl.textContent = `${attachments.length} 个附件`
+            this.loaded = true
         },
         
         togglePanel(force) {
             if (!this.panel) this.init()
-            if (typeof force === 'boolean') {
-                this.panel.style.display = force ? 'block' : 'none'
-            } else {
-                this.panel.style.display = this.panel.style.display === 'none' ? 'block' : 'none'
+            const willShow = typeof force === 'boolean'
+                ? force
+                : this.panel.style.display === 'none'
+            this.panel.style.display = willShow ? 'block' : 'none'
+            if (willShow && !this.loaded) {
+                this.loadData().then(() => this.renderAttachments())
             }
         },
         
         switchView(view) {
             this.currentView = view
+            const container = this.panel.querySelector('#attachment-list')
+            container.className = `ah-body ${view}-view`
             this.renderAttachments()
         },
         
         renderAttachments() {
             const container = this.panel.querySelector('#attachment-list')
             container.innerHTML = ''
-            DownloadManager.tasks.forEach(task => {
+
+            let items = []
+            if (DownloadManager.tasks.length > 0) {
+                items = DownloadManager.tasks.map(t => ({
+                    attachment: t.attachment,
+                    status: t.status,
+                    progress: t.progress,
+                    total: t.total
+                }))
+            } else {
+                // 还未开始下载，显示预览列表
+                items = this.attachments.map(att => ({
+                    attachment: att,
+                    status: 'pending',
+                    progress: 0,
+                    total: att.size || 0
+                }))
+            }
+
+            items.forEach(item => {
+                const percent = item.total ? Math.round((item.progress / item.total) * 100) : 0
                 const div = document.createElement('div')
-                div.className = `attachment-item ${this.currentView}`
+                div.className = `ah-item ${this.currentView}`
+                div.dataset.mailId = item.attachment.mailid || ''
+                div.dataset.attachId = item.attachment.attachid || ''
                 div.innerHTML = `
-                    <span class="attachment-name">${task.attachment.name}</span>
-                    <span class="attachment-size">${(task.attachment.size/1024).toFixed(1)}KB</span>
-                    <span class="attachment-status">${task.status}</span>
-                    <span class="attachment-progress" data-id="${task.attachment.attachid}"></span>
+                    <div class="ah-name" title="${item.attachment.name}">${item.attachment.name}</div>
+                    <div class="ah-size">${(item.attachment.size/1024).toFixed(1)} KB</div>
+                    <div class="ah-status">${item.status}</div>
+                    <div class="ah-progress"><div class="ah-progress-bar" data-id="${item.attachment.attachid}" style="width:${percent}%"></div></div>
                 `
                 container.appendChild(div)
             })
@@ -398,50 +558,51 @@
         },
         
         updateDownloadProgress(task) {
-            const progressEl = this.panel.querySelector(`.attachment-progress[data-id="${task.attachment.attachid}"]`)
-            if (progressEl) {
+            const bar = this.panel.querySelector(`.ah-progress-bar[data-id="${task.attachment.attachid}"]`)
+            if (bar) {
                 const percent = task.total ? Math.round((task.progress / task.total) * 100) : 0
-                progressEl.textContent = `${percent}%`
+                bar.style.width = percent + '%'
             }
         },
         
         updateDownloadStatus() {
-            const stats = DownloadManager.getStats()
             const statsEl = this.panel.querySelector('#download-stats')
+            if (DownloadManager.tasks.length === 0) {
+                statsEl.textContent = `待下载附件: ${this.attachments.length}`
+                return
+            }
+            const stats = DownloadManager.getStats()
             statsEl.textContent = `总数: ${stats.total}, 已完成: ${stats.completed}, 失败: ${stats.failed}, 进度: ${stats.progress}%`
-            this.renderAttachments()
         },
         
         async startDownload() {
-            const folderId = Core.getFolderId()
-            const mailList = await DataService.getMailList(folderId)
-            let attachmentIndex = 0
-            for (const mail of mailList) {
-                const attachments = await DataService.getAttachments(mail.id)
-                attachments.forEach(att => {
-                    const info = Object.assign({}, att, {
-                        mailid: mail.id,
-                        subject: mail.subject,
-                        fromEmail: mail.from,
-                        mailIndex: mailList.indexOf(mail) + 1,
-                        attachIndex: ++attachmentIndex,
-                        totalAttachments: attachments.length
-                    })
-                    if (DataService.filterAttachment(info, Settings.options)) {
-                        DownloadManager.addTask(info)
-                    }
-                })
+            if (!this.loaded) {
+                await this.loadData()
             }
+            DownloadManager.init(Settings.options)
+            let attachmentTotal = 0
+            this.attachments.forEach(att => {
+                attachmentTotal++
+                if (DataService.filterAttachment(att, Settings.options)) {
+                    DownloadManager.addTask(att)
+                }
+            })
+            const mailCountEl = this.panel.querySelector('#mail-count')
+            const attCountEl = this.panel.querySelector('#attachment-count')
+            if (mailCountEl) mailCountEl.textContent = `${this.mails.length} 封邮件`
+            if (attCountEl) attCountEl.textContent = `${attachmentTotal} 个附件`
             this.renderAttachments()
         }
     }
 
     // 设置模块
     const Settings = {
+        storageKey: 'attachmentHelperSettings',
         options: {
             integrityCheck: { enabled: false, pattern: '\\d{6}', prefix: 'ID_' },
             formatCheck: { enabled: false, defaultExt: '.dat' },
             naming: { template: '{mail_subject}_{attach_name}' },
+            concurrency: 3,
             filter: {
                 fileType: { enabled: false, mode: 'include', types: [] },
                 fileSize: { enabled: false, mode: 'min', value: 0 },
@@ -449,12 +610,60 @@
                 mailSubject: { enabled: false, mode: 'include', keywords: [] }
             }
         },
+
+        load() {
+            const saved = localStorage.getItem(this.storageKey)
+            if (saved) {
+                try {
+                    const obj = JSON.parse(saved)
+                    Object.assign(this.options, obj)
+                } catch (e) {
+                    console.warn('加载设置失败', e)
+                }
+            }
+        },
+
+        save() {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.options))
+        },
+
         show() {
-            alert('设置界面未实现，默认配置将被使用。')
+            const tpl = `
+                <div class="ah-overlay">
+                    <div class="ah-dialog">
+                        <h3>下载设置</h3>
+                        <label>并发数
+                            <input id="ah-setting-concurrency" type="number" min="1" max="10" value="${this.options.concurrency}">
+                        </label>
+                        <label>命名模板
+                            <input id="ah-setting-template" type="text" value="${this.options.naming.template}">
+                        </label>
+                        <div class="actions">
+                            <button id="ah-setting-save" class="primary">保存</button>
+                            <button id="ah-setting-cancel">取消</button>
+                        </div>
+                    </div>
+                </div>`
+            const wrapper = document.createElement('div')
+            wrapper.innerHTML = tpl
+            document.body.appendChild(wrapper.firstElementChild)
+            const overlay = document.querySelector('.ah-overlay')
+            overlay.addEventListener('click', (e) => {
+                if (e.target.id === 'ah-setting-save') {
+                    const cc = parseInt(document.getElementById('ah-setting-concurrency').value, 10) || 3
+                    this.options.concurrency = cc
+                    this.options.naming.template = document.getElementById('ah-setting-template').value
+                    this.save()
+                    overlay.remove()
+                } else if (e.target.id === 'ah-setting-cancel' || e.target === overlay) {
+                    overlay.remove()
+                }
+            })
         }
     }
 
     // 初始化
+    Settings.load()
     Core.init()
 
     // Expose for debug
