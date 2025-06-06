@@ -25,6 +25,7 @@
     .ah-actions button.primary{background:#2563eb;color:#fff;border-color:#2563eb;}
     .ah-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
     .ah-body.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
+    .ah-body.preview-view .ah-item{flex-direction:row;align-items:center;gap:12px;}
     .ah-item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;}
     .ah-name{font-weight:500;font-size:14px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .ah-size{font-size:12px;color:#6b7280;}
@@ -470,6 +471,16 @@
                     this.switchView(e.target.dataset.view)
                 } else if (e.target.id === 'download-settings-btn') {
                     Settings.show()
+                } else if (DownloadManager.tasks.length === 0 && this.currentView === 'preview') {
+                    const item = e.target.closest('.ah-item')
+                    if (item) {
+                        const mailId = item.dataset.mailId
+                        const attachId = item.dataset.attachId
+                        if (mailId && attachId) {
+                            const url = `https://wx.mail.qq.com/cgi-bin/download?sid=${Core.getSid()}&mailid=${mailId}&attach=${attachId}`
+                            window.open(url, '_blank')
+                        }
+                    }
                 }
             })
         },
@@ -510,15 +521,36 @@
         renderAttachments() {
             const container = this.panel.querySelector('#attachment-list')
             container.innerHTML = ''
-            DownloadManager.tasks.forEach(task => {
-                const percent = task.total ? Math.round((task.progress / task.total) * 100) : 0
+
+            let items = []
+            if (DownloadManager.tasks.length > 0) {
+                items = DownloadManager.tasks.map(t => ({
+                    attachment: t.attachment,
+                    status: t.status,
+                    progress: t.progress,
+                    total: t.total
+                }))
+            } else {
+                // 还未开始下载，显示预览列表
+                items = this.attachments.map(att => ({
+                    attachment: att,
+                    status: 'pending',
+                    progress: 0,
+                    total: att.size || 0
+                }))
+            }
+
+            items.forEach(item => {
+                const percent = item.total ? Math.round((item.progress / item.total) * 100) : 0
                 const div = document.createElement('div')
                 div.className = `ah-item ${this.currentView}`
+                div.dataset.mailId = item.attachment.mailid || ''
+                div.dataset.attachId = item.attachment.attachid || ''
                 div.innerHTML = `
-                    <div class="ah-name" title="${task.attachment.name}">${task.attachment.name}</div>
-                    <div class="ah-size">${(task.attachment.size/1024).toFixed(1)} KB</div>
-                    <div class="ah-status">${task.status}</div>
-                    <div class="ah-progress"><div class="ah-progress-bar" data-id="${task.attachment.attachid}" style="width:${percent}%"></div></div>
+                    <div class="ah-name" title="${item.attachment.name}">${item.attachment.name}</div>
+                    <div class="ah-size">${(item.attachment.size/1024).toFixed(1)} KB</div>
+                    <div class="ah-status">${item.status}</div>
+                    <div class="ah-progress"><div class="ah-progress-bar" data-id="${item.attachment.attachid}" style="width:${percent}%"></div></div>
                 `
                 container.appendChild(div)
             })
@@ -534,8 +566,12 @@
         },
         
         updateDownloadStatus() {
-            const stats = DownloadManager.getStats()
             const statsEl = this.panel.querySelector('#download-stats')
+            if (DownloadManager.tasks.length === 0) {
+                statsEl.textContent = `待下载附件: ${this.attachments.length}`
+                return
+            }
+            const stats = DownloadManager.getStats()
             statsEl.textContent = `总数: ${stats.total}, 已完成: ${stats.completed}, 失败: ${stats.failed}, 进度: ${stats.progress}%`
         },
         
