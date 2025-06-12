@@ -17,7 +17,7 @@
     'use strict';
 
     // URL常量定义
-    const MAIL_CONSTANTS = {
+const MAIL_CONSTANTS = {
         BASE_URL: 'https://wx.mail.qq.com',
         API_ENDPOINTS: {
             MAIL_LIST: '/list/maillist',
@@ -25,7 +25,29 @@
             ATTACH_THUMBNAIL: '/attach/thumbnail',
             ATTACH_PREVIEW: '/attach/preview'
         }
-    };
+};
+
+    const STYLE_TEXT = `
+.attachment-manager-panel{position:fixed;top:0;right:0;width:400px;height:100vh;background:#fff;border:3px solid red;box-shadow:-2px 0 8px rgba(0,0,0,0.1);z-index:99999;display:none;flex-direction:column;transition:opacity .3s ease,transform .3s ease;opacity:0;transform:translateX(100%)}
+.attachment-manager-header{padding:16px;border-bottom:1px solid var(--base_gray_010,rgba(22,46,74,.08));display:flex;justify-content:space-between;align-items:center;background:var(--bg_white_web,#fff)}
+.attachment-manager-content{flex:1;overflow-y:auto;padding:16px;background:var(--bg_gray_web_1,#F6F8FA)}
+.am-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px}
+.am-actions{display:flex;gap:8px}
+.am-btn{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}
+.am-btn-primary{background:var(--theme_primary,#0F7AF5);color:#fff;border:none;transition:all .2s}
+.am-btn-secondary{background:var(--bg_white_web,#fff);color:var(--base_gray_100,#13181D);border:1px solid var(--base_gray_010,rgba(22,46,74,.08));transition:all .2s}
+#attachment-list{display:flex;flex-direction:column;gap:8px}
+.close-btn{background:none;border:none;cursor:pointer;padding:8px;border-radius:4px;color:var(--base_gray_030,rgba(25,38,54,.3))}
+.close-btn:hover{background:var(--base_gray_005,rgba(20,46,77,.07));color:var(--base_gray_100,#13181D)}
+`;
+    function injectStyles(){
+        if(!document.getElementById('qqmail-attach-style')){
+            const s=document.createElement('style');
+            s.id='qqmail-attach-style';
+            s.textContent=STYLE_TEXT;
+            document.head.appendChild(s);
+        }
+    }
 
     class AttachmentManager {
         constructor(downloader) {
@@ -133,7 +155,7 @@
 
 
         init() {
-
+            injectStyles();
             window.attachmentManager = this;
             this.createAndInjectButton();
             this.initUrlChangeListener();
@@ -187,7 +209,9 @@
                 btn.setAttribute('style', 'margin-right: 8px;');
                 btn.title = '附件管理';
                 btn.innerHTML = `<div class="ui-btn-text">附件管理</div>`;
-                btn.addEventListener('click', () => {this.togglePanel();});
+                btn.addEventListener('click', () => {
+                    this.isViewActive ? this.hideAttachmentView() : this.showAttachmentView();
+                });
                 container.appendChild(btn);
                 return true;
             };
@@ -214,14 +238,9 @@
             }
         }
 
-        togglePanel() {
-        }
 
-        showPanel() {
-        }
 
         hidePanel() {
-            console.log('[HidePanel] 开始隐藏面板');
 
             try {
                 // 调用完整的隐藏逻辑
@@ -272,137 +291,51 @@
         }
 
         createPanel() {
-            // 创建主面板
+            injectStyles();
             const panel = document.createElement('div');
             panel.className = 'attachment-manager-panel';
-            panel.style.cssText = `
-                position: fixed;
-                top: 0;
-                right: 0;
-                width: 400px;
-                height: 100vh;
-                background: #fff;
-                border: 3px solid red;
-                box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-                z-index: 99999;
-                display: none;
-                flex-direction: column;
-                transition: opacity 0.3s ease, transform 0.3s ease;
-                opacity: 0;
-                transform: translateX(100%);
-            `;
 
-            // 创建面板内容
             const header = document.createElement('div');
-            header.style.cssText = `
-                padding: 16px;
-                border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.08));
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                background: var(--bg_white_web, #FFFFFF);
-            `;
+            header.className = 'attachment-manager-header';
             header.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <h3 style="margin: 0; font-size: 16px; color: var(--base_gray_100, #13181D); font-weight: 600;">附件管理</h3>
-                    <span style="color: var(--base_gray_030, rgba(25, 38, 54, 0.3)); font-size: 13px;" id="attachment-count">0 个附件</span>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <h3 style="margin:0;font-size:16px;color:var(--base_gray_100,#13181D);font-weight:600;">附件管理</h3>
+                    <span style="color:var(--base_gray_030,rgba(25,38,54,.3));font-size:13px;" id="attachment-count">0 个附件</span>
                 </div>
-                <button class="close-btn" style="
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    padding: 8px;
-                    color: var(--base_gray_030, rgba(25, 38, 54, 0.3));
-                    border-radius: 4px;
-                    transition: all 0.2s;
-                ">×</button>
-            `;
+                <button class="close-btn">×</button>`;
 
             const content = document.createElement('div');
-            content.style.cssText = `
-                flex: 1;
-                overflow-y: auto;
-                padding: 16px;
-                background: var(--bg_gray_web_1, #F6F8FA);
-            `;
+            content.className = 'attachment-manager-content';
 
-            // 添加工具栏
             const toolbar = document.createElement('div');
-            toolbar.style.cssText = `
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 16px;
-                gap: 12px;
-            `;
+            toolbar.className = 'am-toolbar';
 
-            // 操作按钮组
             const actionButtons = document.createElement('div');
-            actionButtons.style.cssText = `
-                display: flex;
-                gap: 8px;
-            `;
+            actionButtons.className = 'am-actions';
 
-            // 下载全部按钮
             const downloadAllBtn = document.createElement('button');
-            downloadAllBtn.style.cssText = `
-                padding: 8px 16px;
-                border: none;
-                border-radius: 6px;
-                background: var(--theme_primary, #0F7AF5);
-                color: #fff;
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.2s;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            `;
-            downloadAllBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            downloadAllBtn.className = 'am-btn am-btn-primary';
+            downloadAllBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M8 2v8m0 0l3-3m-3 3L5 7m-2 4v2h10v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                下载全部
-            `;
+                下载全部`;
             downloadAllBtn.onclick = () => this.downloadAll();
-            // 比对按钮
+
             const compareBtn = document.createElement('button');
-            compareBtn.style.cssText = `
-                padding: 8px 16px;
-                border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.08));
-                border-radius: 6px;
-                background: var(--bg_white_web, #FFFFFF);
-                color: var(--base_gray_100, #13181D);
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.2s;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            `;
-            compareBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            compareBtn.className = 'am-btn am-btn-secondary';
+            compareBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M2 3h5l2 2h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M8 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                比对
-            `;
+                比对`;
             compareBtn.onclick = () => this.showCompareDialog();
 
             actionButtons.appendChild(downloadAllBtn);
             toolbar.appendChild(compareBtn);
             toolbar.appendChild(actionButtons);
 
-            // 附件列表容器
             const attachmentList = document.createElement('div');
             attachmentList.id = 'attachment-list';
-            attachmentList.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            `;
 
             content.appendChild(toolbar);
             content.appendChild(attachmentList);
@@ -412,14 +345,6 @@
 
         // 添加关闭按钮事件
         header.querySelector('.close-btn').onclick = () => this.hidePanel();
-        header.querySelector('.close-btn').onmouseover = () => {
-            header.querySelector('.close-btn').style.background = 'var(--base_gray_005, rgba(20, 46, 77, 0.07))';
-            header.querySelector('.close-btn').style.color = 'var(--base_gray_100, #13181D)';
-        };
-        header.querySelector('.close-btn').onmouseout = () => {
-            header.querySelector('.close-btn').style.background = 'none';
-            header.querySelector('.close-btn').style.color = 'var(--base_gray_030, rgba(25, 38, 54, 0.3))';
-        };
 
         // 添加搜索框事件
         const searchInput = searchBox.querySelector('input');
@@ -1605,7 +1530,6 @@
                 } else {
                     this.selectedAttachments.delete(attachmentId);
                 }
-                console.log('当前选中的附件:', Array.from(this.selectedAttachments));
                 // 更新智能下载按钮状态
                 this.updateSmartDownloadButton();
             }
@@ -1727,171 +1651,6 @@
         });
     }
 
-    showSortMenu(button) {
-        const menu = document.createElement('div');
-        menu.style.cssText = `
-            position: fixed;
-            background: var(--bg_white_web, #FFFFFF);
-            border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1));
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            z-index: 1002;
-            min-width: 120px;
-        `;
-
-        // 定位菜单到按钮下方
-        const rect = button.getBoundingClientRect();
-        menu.style.top = (rect.bottom + 4) + 'px';
-        menu.style.left = rect.left + 'px';
-
-        const sortOptions = [
-            { value: 'date', label: '按日期' },
-            { value: 'size', label: '按大小' },
-            { value: 'name', label: '按名称' }
-        ];
-
-        sortOptions.forEach(option => {
-            const item = document.createElement('div');
-            item.style.cssText = `
-                padding: 8px 12px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                                    font-size: 13px;
-                color: var(--base_gray_100, #13181D);
-            `;
-            item.textContent = option.label;
-
-            if (this.filters.sortBy === option.value) {
-                item.style.background = 'var(--base_gray_005, rgba(20, 46, 77, 0.05))';
-                const orderIcon = document.createElement('span');
-                orderIcon.textContent = this.filters.sortOrder === 'asc' ? '↑' : '↓';
-                item.appendChild(orderIcon);
-            }
-
-            item.onclick = () => {
-                if (this.filters.sortBy === option.value) {
-                    this.filters.sortOrder = this.filters.sortOrder === 'asc' ? 'desc' : 'asc';
-                } else {
-                    this.filters.sortBy = option.value;
-                    this.filters.sortOrder = 'desc';
-                }
-                this.applyFilters();
-                menu.remove();
-            };
-
-            menu.appendChild(item);
-        });
-
-        document.body.appendChild(menu);
-
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target) && e.target !== button) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
-            }
-        };
-
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu);
-        }, 0);
-    }
-
-    showFilterMenu(button) {
-        // 移除已存在的菜单
-        const existingMenu = document.querySelector('.filter-menu');
-        if (existingMenu) {
-            existingMenu.remove();
-        }
-
-        const menu = document.createElement('div');
-        menu.className = 'filter-menu';
-        menu.style.cssText = `
-            position: fixed;
-            background: var(--bg_white_web, #FFFFFF);
-            border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.08));
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 8px 0;
-            min-width: 160px;
-            z-index: 1001;
-        `;
-
-        // 定位菜单到按钮下方
-        const rect = button.getBoundingClientRect();
-        menu.style.top = (rect.bottom + 4) + 'px';
-        menu.style.left = rect.left + 'px';
-
-        // 简化的筛选选项
-        const filterOptions = [
-            { value: 'all', label: '全部附件', icon: '📎' },
-            { value: 'images', label: '图片', icon: '🖼️' },
-            { value: 'documents', label: '文档', icon: '📄' },
-            { value: 'archives', label: '压缩包', icon: '📦' },
-            { value: 'others', label: '其他', icon: '📋' }
-        ];
-
-        filterOptions.forEach(option => {
-            const item = document.createElement('div');
-            item.style.cssText = `
-                padding: 8px 16px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 13px;
-                color: var(--base_gray_100, #13181D);
-                transition: background 0.2s;
-            `;
-
-            if (this.currentFilter === option.value) {
-                item.style.background = 'var(--base_gray_005, rgba(20, 46, 77, 0.05))';
-                item.style.fontWeight = '500';
-            }
-
-            item.innerHTML = `
-                <span>${option.icon}</span>
-                <span>${option.label}</span>
-                ${this.currentFilter === option.value ? '<span style="margin-left: auto; color: var(--theme_primary, #0F7AF5);">✓</span>' : ''}
-            `;
-
-            item.addEventListener('mouseover', () => {
-                if (this.currentFilter !== option.value) {
-                    item.style.background = 'var(--base_gray_005, rgba(20, 46, 77, 0.05))';
-                }
-            });
-
-            item.addEventListener('mouseout', () => {
-                if (this.currentFilter !== option.value) {
-                    item.style.background = 'transparent';
-                }
-            });
-
-            item.addEventListener('click', () => {
-                this.currentFilter = option.value;
-                this.displayAttachments(this.getFilteredAttachments());
-                menu.remove();
-            });
-
-            menu.appendChild(item);
-        });
-
-        document.body.appendChild(menu);
-
-        // 点击外部关闭菜单
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target) && e.target !== button) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
-            }
-        };
-        setTimeout(() => document.addEventListener('click', closeMenu), 0);
-    }
-
-    updatePageInfo(pageInfoElement) {
-        pageInfoElement.textContent = `第 ${this.filters.currentPage} 页 / 共 ${this.filters.totalPages} 页`;
-    }
 
     showAttachmentDetail(attachment) {
         const detailContainer = document.createElement('div');
@@ -2023,7 +1782,6 @@
                 `name=${encodeURIComponent(attachment.name)}&` +
                 `sid=${this.downloader.sid}`;
 
-            console.log('缩略图URL:', thumbnailUrl);
 
             content.innerHTML = `
                 <div style="
@@ -2180,7 +1938,6 @@
         }
 
         try {
-            console.log('[DownloadAll] Starting download all procedure.');
             const dirHandle = await window.showDirectoryPicker({
                 mode: 'readwrite',
                 startIn: 'downloads'
@@ -2207,7 +1964,6 @@
             const successCount = results.filter(r => !r.error).length;
             const failCount = results.filter(r => r.error).length;
 
-            console.log(`[DownloadAll] Concurrent download all finished. Success: ${successCount}, Fail: ${failCount}`);
 
             if (failCount > 0) {
                 this.showToast(`全部附件下载完成。成功: ${successCount}，失败: ${failCount}`, 'warning');
@@ -2227,7 +1983,6 @@
         } finally {
             this.downloading = false;
             this.hideProgress();
-            console.log('[DownloadAll] Download all procedure ended.');
         }
     }
 
@@ -2261,7 +2016,6 @@
                 this.selectedAttachments.has(att.name_md5)
             );
 
-            console.log('准备下载的附件:', selectedAttachments);
 
             // Initialize progress
             this.totalTasksForProgress = selectedAttachments.length;
@@ -2305,7 +2059,6 @@
 
     async downloadAttachment(attachment, dirHandle, namingStrategy = null) {
         const attachmentName = attachment.name || 'unknown_attachment';
-        console.log(`[DownloadAttachment] Starting download for: ${attachmentName}`);
 
         try {
             // 获取下载URL
@@ -2334,7 +2087,6 @@
                         }
                     }
 
-                    console.log(`[DownloadAttachment] File ${finalFileName} saved successfully`);
                     return true;
                 } catch (error) {
                     console.error(`[DownloadAttachment] Error saving file ${attachmentName}:`, error);
@@ -2354,7 +2106,6 @@
                             saveAs: true,
                             onload: function() {
                                 URL.revokeObjectURL(url);
-                                console.log(`[DownloadAttachment] File ${fileName} downloaded successfully`);
                                 resolve();
                             },
                             onerror: function(error) {
@@ -2381,7 +2132,6 @@
         try {
             const file = await fileHandle.getFile();
             const actualSize = file.size;
-            console.log(`[VerifyDownload] 验证文件完整性: 期望大小=${expectedSize}, 实际大小=${actualSize}`);
             return actualSize === expectedSize;
         } catch (error) {
             console.error('[VerifyDownload] 验证下载完整性失败:', error);
@@ -2390,7 +2140,6 @@
     }
 
     async _fetchRedirectUrl(initialUrl, attachmentName) {
-        console.log(`[DownloadAttachment._fetchRedirectUrl] Fetching redirect URL for ${attachmentName} from: ${initialUrl}`);
 
         return new Promise((resolveRedirect, rejectRedirect) => {
             GM_xmlhttpRequest({
@@ -2412,20 +2161,15 @@
                 },
                 onload: function(response) {
                     if (response.status === 200) {
-                        console.log(`[DownloadAttachment._fetchRedirectUrl] Response status: ${response.status}`);
-                        console.log(`[DownloadAttachment._fetchRedirectUrl] Response finalUrl: ${response.finalUrl}`);
-                        console.log(`[DownloadAttachment._fetchRedirectUrl] Response text length: ${response.responseText?.length || 0}`);
 
                         // 方法1: 检查是否已经重定向到最终URL
                         if (response.finalUrl && response.finalUrl !== initialUrl) {
-                            console.log(`[DownloadAttachment._fetchRedirectUrl] Found redirect via finalUrl: ${response.finalUrl}`);
                             resolveRedirect(response.finalUrl);
                             return;
                         }
 
                         // 方法2: 从响应中提取JavaScript重定向URL
                         const responseText = response.responseText;
-                        console.log(`[DownloadAttachment._fetchRedirectUrl] Response text preview: ${responseText.substring(0, 500)}...`);
 
                         // 尝试多种JavaScript重定向模式
                         const redirectPatterns = [
@@ -2442,7 +2186,6 @@
                         for (const pattern of redirectPatterns) {
                             const match = responseText.match(pattern);
                             if (match && match[1]) {
-                                console.log(`[DownloadAttachment._fetchRedirectUrl] Found redirect URL via pattern: ${match[1]}`);
                                 resolveRedirect(match[1]);
                                 return;
                             }
@@ -2451,7 +2194,6 @@
                         // 方法3: 查找HTML meta refresh重定向
                         const metaRefreshMatch = responseText.match(/<meta[^>]+http-equiv=['"]refresh['"][^>]+content=['"][^'"]*url=([^'"]+)['"]/i);
                         if (metaRefreshMatch && metaRefreshMatch[1]) {
-                            console.log(`[DownloadAttachment._fetchRedirectUrl] Found redirect URL via meta refresh: ${metaRefreshMatch[1]}`);
                             resolveRedirect(metaRefreshMatch[1]);
                             return;
                         }
@@ -2466,7 +2208,6 @@
                         for (const pattern of downloadLinkPatterns) {
                             const match = responseText.match(pattern);
                             if (match && match[1]) {
-                                console.log(`[DownloadAttachment._fetchRedirectUrl] Found potential download URL: ${match[1]}`);
                                 resolveRedirect(match[1]);
                                 return;
                             }
@@ -2477,7 +2218,6 @@
                             const jsonData = JSON.parse(responseText);
                             if (jsonData.url || jsonData.download_url || jsonData.redirect_url) {
                                 const foundUrl = jsonData.url || jsonData.download_url || jsonData.redirect_url;
-                                console.log(`[DownloadAttachment._fetchRedirectUrl] Found redirect URL in JSON: ${foundUrl}`);
                                 resolveRedirect(foundUrl);
                                 return;
                             }
@@ -2695,9 +2435,7 @@
     }
 
     displayGroupedAttachments(groups, container) {
-        console.log('开始显示分组附件，组数:', groups.length);
         groups.forEach((group, index) => {
-            console.log(`显示第 ${index + 1} 组附件，包含 ${group.attachments.length} 个附件`);
             const groupContainer = document.createElement('div');
             groupContainer.style.cssText = `
                 margin: 0 0 16px 0;
@@ -2866,7 +2604,6 @@
             groupContainer.appendChild(attachmentsGrid);
             container.appendChild(groupContainer);
         });
-        console.log('分组附件显示完成');
     }
 
     formatTotalSize(attachments) {
@@ -2876,12 +2613,6 @@
 
     formatMailDate(timestamp) {
         // 调试时间戳问题
-        console.log(`[formatMailDate] 处理时间戳:`, {
-            originalTimestamp: timestamp,
-            timestampType: typeof timestamp,
-            currentTime: new Date(),
-            currentTimestamp: Date.now() / 1000
-        });
 
         if (!timestamp) return '时间未知';
 
@@ -2896,7 +2627,6 @@
             // 可能是毫秒时间戳，尝试转换为秒
             if (timestamp > now * 1000) {
                 timestamp = timestamp / 1000;
-                console.log(`[formatMailDate] 转换为秒级时间戳: ${timestamp}`);
             }
 
             // 如果还是未来时间，使用当前时间
@@ -2920,7 +2650,6 @@
             minute: '2-digit'
         });
 
-        console.log(`[formatMailDate] 最终格式化结果: ${dateString}`);
         return dateString;
     }
 
@@ -3140,7 +2869,6 @@
 
     // 并发下载控制
     async downloadWithConcurrency(attachments, dirHandle) {
-        console.log(`[DownloadWithConcurrency] Starting concurrent download for ${attachments.length} attachments`);
 
         // 预先分析命名策略（如果启用了auto模式）
         let namingStrategy = null;
@@ -3148,7 +2876,6 @@
             this.downloadSettings.fileNaming.validation.enabled &&
             this.downloadSettings.fileNaming.validation.fallbackPattern === 'auto') {
             namingStrategy = this.analyzeAttachmentNaming(attachments, this.downloadSettings.fileNaming.validation.pattern);
-            console.log(`[DownloadWithConcurrency] 预分析命名策略:`, namingStrategy);
         }
 
         const results = [];
@@ -3372,11 +3099,9 @@
         const validAttachments = attachments.filter(att => regex.test(att.name));
         const invalidAttachments = attachments.filter(att => !regex.test(att.name));
 
-        console.log(`[智能命名] 总附件数: ${attachments.length}, 满足规则: ${validAttachments.length}, 不满足规则: ${invalidAttachments.length}`);
 
         // 情况1：只有1个附件，或者全部不满足正则
         if (attachments.length === 1 || validAttachments.length === 0) {
-            console.log('[智能命名] 策略: 使用邮件主题+文件名');
             return { strategy: 'mailSubject', prefix: '' };
         }
 
@@ -3384,7 +3109,6 @@
         if (attachments.length >= 2 && validAttachments.length > 1) {
             const commonPrefix = this.findCommonPrefix(validAttachments.map(att => att.name));
             if (commonPrefix && commonPrefix.length > 0) {
-                console.log(`[智能命名] 策略: 使用公共前缀 "${commonPrefix}"`);
                 return { strategy: 'commonPrefix', prefix: commonPrefix };
             }
         }
@@ -3393,13 +3117,11 @@
         if (validAttachments.length === 1) {
             const extractedPrefix = this.extractNamingPattern(validAttachments[0].name);
             if (extractedPrefix) {
-                console.log(`[智能命名] 策略: 使用提取的模式 "${extractedPrefix}"`);
                 return { strategy: 'extractedPattern', prefix: extractedPrefix };
             }
         }
 
         // 默认策略
-        console.log('[智能命名] 策略: 使用默认邮件主题+文件名');
         return { strategy: 'mailSubject', prefix: '' };
     }
 
@@ -3492,7 +3214,6 @@
                 const regex = new RegExp(fileNamingConfig.validation.pattern);
                 const isValid = regex.test(attachment.name);
 
-                console.log(`[文件名验证] 文件: ${attachment.name}, 模式: ${fileNamingConfig.validation.pattern}, 结果: ${isValid}`);
 
                 if (!isValid && fileNamingConfig.validation.fallbackPattern) {
                     // 验证失败，使用备用命名模式
@@ -3504,7 +3225,6 @@
                         const baseName = this.parseNamingPattern(fileNamingConfig.validation.fallbackPattern, attachment);
                         const ext = this.getFileExtension(attachment.name);
                         fileName = ext ? `${baseName}.${ext}` : baseName;
-                        console.log(`[文件名验证] 使用备用命名: ${fileName}`);
                         return this.sanitizeFileName(fileName);
                     }
                 }
@@ -3612,7 +3332,6 @@
         }
 
         const finalName = attachment.ext ? `${baseName}.${attachment.ext}` : baseName;
-        console.log(`[智能命名] 生成文件名: ${attachment.name} -> ${finalName}`);
         return this.sanitizeFileName(finalName);
     }
 
@@ -3728,7 +3447,6 @@
         while (attempts <= maxRetries) { // Note: attempts <= maxRetries for initial + maxRetries
             try {
                 if (attempts > 0) { // Delay only for actual retries
-                    console.log(`[AsyncRetry] Retrying ${retryIdentifier}, attempt ${attempts} of ${maxRetries} after ${delayMs}ms delay...`);
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                 }
                 return await asyncFn(...argsArray);
@@ -3922,7 +3640,6 @@
     }
 
     async showAttachmentView() {
-        console.log('[ShowAttachmentView] 开始显示附件视图');
 
         // 创建独立的覆盖面板
         this.createOverlayPanel();
@@ -3938,7 +3655,6 @@
     }
 
     hideAttachmentView() {
-        console.log('[HideAttachmentView] 开始隐藏附件视图');
 
         try {
             // 标记视图为非激活状态（优先设置，防止重复调用）
@@ -3953,7 +3669,6 @@
             // 确保页面状态完全恢复
             this.restorePageState();
 
-            console.log('[HideAttachmentView] 附件视图隐藏完成');
         } catch (error) {
             console.error('[HideAttachmentView] 隐藏过程中出现错误:', error);
 
@@ -3970,7 +3685,6 @@
     }
 
     cleanupAttachmentManager() {
-        console.log('[CleanupAttachmentManager] 开始清理附件管理器状态');
 
         // 清理选中状态
         this.selectedAttachments.clear();
@@ -4015,11 +3729,9 @@
         this.totalPages = 1;
         this.isLoading = false;
 
-        console.log('[CleanupAttachmentManager] 附件管理器状态清理完成');
     }
 
     createOverlayPanel() {
-        console.log('[CreateOverlayPanel] 创建覆盖面板');
 
         // 如果面板已存在，先移除
         this.removeOverlayPanel();
@@ -4231,11 +3943,9 @@
             this.overlayPanel.focus();
         }, 100);
 
-        console.log('[CreateOverlayPanel] 覆盖面板创建完成');
     }
 
     removeOverlayPanel() {
-        console.log('[RemoveOverlayPanel] 移除覆盖面板');
 
         // 移除覆盖面板
         if (this.overlayPanel) {
@@ -4277,11 +3987,9 @@
             }
         });
 
-        console.log('[RemoveOverlayPanel] 覆盖面板移除完成');
     }
 
     forceCleanup() {
-        console.log('[ForceCleanup] 执行强制清理');
 
         try {
             // 强制移除所有相关元素
@@ -4320,14 +4028,12 @@
             document.documentElement.style.overflow = '';
             document.body.style.overflow = '';
 
-            console.log('[ForceCleanup] 强制清理完成');
         } catch (error) {
             console.error('[ForceCleanup] 强制清理时出现错误:', error);
         }
     }
 
     restorePageState() {
-        console.log('[RestorePageState] 恢复页面状态');
 
         try {
             // 恢复页面滚动
@@ -4370,7 +4076,6 @@
                 window.dispatchEvent(new Event('resize'));
             }, 100);
 
-            console.log('[RestorePageState] 页面状态恢复完成');
         } catch (error) {
             console.error('[RestorePageState] 恢复页面状态时出现错误:', error);
         }
@@ -4391,14 +4096,12 @@
 
         // 添加全局键盘事件监听器
         document.addEventListener('keydown', this.globalKeyHandler, true);
-        console.log('[AddGlobalKeyListener] 全局键盘监听器已添加');
     }
 
     removeGlobalKeyListener() {
         if (this.globalKeyHandler) {
             document.removeEventListener('keydown', this.globalKeyHandler, true);
             this.globalKeyHandler = null;
-            console.log('[RemoveGlobalKeyListener] 全局键盘监听器已移除');
         }
     }
 
@@ -4542,7 +4245,6 @@
             } else {
                 currentAttempt++;
                 if (currentAttempt < attempts) {
-                    console.log(`[Downloader] 未找到工具栏，将在 ${interval}ms 后重试... (尝试 ${currentAttempt}/${attempts})`);
                     setTimeout(tryInject, interval);
                 } else {
                     console.error('[Downloader] 注入按钮失败：无法找到指定的工具栏。');
@@ -4578,7 +4280,6 @@ class QQMailDownloader {
     }
 
     async fetchAttachment(attachment) {
-        console.log(`[FetchAttachment] Starting fetch for: ${attachment.name}`);
 
         try {
             // 构建初始URL
@@ -4593,7 +4294,6 @@ class QQMailDownloader {
             try {
                 // 尝试获取重定向URL
                 finalDownloadUrl = await this._fetchRedirectUrl(initialUrl, attachment.name);
-                console.log(`[FetchAttachment] Got redirect URL for ${attachment.name}: ${finalDownloadUrl}`);
             } catch (redirectError) {
                 console.warn(`[FetchAttachment] Redirect failed for ${attachment.name}, trying direct download:`, redirectError.message);
 
@@ -4608,11 +4308,9 @@ class QQMailDownloader {
                         const separator = directUrl.includes('?') ? '&' : '?';
                         directUrl += `${separator}sid=${sid}`;
                     }
-                    console.log(`[FetchAttachment] Trying direct download URL: ${directUrl}`);
                     finalDownloadUrl = directUrl;
                 } else {
                     // 回退方案2: 使用初始URL
-                    console.log(`[FetchAttachment] Using initial URL as fallback: ${initialUrl}`);
                     finalDownloadUrl = initialUrl;
                 }
             }
@@ -4629,7 +4327,6 @@ class QQMailDownloader {
                     responseType: 'blob',
                     onload: function(response) {
                         if (response.status === 200) {
-                            console.log(`[FetchAttachment] Successfully downloaded ${attachment.name}, size: ${response.response.size} bytes`);
                             resolve(response);
                         } else {
                             reject(new Error(`Failed to fetch content: ${response.status} ${response.statusText}`));
@@ -4649,8 +4346,6 @@ class QQMailDownloader {
         }
 
     async _fetchRedirectUrl(initialUrl, attachmentName) {
-        console.log(`[FetchRedirectUrl] Starting redirect fetch for: ${attachmentName}`);
-        console.log(`[FetchRedirectUrl] Initial URL: ${initialUrl}`);
 
         try {
             const response = await new Promise((resolve, reject) => {
@@ -4674,19 +4369,14 @@ class QQMailDownloader {
                 });
             });
 
-            console.log(`[FetchRedirectUrl] Response status: ${response.status}`);
-            console.log(`[FetchRedirectUrl] Response finalUrl: ${response.finalUrl}`);
-            console.log(`[FetchRedirectUrl] Response text length: ${response.responseText?.length || 0}`);
 
             // 方法1: 检查是否已经重定向到最终URL
             if (response.finalUrl && response.finalUrl !== initialUrl) {
-                console.log(`[FetchRedirectUrl] Found redirect via finalUrl: ${response.finalUrl}`);
                 return response.finalUrl;
             }
 
             // 方法2: 从响应中提取JavaScript重定向URL
             const responseText = response.responseText;
-            console.log(`[FetchRedirectUrl] Response text preview: ${responseText.substring(0, 500)}...`);
 
             // 尝试多种JavaScript重定向模式
             const redirectPatterns = [
@@ -4703,7 +4393,6 @@ class QQMailDownloader {
             for (const pattern of redirectPatterns) {
                 const match = responseText.match(pattern);
                 if (match && match[1]) {
-                    console.log(`[FetchRedirectUrl] Found redirect URL via pattern ${pattern}: ${match[1]}`);
                     return match[1];
                 }
             }
@@ -4711,7 +4400,6 @@ class QQMailDownloader {
             // 方法3: 查找HTML meta refresh重定向
             const metaRefreshMatch = responseText.match(/<meta[^>]+http-equiv=['"]refresh['"][^>]+content=['"][^'"]*url=([^'"]+)['"]/i);
             if (metaRefreshMatch && metaRefreshMatch[1]) {
-                console.log(`[FetchRedirectUrl] Found redirect URL via meta refresh: ${metaRefreshMatch[1]}`);
                 return metaRefreshMatch[1];
             }
 
@@ -4725,7 +4413,6 @@ class QQMailDownloader {
             for (const pattern of downloadLinkPatterns) {
                 const match = responseText.match(pattern);
                 if (match && match[1]) {
-                    console.log(`[FetchRedirectUrl] Found potential download URL: ${match[1]}`);
                     return match[1];
                 }
             }
@@ -4735,7 +4422,6 @@ class QQMailDownloader {
                 const jsonData = JSON.parse(responseText);
                 if (jsonData.url || jsonData.download_url || jsonData.redirect_url) {
                     const foundUrl = jsonData.url || jsonData.download_url || jsonData.redirect_url;
-                    console.log(`[FetchRedirectUrl] Found redirect URL in JSON: ${foundUrl}`);
                     return foundUrl;
                 }
             } catch (e) {
@@ -4785,12 +4471,10 @@ class QQMailDownloader {
     }
 
     handleLoginPage() {
-        console.log('[QQMailDownloader] On login page, waiting for login...');
         // 可以添加登录页面的特定处理逻辑
     }
 
     handleMainPage() {
-        console.log('[QQMailDownloader] On main page, initializing...');
         // 初始化附件管理器
         this.attachmentManager = new AttachmentManager(this);
     }
@@ -4808,7 +4492,6 @@ class QQMailDownloader {
     }
 
     cleanup() {
-        console.log('[QQMailDownloader.cleanup] Cleaning up QQMailDownloader resources...');
         if (this.manager) {
             if (this.manager.container) {
                 this.manager.container.remove();
@@ -4818,7 +4501,6 @@ class QQMailDownloader {
         // Remove hashchange listener
         if (this.boundFolderChangeHandler) {
             window.removeEventListener('hashchange', this.boundFolderChangeHandler, false);
-            console.log('[FolderObserver] Removed hashchange event listener.');
             this.boundFolderChangeHandler = null;
         }
         this.isLoggedIn = false;
@@ -4827,16 +4509,11 @@ class QQMailDownloader {
     }
 
     getCurrentFolderId() {
-        console.log('[getCurrentFolderId] 开始解析文件夹ID');
-        console.log('[getCurrentFolderId] 当前URL:', window.location.href);
-        console.log('[getCurrentFolderId] URL search:', window.location.search);
-        console.log('[getCurrentFolderId] URL hash:', window.location.hash);
 
         // 方法1: 从URL参数中获取
         const urlParams = new URLSearchParams(window.location.search);
         const folderid = urlParams.get('folderid');
         if (folderid) {
-            console.log('[getCurrentFolderId] 从URL参数获取到folderid:', folderid);
             return folderid;
         }
 
@@ -4844,21 +4521,18 @@ class QQMailDownloader {
         const hash = window.location.hash;
         const folderMatch = hash.match(/folderid=([^&]+)/);
         if (folderMatch) {
-            console.log('[getCurrentFolderId] 从hash获取到folderid:', folderMatch[1]);
             return folderMatch[1];
         }
 
         // 方法3: 从hash中获取 /list/xxx 格式
         const listMatch = hash.match(/\/list\/(\d+)/);
         if (listMatch) {
-            console.log('[getCurrentFolderId] 从hash list路径获取到folderid:', listMatch[1]);
             return listMatch[1];
         }
 
         // 方法4: 从hash中获取 #/folder/xxx 格式
         const folderPathMatch = hash.match(/\/folder\/(\d+)/);
         if (folderPathMatch) {
-            console.log('[getCurrentFolderId] 从hash folder路径获取到folderid:', folderPathMatch[1]);
             return folderPathMatch[1];
         }
 
@@ -4866,7 +4540,6 @@ class QQMailDownloader {
         const pathname = window.location.pathname;
         const pathMatch = pathname.match(/\/folder\/(\d+)/);
         if (pathMatch) {
-            console.log('[getCurrentFolderId] 从pathname获取到folderid:', pathMatch[1]);
             return pathMatch[1];
         }
 
@@ -4877,7 +4550,6 @@ class QQMailDownloader {
             for (const element of folderElements) {
                 const dataFolderId = element.getAttribute('data-folderid') || element.getAttribute('data-folder-id');
                 if (dataFolderId) {
-                    console.log('[getCurrentFolderId] 从DOM元素获取到folderid:', dataFolderId);
                     return dataFolderId;
                 }
             }
@@ -4890,12 +4562,10 @@ class QQMailDownloader {
             // 可能在邮件详情页，尝试从URL中提取
             const mailMatch = window.location.href.match(/\/mail\/(\d+)/);
             if (mailMatch) {
-                console.log('[getCurrentFolderId] 在邮件页面，使用收件箱ID: 1');
                 return '1'; // 默认收件箱
             }
         }
 
-        console.log('[getCurrentFolderId] 所有方法都失败，使用默认收件箱ID: 1');
         // 默认返回收件箱
         return '1';
     }
@@ -4905,7 +4575,6 @@ class QQMailDownloader {
         const r = Date.now(); // 时间戳
         const requestUrl = `${MAIL_CONSTANTS.BASE_URL}${MAIL_CONSTANTS.API_ENDPOINTS.MAIL_LIST}?r=${r}&sid=${this.sid}&dir=${folderId}&page_now=${pageNow}&page_size=${pageSize}&sort_type=1&sort_direction=1&func=1&tag=&enable_topmail=true`;
 
-        console.log(`[fetchMailList] Request URL: ${requestUrl}`);
 
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
@@ -4926,16 +4595,13 @@ class QQMailDownloader {
                     'Origin': MAIL_CONSTANTS.BASE_URL
                 },
                 onload: function(response) {
-                    console.log(`[fetchMailList] Response status: ${response.status}`);
                     if (response.status === 200) {
                         try {
                             const data = JSON.parse(response.responseText);
-                            console.log(`[fetchMailList] Response structure:`, data);
 
                             // 检查响应格式
                             if (data && data.head && data.head.ret === 0) {
                                 if (data.body && data.body.list) {
-                                    console.log(`[fetchMailList] Success: Found ${data.body.list.length} mails`);
                                     resolve({
                                         mails: data.body.list,
                                         total: data.body.total_num || data.body.list.length,
@@ -4969,8 +4635,6 @@ class QQMailDownloader {
     // 更新 getAllMails 方法使用新的 fetchMailList 函数，支持分页获取所有邮件
     async getAllMails(folderId) {
         try {
-            console.log(`[QQMailDownloader] Getting all mails for folder: ${folderId}`);
-            console.log(`[QQMailDownloader] Current SID: ${this.sid}`);
 
             const allMails = [];
             let page = 0;
@@ -4980,11 +4644,9 @@ class QQMailDownloader {
 
             while (hasMore) {
                 try {
-                    console.log(`[QQMailDownloader] Fetching page ${page + 1}...`);
                     const result = await this.fetchMailList(folderId, page, pageSize);
 
                     if (!result.mails || result.mails.length === 0) {
-                        console.log(`[QQMailDownloader] No more mails on page ${page + 1}`);
                         hasMore = false;
                         continue;
                     }
@@ -4992,15 +4654,12 @@ class QQMailDownloader {
                     // 记录总邮件数（从第一页获取）
                     if (page === 0) {
                         totalMails = result.total;
-                        console.log(`[QQMailDownloader] Total mails in folder: ${totalMails}`);
                     }
 
                     allMails.push(...result.mails);
-                    console.log(`[QQMailDownloader] Fetched ${result.mails.length} mails from page ${page + 1}, total collected: ${allMails.length}/${totalMails}`);
 
                     // 检查是否已获取所有邮件
                     if (allMails.length >= totalMails || result.mails.length < pageSize) {
-                        console.log(`[QQMailDownloader] All mails fetched. Total: ${allMails.length}`);
                         hasMore = false;
                     } else {
                         page++;
@@ -5020,7 +4679,6 @@ class QQMailDownloader {
                 }
             }
 
-            console.log(`[QQMailDownloader] Successfully fetched all ${allMails.length} mails from folder ${folderId}`);
             return allMails;
 
         } catch (error) {
@@ -5035,9 +4693,7 @@ let downloader = null;
 const observer = new MutationObserver(mutationCallback);
 
 function initDownloader() {
-    console.log('[GlobalInit] Attempting to initialize QQMailDownloader...');
     if (downloader && typeof downloader.cleanup === 'function') {
-        console.log('[GlobalInit] Cleaning up previous downloader instance.');
         try {
             downloader.cleanup();
         } catch (e) {
@@ -5050,7 +4706,6 @@ function initDownloader() {
         const newDownloaderInstance = new QQMailDownloader();
         // 调用 init 方法
         newDownloaderInstance.init().then(() => {
-            console.log('[GlobalInit] QQMailDownloader initialized successfully');
         }).catch(error => {
             console.error('[GlobalInit] Failed to initialize QQMailDownloader:', error);
         });
