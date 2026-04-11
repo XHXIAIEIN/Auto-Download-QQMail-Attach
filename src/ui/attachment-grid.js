@@ -52,7 +52,7 @@ export class AttachmentGrid {
     const dateStr = date ? formatDate(date, 'MM-DD') : '';
     const isSelected = this.manager.selectedAttachments.has(attachment.fileid || attachment.name);
 
-    // Build card HTML using html tag for dynamic content
+    // Build card HTML — no inline event handlers (CSP blocks them)
     card.innerHTML = html`
       <input type="checkbox" class="am-checkbox"
         style="position:absolute;top:var(--am-space-2);left:var(--am-space-2);z-index:10"
@@ -60,9 +60,8 @@ export class AttachmentGrid {
         data-attachment-id="${attachment.fileid || attachment.name}">
       <div class="am-card-preview">
         ${trusted(thumbUrl
-          ? `<img src="${thumbUrl}" alt="" style="width:100%;height:100%;object-fit:cover"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-             <span style="display:none;font-size:24px;width:100%;height:100%;align-items:center;justify-content:center">${icon}</span>`
+          ? `<img class="am-thumb" src="${thumbUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
+             <span class="am-thumb-fallback" style="font-size:24px;display:flex;width:100%;height:100%;align-items:center;justify-content:center">${icon}</span>`
           : `<span style="font-size:24px">${icon}</span>`
         )}
       </div>
@@ -71,6 +70,20 @@ export class AttachmentGrid {
         <div class="am-card-meta">${size}${trusted(dateStr ? ` · ${dateStr}` : '')}</div>
       </div>
     `;
+
+    // Thumbnail load/error via addEventListener (CSP-safe)
+    const img = qs('.am-thumb', card);
+    if (img) {
+      const fallback = qs('.am-thumb-fallback', card);
+      img.addEventListener('load', () => {
+        img.style.display = '';
+        if (fallback) fallback.style.display = 'none';
+      });
+      img.addEventListener('error', () => {
+        img.style.display = 'none';
+        if (fallback) fallback.style.display = 'flex';
+      });
+    }
 
     // Checkbox toggle
     const checkbox = qs('input[type="checkbox"]', card);

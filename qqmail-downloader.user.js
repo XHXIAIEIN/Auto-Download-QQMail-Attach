@@ -1891,15 +1891,26 @@
         ${trusted(this.manager.selectedAttachments.has(attachment.fileid || attachment.name) ? "checked" : "")}
         data-attachment-id="${attachment.fileid || attachment.name}">
       <div class="am-card-preview">
-        ${trusted(thumbUrl ? `<img src="${thumbUrl}" alt="" style="width:100%;height:100%;object-fit:cover"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-             <span style="display:none;font-size:24px;width:100%;height:100%;align-items:center;justify-content:center">${icon}</span>` : `<span style="font-size:24px">${icon}</span>`)}
+        ${trusted(thumbUrl ? `<img class="am-thumb" src="${thumbUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
+             <span class="am-thumb-fallback" style="font-size:24px;display:flex;width:100%;height:100%;align-items:center;justify-content:center">${icon}</span>` : `<span style="font-size:24px">${icon}</span>`)}
       </div>
       <div style="padding:var(--am-space-2);display:flex;flex-direction:column;gap:2px">
         <div class="am-card-title" title="${attachment.name}">${attachment.name}</div>
         <div class="am-card-meta">${size}${trusted(dateStr ? ` · ${dateStr}` : "")}</div>
       </div>
     `;
+			const img = qs(".am-thumb", card);
+			if (img) {
+				const fallback = qs(".am-thumb-fallback", card);
+				img.addEventListener("load", () => {
+					img.style.display = "";
+					if (fallback) fallback.style.display = "none";
+				});
+				img.addEventListener("error", () => {
+					img.style.display = "none";
+					if (fallback) fallback.style.display = "flex";
+				});
+			}
 			const checkbox = qs("input[type=\"checkbox\"]", card);
 			checkbox?.addEventListener("change", (e) => {
 				e.stopPropagation();
