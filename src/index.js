@@ -65,18 +65,13 @@ import { AttachmentManager } from './core/attachment-manager.js';
     `;
     btn.addEventListener('click', () => manager?.toggle());
 
-    // 插入到"共 N 封"之前（如果它是 rightWrap 的直接子元素）
-    const totalBtn = rightWrap.querySelector(':scope > .mail-total-btn');
-    if (totalBtn) {
-      rightWrap.insertBefore(btn, totalBtn);
+    // 插入到 ellipsis 按钮容器内部（和删除/转发等同级），
+    // 这样小屏时会被原生收纳到"更多"菜单里
+    const ellipsisBtns = rightWrap.querySelector('.ui-toolbar-ellipsis-btns');
+    if (ellipsisBtns) {
+      ellipsisBtns.appendChild(btn);
     } else {
-      // 找到 ellipsis 容器，插入到它后面
-      const ellipsis = rightWrap.querySelector('.ui-toolbar-ellipsis-btns');
-      if (ellipsis) {
-        ellipsis.parentNode.insertBefore(btn, ellipsis.nextSibling);
-      } else {
-        rightWrap.appendChild(btn);
-      }
+      rightWrap.appendChild(btn);
     }
   }
 
