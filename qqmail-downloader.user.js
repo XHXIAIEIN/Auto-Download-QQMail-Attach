@@ -21,105 +21,1018 @@
     'use strict';
 
     class StyleManager {
+        static _cache = null;
+        static _injected = false;
+
+        static _cssText = `
+            /* ========================================
+               AM Design System — Design Tokens
+               Inspired by Linear + Superhuman, light theme
+               ======================================== */
+            :root {
+                --am-bg: #ffffff;
+                --am-bg-subtle: #f8f9fa;
+                --am-bg-muted: #f1f3f5;
+                --am-bg-elevated: #ffffff;
+                --am-overlay: rgba(0, 0, 0, 0.4);
+                --am-overlay-blur: 4px;
+
+                --am-text: #1a1d21;
+                --am-text-secondary: #5e6370;
+                --am-text-tertiary: #8b8f98;
+                --am-text-inverse: #ffffff;
+
+                --am-border: rgba(0, 0, 0, 0.08);
+                --am-border-strong: rgba(0, 0, 0, 0.15);
+
+                --am-accent: #0F7AF5;
+                --am-accent-hover: #0E6FD9;
+                --am-accent-subtle: rgba(15, 122, 245, 0.08);
+                --am-accent-text: #ffffff;
+
+                --am-success: #18a058;
+                --am-success-subtle: rgba(24, 160, 88, 0.08);
+                --am-warning: #f0a020;
+                --am-warning-subtle: rgba(240, 160, 32, 0.08);
+                --am-error: #d03050;
+                --am-error-subtle: rgba(208, 48, 80, 0.08);
+
+                --am-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+                --am-font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+
+                --am-space-1: 4px;
+                --am-space-2: 8px;
+                --am-space-3: 12px;
+                --am-space-4: 16px;
+                --am-space-5: 20px;
+                --am-space-6: 24px;
+                --am-space-8: 32px;
+                --am-space-10: 40px;
+                --am-space-12: 48px;
+
+                --am-radius-sm: 4px;
+                --am-radius-md: 6px;
+                --am-radius-lg: 8px;
+                --am-radius-xl: 12px;
+                --am-radius-2xl: 16px;
+                --am-radius-full: 9999px;
+
+                --am-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+                --am-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+                --am-shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+                --am-shadow-xl: 0 20px 60px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.1);
+
+                --am-ease: cubic-bezier(0.4, 0, 0.2, 1);
+                --am-duration: 0.2s;
+                --am-duration-slow: 0.3s;
+            }
+
+            /* ========================================
+               Animations
+               ======================================== */
+            @keyframes am-spin { to { transform: rotate(360deg); } }
+            @keyframes am-slide-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+            @keyframes am-fade-in { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes am-scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+            @keyframes attachmentWindowSlideIn {
+                from { opacity: 0; transform: translate(-50%, -60%) scale(0.8); }
+                to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+
+            /* ========================================
+               Overlay & Window
+               ======================================== */
+            .am-overlay {
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: var(--am-overlay);
+                backdrop-filter: blur(var(--am-overlay-blur));
+                z-index: 9999;
+                opacity: 0;
+                transition: opacity var(--am-duration-slow) var(--am-ease);
+                pointer-events: none;
+            }
+            .am-overlay.show {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .am-window {
+                position: fixed;
+                top: 50%; left: 50%;
+                transform: translate(-50%, -50%) scale(0.9);
+                width: 75%; max-width: 900px;
+                height: 95%; max-height: 95vh;
+                min-width: 600px; min-height: 700px;
+                background: var(--am-bg-elevated);
+                border-radius: var(--am-radius-xl);
+                box-shadow: var(--am-shadow-xl);
+                z-index: 10000;
+                display: flex; flex-direction: column;
+                font-family: var(--am-font);
+                overflow: hidden;
+                resize: both;
+                opacity: 0;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .am-window.show {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            .am-window.maximized {
+                top: 0 !important; left: 0 !important;
+                transform: none !important;
+                width: 100% !important; height: 100% !important;
+                border-radius: 0 !important;
+                max-width: none !important; max-height: none !important;
+            }
+            .am-window.minimized {
+                height: 60px !important;
+                overflow: hidden;
+            }
+            .am-window.minimized .am-window-content {
+                display: none;
+            }
+
+            .am-window-header {
+                display: flex; align-items: center; justify-content: space-between;
+                padding: var(--am-space-4) var(--am-space-5);
+                background: var(--am-bg);
+                border-bottom: 1px solid var(--am-border);
+                cursor: move; user-select: none; flex-shrink: 0;
+            }
+
+            .am-window-content {
+                flex: 1; overflow: hidden;
+                display: flex; flex-direction: column;
+                background: var(--am-bg-subtle);
+            }
+
+            .am-window-dot {
+                width: 12px; height: 12px;
+                border-radius: var(--am-radius-full);
+                cursor: pointer;
+                transition: all var(--am-duration) var(--am-ease);
+                border: none;
+                display: inline-block;
+            }
+            .am-window-dot:hover { transform: scale(1.15); }
+            .am-window-dot--close { background: #ff5f57; border: 1px solid #e0443e; }
+            .am-window-dot--close:hover { background: #e0443e; }
+            .am-window-dot--minimize { background: #ffbd2e; border: 1px solid #dea123; }
+            .am-window-dot--minimize:hover { background: #dea123; }
+            .am-window-dot--maximize { background: #28ca42; border: 1px solid #1aab29; }
+            .am-window-dot--maximize:hover { background: #1aab29; }
+
+            /* ========================================
+               Buttons
+               ======================================== */
+            .am-btn {
+                padding: var(--am-space-2) var(--am-space-4);
+                border-radius: var(--am-radius-md);
+                font-family: var(--am-font);
+                font-size: 13px; font-weight: 500;
+                cursor: pointer;
+                display: inline-flex; align-items: center; justify-content: center; gap: var(--am-space-1);
+                transition: all var(--am-duration) var(--am-ease);
+                border: 1px solid var(--am-border);
+                background: var(--am-bg);
+                color: var(--am-text);
+                line-height: 1.4;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+            .am-btn:hover { background: var(--am-bg-muted); border-color: var(--am-border-strong); }
+            .am-btn:active { transform: scale(0.98); }
+            .am-btn:focus-visible { outline: 2px solid var(--am-accent); outline-offset: 2px; }
+
+            .am-btn--primary {
+                background: var(--am-accent);
+                color: var(--am-accent-text);
+                border-color: var(--am-accent-hover);
+            }
+            .am-btn--primary:hover { background: var(--am-accent-hover); }
+
+            .am-btn--ghost {
+                background: transparent;
+                border: 1px solid var(--am-border);
+            }
+            .am-btn--ghost:hover { background: var(--am-bg-muted); }
+
+            .am-btn--icon {
+                width: 32px; height: 32px;
+                padding: 0;
+                background: transparent;
+                border: 1px solid var(--am-border);
+            }
+            .am-btn--icon:hover { background: var(--am-bg-muted); border-color: var(--am-border-strong); }
+
+            .am-btn--sm {
+                padding: var(--am-space-1) var(--am-space-2);
+                font-size: 12px;
+            }
+
+            .am-btn--danger {
+                background: var(--am-error);
+                color: var(--am-text-inverse);
+                border-color: var(--am-error);
+            }
+            .am-btn--danger:hover { background: #b82848; }
+
+            /* ========================================
+               Cards
+               ======================================== */
+            .am-card {
+                background: var(--am-bg);
+                border: 1px solid var(--am-border);
+                border-radius: var(--am-radius-lg);
+                padding: var(--am-space-6);
+                transition: all var(--am-duration) var(--am-ease);
+                position: relative; overflow: hidden;
+            }
+
+            .am-card--stat {
+                min-height: 120px;
+                display: flex; flex-direction: column;
+            }
+
+            .am-card--attachment {
+                aspect-ratio: 1;
+                cursor: pointer;
+                padding: 0;
+                box-shadow: none;
+            }
+
+            .am-card--hover:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--am-shadow-md);
+                border-color: var(--am-border-strong);
+            }
+
+            .am-card-preview {
+                width: 100%; height: 100%;
+                display: flex; align-items: center; justify-content: center;
+                background: var(--am-bg-muted);
+                overflow: hidden;
+            }
+
+            .am-card-title {
+                font-weight: 600; font-size: 14px;
+                color: var(--am-text);
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            }
+
+            .am-card-meta {
+                font-size: 12px;
+                color: var(--am-text-tertiary);
+                display: flex; align-items: center; gap: var(--am-space-3);
+            }
+
+            /* ========================================
+               Grid
+               ======================================== */
+            .am-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: var(--am-space-4);
+            }
+
+            .am-grid--stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: var(--am-space-5);
+            }
+
+            /* ========================================
+               Form Elements
+               ======================================== */
+            .am-input {
+                width: 100%;
+                padding: var(--am-space-3) var(--am-space-4);
+                border: 1px solid var(--am-border-strong);
+                border-radius: var(--am-radius-lg);
+                font-family: var(--am-font);
+                font-size: 14px;
+                color: var(--am-text);
+                background: var(--am-bg);
+                transition: all var(--am-duration) var(--am-ease);
+                box-sizing: border-box;
+                outline: none;
+            }
+            .am-input:focus {
+                border-color: var(--am-accent);
+                box-shadow: 0 0 0 3px var(--am-accent-subtle);
+            }
+            .am-input::placeholder { color: var(--am-text-tertiary); }
+
+            .am-select {
+                width: 100%;
+                padding: var(--am-space-3) var(--am-space-4);
+                border: 1px solid var(--am-border-strong);
+                border-radius: var(--am-radius-lg);
+                font-family: var(--am-font);
+                font-size: 14px;
+                color: var(--am-text);
+                background: var(--am-bg);
+                transition: all var(--am-duration) var(--am-ease);
+                box-sizing: border-box;
+                outline: none;
+                cursor: pointer;
+            }
+            .am-select:focus {
+                border-color: var(--am-accent);
+                box-shadow: 0 0 0 3px var(--am-accent-subtle);
+            }
+
+            .am-checkbox {
+                width: 20px; height: 20px;
+                accent-color: var(--am-accent);
+                cursor: pointer;
+                border-radius: var(--am-radius-sm);
+            }
+
+            .am-switch {
+                position: relative;
+                width: 36px; height: 20px;
+                background: var(--am-bg-muted);
+                border-radius: var(--am-radius-full);
+                border: 1px solid var(--am-border-strong);
+                cursor: pointer;
+                transition: all var(--am-duration) var(--am-ease);
+            }
+            .am-switch::after {
+                content: '';
+                position: absolute;
+                top: 2px; left: 2px;
+                width: 14px; height: 14px;
+                background: var(--am-bg);
+                border-radius: var(--am-radius-full);
+                box-shadow: var(--am-shadow-sm);
+                transition: transform var(--am-duration) var(--am-ease);
+            }
+            .am-switch.active {
+                background: var(--am-accent);
+                border-color: var(--am-accent);
+            }
+            .am-switch.active::after {
+                transform: translateX(16px);
+            }
+
+            /* ========================================
+               Feedback — Toast
+               ======================================== */
+            .am-toast {
+                position: fixed;
+                top: var(--am-space-5); right: var(--am-space-5);
+                padding: var(--am-space-3) var(--am-space-4);
+                border-radius: var(--am-radius-md);
+                color: var(--am-text-inverse);
+                font-family: var(--am-font);
+                font-size: 13px;
+                z-index: 10002;
+                box-shadow: var(--am-shadow-md);
+                display: flex; align-items: center; gap: var(--am-space-2);
+                max-width: 320px;
+                word-wrap: break-word;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all var(--am-duration-slow) ease;
+            }
+            .am-toast.show {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            .am-toast--info { background: var(--am-accent); }
+            .am-toast--success { background: var(--am-success); }
+            .am-toast--warning { background: var(--am-warning); }
+            .am-toast--error { background: var(--am-error); }
+
+            /* ========================================
+               Feedback — Progress
+               ======================================== */
+            .am-progress {
+                width: 100%;
+                height: 4px;
+                background: var(--am-bg-muted);
+                border-radius: var(--am-radius-full);
+                overflow: hidden;
+            }
+            .am-progress-bar {
+                height: 100%;
+                background: var(--am-accent);
+                border-radius: var(--am-radius-full);
+                transition: width var(--am-duration-slow) var(--am-ease);
+            }
+
+            /* ========================================
+               Feedback — State
+               ======================================== */
+            .am-state {
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                padding: var(--am-space-10) var(--am-space-5);
+                text-align: center;
+                color: var(--am-text-secondary);
+                font-size: 14px;
+            }
+            .am-state--loading::before {
+                content: '';
+                width: 32px; height: 32px;
+                border: 2px solid var(--am-border);
+                border-top-color: var(--am-accent);
+                border-radius: 50%;
+                animation: am-spin 1s linear infinite;
+                margin-bottom: var(--am-space-3);
+            }
+            .am-state--empty { color: var(--am-text-tertiary); }
+            .am-state--error { color: var(--am-error); }
+
+            /* ========================================
+               Menu
+               ======================================== */
+            .am-menu {
+                position: fixed;
+                background: var(--am-bg-elevated);
+                border: 1px solid var(--am-border);
+                border-radius: var(--am-radius-lg);
+                box-shadow: var(--am-shadow-md);
+                padding: var(--am-space-2) 0;
+                min-width: 160px;
+                z-index: 1001;
+                animation: am-scale-in var(--am-duration) var(--am-ease);
+            }
+            .am-menu-item {
+                padding: var(--am-space-2) var(--am-space-4);
+                cursor: pointer;
+                display: flex; align-items: center; gap: var(--am-space-2);
+                font-size: 13px;
+                color: var(--am-text);
+                transition: background var(--am-duration) var(--am-ease);
+            }
+            .am-menu-item:hover {
+                background: var(--am-bg-muted);
+            }
+            .am-menu-divider {
+                height: 1px;
+                background: var(--am-border);
+                margin: var(--am-space-1) 0;
+            }
+
+            /* ========================================
+               Dialog
+               ======================================== */
+            .am-dialog-overlay {
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: var(--am-overlay);
+                backdrop-filter: blur(var(--am-overlay-blur));
+                z-index: 10000;
+                display: flex; align-items: center; justify-content: center;
+                animation: am-fade-in var(--am-duration-slow) var(--am-ease);
+            }
+            .am-dialog {
+                background: var(--am-bg-elevated);
+                border-radius: var(--am-radius-2xl);
+                box-shadow: var(--am-shadow-xl);
+                max-width: 800px; width: 90%;
+                max-height: 80vh;
+                overflow: hidden;
+                display: flex; flex-direction: column;
+                animation: am-scale-in var(--am-duration-slow) var(--am-ease);
+            }
+            .am-dialog-header {
+                padding: var(--am-space-6) var(--am-space-8);
+                border-bottom: 1px solid var(--am-border);
+                font-size: 18px; font-weight: 600;
+                color: var(--am-text);
+            }
+            .am-dialog-body {
+                padding: var(--am-space-8);
+                overflow-y: auto;
+                flex: 1;
+            }
+            .am-dialog-footer {
+                padding: var(--am-space-4) var(--am-space-8);
+                border-top: 1px solid var(--am-border);
+                display: flex; gap: var(--am-space-3);
+                justify-content: flex-end;
+            }
+
+            /* ========================================
+               Tabs
+               ======================================== */
+            .am-tabs {
+                display: flex;
+                border-bottom: 1px solid var(--am-border);
+                gap: 0;
+            }
+            .am-tab {
+                padding: var(--am-space-3) var(--am-space-4);
+                font-size: 13px; font-weight: 500;
+                color: var(--am-text-secondary);
+                cursor: pointer;
+                border-bottom: 2px solid transparent;
+                transition: all var(--am-duration) var(--am-ease);
+                background: none; border-top: none; border-left: none; border-right: none;
+            }
+            .am-tab:hover { color: var(--am-text); }
+            .am-tab.active {
+                color: var(--am-accent);
+                border-bottom-color: var(--am-accent);
+            }
+
+            /* ========================================
+               Utility
+               ======================================== */
+            .am-divider {
+                height: 1px;
+                background: var(--am-border);
+                border: none;
+                margin: var(--am-space-4) 0;
+            }
+
+            .am-badge {
+                display: inline-flex; align-items: center; justify-content: center;
+                padding: 2px var(--am-space-2);
+                font-size: 11px; font-weight: 600;
+                border-radius: var(--am-radius-full);
+                background: var(--am-accent-subtle);
+                color: var(--am-accent);
+                line-height: 1.4;
+            }
+
+            .am-text-truncate {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .am-scroll {
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: var(--am-border-strong) transparent;
+            }
+            .am-scroll::-webkit-scrollbar { width: 6px; }
+            .am-scroll::-webkit-scrollbar-track { background: transparent; }
+            .am-scroll::-webkit-scrollbar-thumb {
+                background: var(--am-border-strong);
+                border-radius: var(--am-radius-full);
+            }
+            .am-scroll::-webkit-scrollbar-thumb:hover { background: var(--am-text-tertiary); }
+
+            /* ========================================
+               Bento Grid Layout
+               ======================================== */
+            .am-bento {
+                display: flex; flex-direction: column;
+                gap: var(--am-space-6);
+                padding: var(--am-space-8);
+                max-width: 800px; margin: 0 auto;
+                min-height: 100%;
+                background: var(--am-bg-subtle);
+            }
+
+            .am-bento-header {
+                background: var(--am-bg);
+                border: 1px solid var(--am-border);
+                border-radius: var(--am-radius-xl);
+                padding: var(--am-space-5);
+                display: flex; justify-content: space-between; align-items: center;
+                min-height: 80px;
+            }
+
+            .am-bento-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: var(--am-space-5);
+                width: 100%;
+            }
+
+            .am-bento-card {
+                background: var(--am-bg);
+                border: 1px solid var(--am-border);
+                border-radius: var(--am-radius-xl);
+                padding: var(--am-space-6);
+                transition: all var(--am-duration) var(--am-ease);
+                position: relative; overflow: hidden;
+                min-height: 120px;
+                display: flex; flex-direction: column;
+            }
+            .am-bento-card--primary {
+                background: var(--am-accent-subtle);
+                color: var(--am-accent);
+                border: 2px solid var(--am-accent);
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(15, 122, 245, 0.08);
+                min-height: 160px;
+            }
+            .am-bento-card--primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 16px rgba(15, 122, 245, 0.15);
+                background: rgba(15, 122, 245, 0.08);
+            }
+            .am-bento-card--hover:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--am-shadow-md);
+                border-color: var(--am-border-strong);
+            }
+
+            .am-bento-title {
+                font-size: 16px; font-weight: 600;
+                color: var(--am-text);
+                margin: 0 0 var(--am-space-3) 0;
+                line-height: 1.3;
+            }
+
+            .am-stat-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: var(--am-space-5);
+                width: 100%;
+            }
+
+            .am-stat-item {
+                text-align: center;
+                padding: var(--am-space-3);
+            }
+
+            .am-stat-number {
+                font-size: 32px; font-weight: 700;
+                color: var(--am-text);
+                margin: 0; line-height: 1.1;
+                font-family: var(--am-font);
+                letter-spacing: -0.02em;
+            }
+            .am-stat-number--lg {
+                font-size: 42px; font-weight: 800;
+                color: inherit;
+            }
+
+            .am-stat-label {
+                font-size: 14px; font-weight: 600;
+                color: var(--am-text);
+                margin: 6px 0 0 0;
+                line-height: 1.3;
+            }
+
+            .am-stat-desc {
+                font-size: 12px;
+                color: var(--am-text-secondary);
+                line-height: 1.4;
+                margin: var(--am-space-1) 0 0 0;
+            }
+
+            .am-overview-row {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: var(--am-space-3) 0;
+                border-bottom: 1px solid var(--am-border);
+            }
+            .am-overview-row:last-child { border-bottom: none; }
+            .am-overview-row-label {
+                font-size: 14px;
+                color: var(--am-text-secondary);
+            }
+            .am-overview-row-value {
+                font-size: 16px; font-weight: 600;
+                color: var(--am-text);
+            }
+
+            .am-list-card {
+                background: var(--am-bg);
+                border: 1px solid var(--am-border);
+                border-radius: var(--am-radius-xl);
+                padding: var(--am-space-6);
+                display: none;
+            }
+            .am-list-card.visible { display: block; }
+
+            .am-list-item {
+                padding: var(--am-space-3);
+                background: var(--am-bg-subtle);
+                border-radius: var(--am-radius-md);
+                border: 1px solid var(--am-border);
+                cursor: pointer;
+                transition: background var(--am-duration) var(--am-ease);
+            }
+            .am-list-item:hover {
+                background: var(--am-bg-muted);
+            }
+
+            .am-list-more {
+                padding: var(--am-space-3);
+                text-align: center;
+                border-top: 1px solid var(--am-border);
+                margin-top: var(--am-space-2);
+                font-size: 12px;
+                color: var(--am-text-secondary);
+            }
+
+            .am-group-card {
+                padding: var(--am-space-3);
+                background: var(--am-bg-subtle);
+                border-radius: var(--am-radius-md);
+                border: 1px solid var(--am-border);
+            }
+
+            .am-tag {
+                display: inline-block;
+                padding: 1px var(--am-space-1);
+                border-radius: var(--am-radius-sm);
+                font-size: 11px; font-weight: 500;
+                line-height: 1.4;
+            }
+            .am-tag--warning {
+                background: var(--am-warning-subtle);
+                color: var(--am-warning);
+            }
+            .am-tag--error {
+                background: var(--am-error-subtle);
+                color: var(--am-error);
+            }
+            .am-tag--success {
+                background: var(--am-success-subtle);
+                color: var(--am-success);
+            }
+
+            /* ========================================
+               Form Elements — Settings
+               ======================================== */
+            .am-form-section {
+                margin-bottom: var(--am-space-8);
+                padding-bottom: var(--am-space-6);
+                border-bottom: 1px solid var(--am-border);
+            }
+            .am-form-section:last-child { border-bottom: none; margin-bottom: 0; }
+
+            .am-form-section-title {
+                font-size: 18px; font-weight: 600;
+                color: var(--am-text);
+                margin-bottom: var(--am-space-4);
+            }
+
+            .am-form-item {
+                margin-bottom: var(--am-space-5);
+            }
+
+            .am-form-label {
+                font-size: 14px; font-weight: 600;
+                color: var(--am-text);
+                margin-bottom: var(--am-space-2);
+                display: block;
+            }
+
+            .am-form-desc {
+                font-size: 13px;
+                color: var(--am-text-secondary);
+                margin-top: var(--am-space-1);
+                line-height: 1.4;
+            }
+
+            .am-form-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: var(--am-space-5);
+                margin-bottom: var(--am-space-5);
+            }
+
+            .am-form-checkbox {
+                display: flex; align-items: center;
+                margin-bottom: var(--am-space-3);
+            }
+            .am-form-checkbox input[type="checkbox"] {
+                margin-right: var(--am-space-2);
+                transform: scale(1.2);
+            }
+
+            .am-form-panel {
+                background: var(--am-bg-subtle);
+                padding: var(--am-space-4);
+                border-radius: var(--am-radius-lg);
+                margin-top: var(--am-space-3);
+            }
+
+            .am-form-actions {
+                display: flex; gap: var(--am-space-3);
+                justify-content: flex-end;
+                margin-top: var(--am-space-8);
+                padding-top: var(--am-space-6);
+                border-top: 1px solid var(--am-border);
+            }
+
+            @media (max-width: 768px) {
+                .am-bento-row { grid-template-columns: 1fr !important; gap: var(--am-space-4) !important; }
+                .am-stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: var(--am-space-3) !important; }
+                .am-bento { padding: var(--am-space-4) !important; }
+                .am-form-row { grid-template-columns: 1fr !important; }
+            }
+            @media (max-width: 480px) {
+                .am-stat-grid { grid-template-columns: 1fr !important; }
+            }
+
+            /* ========================================
+               Legacy class compatibility (attachment-*)
+               ======================================== */
+            .attachment-floating-overlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(4px);
+                z-index: 9999;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            .attachment-floating-overlay.show { opacity: 1; }
+
+            .attachment-floating-window {
+                position: fixed; top: 50%; left: 50%;
+                transform: translate(-50%, -50%);
+                width: 75%; max-width: 900px;
+                height: 95%; max-height: 95vh;
+                min-width: 600px; min-height: 700px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.1);
+                z-index: 10000;
+                display: flex; flex-direction: column;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                overflow: hidden; resize: both;
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .attachment-floating-window.show {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            .attachment-window-header {
+                display: flex; align-items: center; justify-content: space-between;
+                padding: 16px 20px; background: #fff;
+                border-bottom: 1px solid rgba(22, 46, 74, 0.1);
+                cursor: move; user-select: none; flex-shrink: 0;
+            }
+            .attachment-window-content {
+                flex: 1; overflow: hidden;
+                display: flex; flex-direction: column;
+                background: #f5f5f5;
+            }
+            .attachment-window-controls { display: flex; align-items: center; gap: 8px; }
+            .attachment-window-button {
+                width: 12px; height: 12px;
+                border-radius: 50%; cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .attachment-window-button.close { background: #ff5f57; border: 1px solid #e0443e; }
+            .attachment-window-button.close:hover { background: #e0443e; transform: scale(1.1); }
+            .attachment-window-button.minimize { background: #ffbd2e; border: 1px solid #dea123; }
+            .attachment-window-button.minimize:hover { background: #dea123; transform: scale(1.1); }
+            .attachment-window-button.maximize { background: #28ca42; border: 1px solid #1aab29; }
+            .attachment-window-button.maximize:hover { background: #1aab29; transform: scale(1.1); }
+
+            .attachment-floating-window.maximized {
+                top: 0 !important; left: 0 !important;
+                transform: none !important;
+                width: 100% !important; height: 100% !important;
+                border-radius: 0 !important;
+                max-width: none !important; max-height: none !important;
+            }
+            .attachment-floating-window.minimized { height: 60px !important; overflow: hidden; }
+            .attachment-floating-window.minimized .attachment-window-content { display: none; }
+
+            /* Responsive */
+            @media (max-width: 1024px) {
+                .attachment-floating-window, .am-window {
+                    width: 85% !important; height: 95% !important; min-width: 500px !important;
+                }
+            }
+            @media (max-width: 768px) {
+                .attachment-floating-window, .am-window {
+                    width: 100% !important; height: 100% !important;
+                    min-width: 320px !important; border-radius: 0 !important;
+                    top: 0 !important; left: 0 !important; transform: none !important;
+                }
+                .bento-row-responsive { grid-template-columns: 1fr !important; gap: 16px !important; }
+                .bento-stats-responsive { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+            }
+            @media (max-width: 480px) {
+                .bento-stats-responsive { grid-template-columns: 1fr !important; }
+            }
+        `;
+
+        static inject() {
+            if (StyleManager._injected) return;
+            if (document.getElementById('am-design-system')) {
+                StyleManager._injected = true;
+                return;
+            }
+            const style = document.createElement('style');
+            style.id = 'am-design-system';
+            style.textContent = StyleManager._cssText;
+            document.head.appendChild(style);
+            StyleManager._injected = true;
+        }
+
         static getStyles() {
-            return {
+            if (StyleManager._cache) return StyleManager._cache;
+            StyleManager.inject();
+            StyleManager._cache = {
                 base: {
-                    panel: `position: fixed; background: var(--bg_white_web, #FFFFFF); border-radius: 8px; box-shadow: var(--shadow_4, 0 8px 12px 0 rgba(19, 24, 29, 0.14)); z-index: 10000; display: flex; flex-direction: column;`,
-                    overlay: `position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--mask_gray_030, rgba(0, 0, 0, 0.3)); z-index: 9999; display: flex; align-items: center; justify-content: center;`,
-                    toolbar: `display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--base_gray_007, rgba(21, 46, 74, 0.07)); background: var(--bg_white_web, #FFFFFF); border-radius: 8px 8px 0 0;`,
-                    content: `flex: 1; min-height: 0; overflow: auto; padding: 20px;`
+                    panel: `position: fixed; background: var(--am-bg, #FFFFFF); border-radius: var(--am-radius-lg, 8px); box-shadow: var(--am-shadow-lg, 0 8px 12px 0 rgba(19, 24, 29, 0.14)); z-index: 10000; display: flex; flex-direction: column;`,
+                    overlay: `position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--am-overlay, rgba(0, 0, 0, 0.3)); z-index: 9999; display: flex; align-items: center; justify-content: center;`,
+                    toolbar: `display: flex; align-items: center; padding: var(--am-space-4, 16px) var(--am-space-5, 20px); border-bottom: 1px solid var(--am-border, rgba(21, 46, 74, 0.07)); background: var(--am-bg, #FFFFFF); border-radius: var(--am-radius-lg, 8px) var(--am-radius-lg, 8px) 0 0;`,
+                    content: `flex: 1; min-height: 0; overflow: auto; padding: var(--am-space-5, 20px);`
                 },
                 buttons: {
-                    primary: `padding: 8px 16px; background: var(--theme_primary, #0F7AF5); color: var(--base_white_100, #FFFFFF); border: 1px solid var(--theme_darken_2, #0E66CB); border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px; transition: all 0.2s; box-shadow: var(--material_BlueButton_Small);`,
-                    secondary: `padding: 8px 16px; background: var(--bg_white_web, #FFFFFF); color: var(--base_gray_080, rgba(22, 30, 38, 0.8)); border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px; transition: all 0.2s;`,
-                    icon: `width: 32px; height: 32px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); border-radius: 4px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;`
+                    primary: `padding: var(--am-space-2, 8px) var(--am-space-4, 16px); background: var(--am-accent, #0F7AF5); color: var(--am-accent-text, #FFFFFF); border: 1px solid var(--am-accent-hover, #0E66CB); border-radius: var(--am-radius-sm, 4px); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: var(--am-space-1, 4px); transition: all var(--am-duration, 0.2s);`,
+                    secondary: `padding: var(--am-space-2, 8px) var(--am-space-4, 16px); background: var(--am-bg, #FFFFFF); color: var(--am-text, rgba(22, 30, 38, 0.8)); border: 1px solid var(--am-border, rgba(22, 46, 74, 0.1)); border-radius: var(--am-radius-sm, 4px); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: var(--am-space-1, 4px); transition: all var(--am-duration, 0.2s);`,
+                    icon: `width: 32px; height: 32px; border: 1px solid var(--am-border, rgba(22, 46, 74, 0.1)); border-radius: var(--am-radius-sm, 4px); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--am-duration, 0.2s);`
                 },
                 cards: {
-                    attachment: `background: var(--bg_white_web, #FFFFFF); border: 1px solid var(--border_gray_010, rgba(22, 46, 74, 0.05)); border-radius: 8px; overflow: hidden; cursor: pointer; transition: box-shadow 0.2s, border 0.2s; position: relative; aspect-ratio: 1; box-shadow: none;`,
-                    mail: `background: var(--bg_white_web, #FFFFFF); border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); border-radius: 8px; margin-bottom: 16px; overflow: hidden; transition: box-shadow 0.2s;`
+                    attachment: `background: var(--am-bg, #FFFFFF); border: 1px solid var(--am-border, rgba(22, 46, 74, 0.05)); border-radius: var(--am-radius-lg, 8px); overflow: hidden; cursor: pointer; transition: box-shadow var(--am-duration, 0.2s), border var(--am-duration, 0.2s); position: relative; aspect-ratio: 1; box-shadow: none;`,
+                    mail: `background: var(--am-bg, #FFFFFF); border: 1px solid var(--am-border, rgba(22, 46, 74, 0.1)); border-radius: var(--am-radius-lg, 8px); margin-bottom: var(--am-space-4, 16px); overflow: hidden; transition: box-shadow var(--am-duration, 0.2s);`
                 },
                 controls: {
-                    checkbox: `position: absolute; top: 8px; left: 8px; width: 20px; height: 20px; z-index: 10; accent-color: var(--theme_primary, #0F7AF5); cursor: pointer; background: rgba(255,255,255,0.9); border-radius: 4px; box-shadow: 0 1px 4px 0 rgba(21,46,74,0.08); opacity: 0.9; transition: opacity 0.2s, box-shadow 0.2s; border: 1px solid var(--border_gray_020, #e0e6ed);`
+                    checkbox: `position: absolute; top: var(--am-space-2, 8px); left: var(--am-space-2, 8px); width: 20px; height: 20px; z-index: 10; accent-color: var(--am-accent, #0F7AF5); cursor: pointer; background: rgba(255,255,255,0.9); border-radius: var(--am-radius-sm, 4px); box-shadow: var(--am-shadow-sm, 0 1px 4px 0 rgba(21,46,74,0.08)); opacity: 0.9; transition: opacity var(--am-duration, 0.2s), box-shadow var(--am-duration, 0.2s); border: 1px solid var(--am-border-strong, #e0e6ed);`
                 },
                 menus: {
-                    dropdown: `position: fixed; background: var(--bg_white_web, #FFFFFF); border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.08)); border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); padding: 8px 0; min-width: 160px; z-index: 1001;`,
-                    item: `padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--base_gray_100, #13181D); transition: background 0.2s;`
+                    dropdown: `position: fixed; background: var(--am-bg-elevated, #FFFFFF); border: 1px solid var(--am-border, rgba(22, 46, 74, 0.08)); border-radius: var(--am-radius-lg, 8px); box-shadow: var(--am-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1)); padding: var(--am-space-2, 8px) 0; min-width: 160px; z-index: 1001;`,
+                    item: `padding: var(--am-space-2, 8px) var(--am-space-4, 16px); cursor: pointer; display: flex; align-items: center; gap: var(--am-space-2, 8px); font-size: 13px; color: var(--am-text, #13181D); transition: background var(--am-duration, 0.2s);`
                 },
                 states: {
-                    loading: `position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--mask_white_095, rgba(255, 255, 255, 0.95)); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;`,
-                    empty: `text-align: center; padding: 40px 20px; color: var(--base_gray_030, rgba(25, 38, 54, 0.3)); font-size: 14px;`,
-                    spinner: `width: 32px; height: 32px; border: 2px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); border-top: 2px solid var(--theme_primary, #0F7AF5); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;`
+                    loading: `position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;`,
+                    empty: `text-align: center; padding: var(--am-space-10, 40px) var(--am-space-5, 20px); color: var(--am-text-tertiary, rgba(25, 38, 54, 0.3)); font-size: 14px;`,
+                    spinner: `width: 32px; height: 32px; border: 2px solid var(--am-border, rgba(22, 46, 74, 0.1)); border-top: 2px solid var(--am-accent, #0F7AF5); border-radius: 50%; animation: am-spin 1s linear infinite; margin-bottom: var(--am-space-3, 12px);`
                 },
                 toasts: {
-                    base: `position: fixed; top: 20px; right: 20px; padding: 12px 16px; border-radius: 6px; color: white; font-size: 13px; z-index: 10002; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); display: flex; align-items: center; gap: 8px; max-width: 320px; word-wrap: break-word; opacity: 0; transform: translateX(100%); transition: all 0.3s ease;`,
-                    info: `background: var(--theme_primary, #0F7AF5);`,
-                    success: `background: var(--chrome_green, #00A755);`,
-                    warning: `background: var(--chrome_yellow, #FFA500);`,
-                    error: `background: var(--chrome_red, #F73116);`
+                    base: `position: fixed; top: var(--am-space-5, 20px); right: var(--am-space-5, 20px); padding: var(--am-space-3, 12px) var(--am-space-4, 16px); border-radius: var(--am-radius-md, 6px); color: var(--am-text-inverse, white); font-size: 13px; z-index: 10002; box-shadow: var(--am-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1)); display: flex; align-items: center; gap: var(--am-space-2, 8px); max-width: 320px; word-wrap: break-word; opacity: 0; transform: translateX(100%); transition: all var(--am-duration-slow, 0.3s) ease;`,
+                    info: `background: var(--am-accent, #0F7AF5);`,
+                    success: `background: var(--am-success, #00A755);`,
+                    warning: `background: var(--am-warning, #FFA500);`,
+                    error: `background: var(--am-error, #F73116);`
                 },
                 media: {
-                    preview: `width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); overflow: hidden;`,
-                    image: `width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;`,
-                    icon: `font-size: 24px; color: var(--theme_primary, #0F7AF5); display: flex; align-items: center; justify-content: center; height: 100%; transition: transform 0.3s ease;`
+                    preview: `width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--am-bg-muted, rgba(20, 46, 77, 0.05)); overflow: hidden;`,
+                    image: `width: 100%; height: 100%; object-fit: cover; transition: transform var(--am-duration-slow, 0.3s) ease;`,
+                    icon: `font-size: 24px; color: var(--am-accent, #0F7AF5); display: flex; align-items: center; justify-content: center; height: 100%; transition: transform var(--am-duration-slow, 0.3s) ease;`
                 },
                 layouts: {
-                    grid: `display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; padding: 16px; background: transparent;`,
-                    floatingWindow: `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; max-width: 900px; height: 95%; max-height: 95vh; min-width: 600px; min-height: 700px; background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.1); z-index: 10000; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; resize: both;`,
-                    floatingOverlay: `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); z-index: 9999; opacity: 0; transition: opacity 0.3s ease;`,
-                    windowHeader: `display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #fff; border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); cursor: move; user-select: none; flex-shrink: 0;`,
-                    windowContent: `flex: 1; overflow: hidden; display: flex; flex-direction: column; background: #f5f5f5;`,
-                    windowControls: `display: flex; align-items: center; gap: 8px;`,
-                    windowButton: `width: 12px; height: 12px; border-radius: 50%; cursor: pointer; transition: all 0.2s ease;`,
+                    grid: `display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--am-space-4, 16px); padding: var(--am-space-4, 16px); background: transparent;`,
+                    floatingWindow: `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; max-width: 900px; height: 95%; max-height: 95vh; min-width: 600px; min-height: 700px; background: var(--am-bg, #fff); border-radius: var(--am-radius-xl, 12px); box-shadow: var(--am-shadow-xl, 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.1)); z-index: 10000; display: flex; flex-direction: column; font-family: var(--am-font, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif); overflow: hidden; resize: both;`,
+                    floatingOverlay: `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--am-overlay, rgba(0, 0, 0, 0.4)); backdrop-filter: blur(var(--am-overlay-blur, 4px)); z-index: 9999; opacity: 0; transition: opacity var(--am-duration-slow, 0.3s) ease;`,
+                    windowHeader: `display: flex; align-items: center; justify-content: space-between; padding: var(--am-space-4, 16px) var(--am-space-5, 20px); background: var(--am-bg, #fff); border-bottom: 1px solid var(--am-border, rgba(22, 46, 74, 0.1)); cursor: move; user-select: none; flex-shrink: 0;`,
+                    windowContent: `flex: 1; overflow: hidden; display: flex; flex-direction: column; background: var(--am-bg-subtle, #f5f5f5);`,
+                    windowControls: `display: flex; align-items: center; gap: var(--am-space-2, 8px);`,
+                    windowButton: `width: 12px; height: 12px; border-radius: 50%; cursor: pointer; transition: all var(--am-duration, 0.2s) ease;`,
                     closeButton: `background: #ff5f57; border: 1px solid #e0443e;`,
                     minimizeButton: `background: #ffbd2e; border: 1px solid #dea123;`,
                     maximizeButton: `background: #28ca42; border: 1px solid #1aab29;`,
-                    bentoGrid: `display: flex; flex-direction: column; gap: 24px; padding: 32px; max-width: 800px; margin: 0 auto; min-height: 100%; background: #f8f9fa;`,
-                    bentoCard: `background: var(--bg_white_web, #FFFFFF); border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); border-radius: 12px; padding: 24px; transition: all 0.2s ease; position: relative; overflow: hidden; min-height: 120px; display: flex; flex-direction: column;`,
-                    bentoCardPrimary: `background: rgba(25, 118, 210, 0.05); color: #1976d2; border: 2px solid #1976d2; border-radius: 12px; padding: 24px; position: relative; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08); min-height: 160px; display: flex; flex-direction: column;`,
-                    bentoCardWarning: `background: rgba(245, 124, 0, 0.05); color: #f57c00; border: 2px solid #f57c00; border-radius: 12px; padding: 24px; position: relative; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(245, 124, 0, 0.08); min-height: 160px; display: flex; flex-direction: column;`,
-                    bentoCardHeader: `background: var(--bg_white_web, #FFFFFF); border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); border-radius: 12px; padding: 20px; display: flex; justify-content: space-between; align-items: center; min-height: 80px;`,
-                    bentoRow: `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;`,
-                    bentoRowResponsive: `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;`,
-                    bentoRowThree: `display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%;`,
-                    bentoRowFour: `display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%;`,
-                    bentoStatsGrid: `display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 20px; width: 100%;`,
-                    bentoStatsResponsive: `display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 20px; width: 100%;`
+                    bentoGrid: `display: flex; flex-direction: column; gap: var(--am-space-6, 24px); padding: var(--am-space-8, 32px); max-width: 800px; margin: 0 auto; min-height: 100%; background: var(--am-bg-subtle, #f8f9fa);`,
+                    bentoCard: `background: var(--am-bg, #FFFFFF); border: 1px solid var(--am-border, rgba(22, 46, 74, 0.1)); border-radius: var(--am-radius-xl, 12px); padding: var(--am-space-6, 24px); transition: all var(--am-duration, 0.2s) ease; position: relative; overflow: hidden; min-height: 120px; display: flex; flex-direction: column;`,
+                    bentoCardPrimary: `background: rgba(25, 118, 210, 0.05); color: #1976d2; border: 2px solid #1976d2; border-radius: var(--am-radius-xl, 12px); padding: var(--am-space-6, 24px); position: relative; cursor: pointer; transition: all var(--am-duration-slow, 0.3s) ease; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08); min-height: 160px; display: flex; flex-direction: column;`,
+                    bentoCardWarning: `background: rgba(245, 124, 0, 0.05); color: #f57c00; border: 2px solid #f57c00; border-radius: var(--am-radius-xl, 12px); padding: var(--am-space-6, 24px); position: relative; transition: all var(--am-duration-slow, 0.3s) ease; box-shadow: 0 2px 8px rgba(245, 124, 0, 0.08); min-height: 160px; display: flex; flex-direction: column;`,
+                    bentoCardHeader: `background: var(--am-bg, #FFFFFF); border: 1px solid var(--am-border, rgba(22, 46, 74, 0.1)); border-radius: var(--am-radius-xl, 12px); padding: var(--am-space-5, 20px); display: flex; justify-content: space-between; align-items: center; min-height: 80px;`,
+                    bentoRow: `display: grid; grid-template-columns: 1fr 1fr; gap: var(--am-space-5, 20px); width: 100%;`,
+                    bentoRowResponsive: `display: grid; grid-template-columns: 1fr 1fr; gap: var(--am-space-5, 20px); width: 100%;`,
+                    bentoRowThree: `display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--am-space-4, 16px); width: 100%;`,
+                    bentoRowFour: `display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--am-space-4, 16px); width: 100%;`,
+                    bentoStatsGrid: `display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--am-space-5, 20px); width: 100%;`,
+                    bentoStatsResponsive: `display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--am-space-5, 20px); width: 100%;`
                 },
                 dialogs: {
-                    compareDialog: `padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); position: relative;`,
-                    detailDialog: `position: relative; width: 90%; max-width: 1000px; max-height: 90vh; transform: scale(0.95); transition: transform 0.3s ease;`,
+                    compareDialog: `padding: var(--am-space-6, 24px); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: var(--am-shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.2)); position: relative;`,
+                    detailDialog: `position: relative; width: 90%; max-width: 1000px; max-height: 90vh; transform: scale(0.95); transition: transform var(--am-duration-slow, 0.3s) ease;`,
                     settingsOverlay: `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;`,
-                    settingsContent: `background: white; border-radius: 16px; padding: 32px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);`,
-                    settingsSection: `margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1));`,
-                    settingsTitle: `font-size: 24px; font-weight: 700; color: var(--base_gray_100, #13181D); margin-bottom: 24px;`,
-                    settingsSectionTitle: `font-size: 18px; font-weight: 600; color: var(--base_gray_090, rgba(22, 30, 38, 0.9)); margin-bottom: 16px;`,
-                    settingsItem: `margin-bottom: 20px;`,
-                    settingsLabel: `font-size: 14px; font-weight: 600; color: var(--base_gray_080, rgba(22, 30, 38, 0.8)); margin-bottom: 8px; display: block;`,
-                    settingsInput: `width: 100%; padding: 12px 16px; border: 1px solid var(--base_gray_020, rgba(22, 46, 74, 0.2)); border-radius: 8px; font-size: 14px; transition: all 0.2s ease; box-sizing: border-box;`,
-                    settingsSelect: `width: 100%; padding: 12px 16px; border: 1px solid var(--base_gray_020, rgba(22, 46, 74, 0.2)); border-radius: 8px; font-size: 14px; background: white; transition: all 0.2s ease; box-sizing: border-box;`,
-                    settingsCheckbox: `margin-right: 8px; transform: scale(1.2);`,
-                    settingsDescription: `font-size: 13px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); margin-top: 4px; line-height: 1.4;`,
-                    settingsButtonGroup: `display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1));`,
-                    settingsRow: `display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;`,
-                    settingsCheckboxItem: `display: flex; align-items: center; margin-bottom: 12px;`
+                    settingsContent: `background: var(--am-bg, white); border-radius: var(--am-radius-2xl, 16px); padding: var(--am-space-8, 32px); max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: var(--am-shadow-xl, 0 20px 60px rgba(0, 0, 0, 0.15));`,
+                    settingsSection: `margin-bottom: var(--am-space-8, 32px); padding-bottom: var(--am-space-6, 24px); border-bottom: 1px solid var(--am-border, rgba(22, 46, 74, 0.1));`,
+                    settingsTitle: `font-size: 24px; font-weight: 700; color: var(--am-text, #13181D); margin-bottom: var(--am-space-6, 24px);`,
+                    settingsSectionTitle: `font-size: 18px; font-weight: 600; color: var(--am-text, rgba(22, 30, 38, 0.9)); margin-bottom: var(--am-space-4, 16px);`,
+                    settingsItem: `margin-bottom: var(--am-space-5, 20px);`,
+                    settingsLabel: `font-size: 14px; font-weight: 600; color: var(--am-text, rgba(22, 30, 38, 0.8)); margin-bottom: var(--am-space-2, 8px); display: block;`,
+                    settingsInput: `width: 100%; padding: var(--am-space-3, 12px) var(--am-space-4, 16px); border: 1px solid var(--am-border-strong, rgba(22, 46, 74, 0.2)); border-radius: var(--am-radius-lg, 8px); font-size: 14px; transition: all var(--am-duration, 0.2s) ease; box-sizing: border-box;`,
+                    settingsSelect: `width: 100%; padding: var(--am-space-3, 12px) var(--am-space-4, 16px); border: 1px solid var(--am-border-strong, rgba(22, 46, 74, 0.2)); border-radius: var(--am-radius-lg, 8px); font-size: 14px; background: var(--am-bg, white); transition: all var(--am-duration, 0.2s) ease; box-sizing: border-box;`,
+                    settingsCheckbox: `margin-right: var(--am-space-2, 8px); transform: scale(1.2);`,
+                    settingsDescription: `font-size: 13px; color: var(--am-text-secondary, rgba(22, 30, 38, 0.6)); margin-top: var(--am-space-1, 4px); line-height: 1.4;`,
+                    settingsButtonGroup: `display: flex; gap: var(--am-space-3, 12px); justify-content: flex-end; margin-top: var(--am-space-8, 32px); padding-top: var(--am-space-6, 24px); border-top: 1px solid var(--am-border, rgba(22, 46, 74, 0.1));`,
+                    settingsRow: `display: grid; grid-template-columns: 1fr 1fr; gap: var(--am-space-5, 20px); margin-bottom: var(--am-space-5, 20px);`,
+                    settingsCheckboxItem: `display: flex; align-items: center; margin-bottom: var(--am-space-3, 12px);`
                 },
                 comparison: {
-                    summaryTitle: `display: flex; align-items: center; gap: 12px; margin-bottom: 20px;`,
-                    titleAccent: `width: 4px; height: 24px; background: linear-gradient(135deg, #0F7AF5, #40a9ff); border-radius: 2px;`,
-                    statsGrid: `display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;`,
-                    statCard: `border-radius: 12px; padding: 20px; color: white; position: relative; overflow: hidden;`,
+                    summaryTitle: `display: flex; align-items: center; gap: var(--am-space-3, 12px); margin-bottom: var(--am-space-5, 20px);`,
+                    titleAccent: `width: 4px; height: 24px; background: linear-gradient(135deg, var(--am-accent, #0F7AF5), #40a9ff); border-radius: 2px;`,
+                    statsGrid: `display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--am-space-4, 16px); margin-bottom: var(--am-space-6, 24px);`,
+                    statCard: `border-radius: var(--am-radius-xl, 12px); padding: var(--am-space-5, 20px); color: var(--am-text-inverse, white); position: relative; overflow: hidden;`,
                     statCardDecor: `position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 50%; opacity: 0.3;`,
-                    statNumber: `font-size: 28px; font-weight: 800; margin-bottom: 4px;`,
+                    statNumber: `font-size: 28px; font-weight: 800; margin-bottom: var(--am-space-1, 4px);`,
                     statLabel: `font-size: 13px; opacity: 0.9;`,
-                    statExtra: `font-size: 11px; opacity: 0.7; margin-top: 4px;`,
-                    statusCard: `border-radius: 12px; padding: 20px; position: relative; overflow: hidden;`,
+                    statExtra: `font-size: 11px; opacity: 0.7; margin-top: var(--am-space-1, 4px);`,
+                    statusCard: `border-radius: var(--am-radius-xl, 12px); padding: var(--am-space-5, 20px); position: relative; overflow: hidden;`,
                     statusIcon: `position: absolute; top: -20px; right: -20px; font-size: 80px; opacity: 0.1;`,
-                    statusHeader: `display: flex; align-items: center; gap: 12px; margin-bottom: 16px;`,
-                    statusBadge: `width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold;`,
-                    statusGrid: `display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;`,
-                    statusSubCard: `background: rgba(255,255,255,0.6); border-radius: 8px; padding: 16px;`,
-                    sectionCard: `background: #fff; border-radius: 12px; overflow: hidden; margin-bottom: 20px;`,
-                    sectionHeader: `padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;`,
+                    statusHeader: `display: flex; align-items: center; gap: var(--am-space-3, 12px); margin-bottom: var(--am-space-4, 16px);`,
+                    statusBadge: `width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--am-text-inverse, white); font-size: 20px; font-weight: bold;`,
+                    statusGrid: `display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--am-space-4, 16px);`,
+                    statusSubCard: `background: rgba(255,255,255,0.6); border-radius: var(--am-radius-lg, 8px); padding: var(--am-space-4, 16px);`,
+                    sectionCard: `background: var(--am-bg, #fff); border-radius: var(--am-radius-xl, 12px); overflow: hidden; margin-bottom: var(--am-space-5, 20px);`,
+                    sectionHeader: `padding: var(--am-space-4, 16px) var(--am-space-5, 20px); display: flex; align-items: center; justify-content: space-between;`,
                     sectionIcon: `width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;`,
                     sectionTitle: `margin: 0; font-size: 18px; font-weight: 700;`,
                     sectionSubtitle: `font-size: 13px; opacity: 0.9; margin-top: 2px;`,
@@ -127,72 +1040,73 @@
                     sectionNumber: `font-size: 24px; font-weight: 800;`,
                     sectionUnit: `font-size: 11px; opacity: 0.8;`,
                     itemList: `max-height: 300px; overflow-y: auto;`,
-                    itemRow: `padding: 16px 20px; display: flex; align-items: center; gap: 16px; transition: background 0.2s;`,
+                    itemRow: `padding: var(--am-space-4, 16px) var(--am-space-5, 20px); display: flex; align-items: center; gap: var(--am-space-4, 16px); transition: background var(--am-duration, 0.2s);`,
                     itemDot: `width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;`,
                     itemContent: `flex: 1; min-width: 0;`,
-                    itemName: `font-weight: 600; color: #13181D; margin-bottom: 4px; word-break: break-all;`,
-                    itemMeta: `display: flex; align-items: center; gap: 12px; font-size: 12px; color: #666;`,
-                    itemTag: `font-size: 11px; padding: 4px 8px; background: #f8f9fa; border-radius: 4px; margin-top: 4px;`,
-                    emptyState: `border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px;`,
-                    emptyIcon: `width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: white; font-size: 24px;`,
-                    emptyTitle: `margin: 0 0 8px 0; font-size: 18px; font-weight: 700;`,
+                    itemName: `font-weight: 600; color: var(--am-text, #13181D); margin-bottom: var(--am-space-1, 4px); word-break: break-all;`,
+                    itemMeta: `display: flex; align-items: center; gap: var(--am-space-3, 12px); font-size: 12px; color: var(--am-text-secondary, #666);`,
+                    itemTag: `font-size: 11px; padding: var(--am-space-1, 4px) var(--am-space-2, 8px); background: var(--am-bg-subtle, #f8f9fa); border-radius: var(--am-radius-sm, 4px); margin-top: var(--am-space-1, 4px);`,
+                    emptyState: `border-radius: var(--am-radius-xl, 12px); padding: var(--am-space-5, 20px); text-align: center; margin-bottom: var(--am-space-5, 20px);`,
+                    emptyIcon: `width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--am-space-4, 16px); color: var(--am-text-inverse, white); font-size: 24px;`,
+                    emptyTitle: `margin: 0 0 var(--am-space-2, 8px) 0; font-size: 18px; font-weight: 700;`,
                     emptyDesc: `font-size: 14px;`
                 },
                 progress: {
-                    area: `display: block; padding: 16px 20px; border-top: 1px solid var(--base_gray_010, #e9e9e9); background: var(--bg_white_web, #FFFFFF); position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;`,
-                    text: `color: var(--base_gray_080, rgba(22, 30, 38, 0.8)); font-size: 13px;`
+                    area: `display: block; padding: var(--am-space-4, 16px) var(--am-space-5, 20px); border-top: 1px solid var(--am-border, #e9e9e9); background: var(--am-bg, #FFFFFF); position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;`,
+                    text: `color: var(--am-text, rgba(22, 30, 38, 0.8)); font-size: 13px;`
                 },
                 errors: {
                     centered: `position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;`
                 },
                 interactions: {
-                    menuItemHover: `background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); font-weight: 500;`,
-                    cardHover: `transform: translateY(-2px); box-shadow: 0 4px 12px 0 rgba(19, 24, 29, 0.12); border-color: var(--base_gray_020, rgba(22, 46, 74, 0.2));`,
+                    menuItemHover: `background: var(--am-bg-muted, rgba(20, 46, 77, 0.05)); font-weight: 500;`,
+                    cardHover: `transform: translateY(-2px); box-shadow: var(--am-shadow-md, 0 4px 12px 0 rgba(19, 24, 29, 0.12)); border-color: var(--am-border-strong, rgba(22, 46, 74, 0.2));`,
                     cardPrimaryHover: `transform: translateY(-2px); box-shadow: 0 4px 16px rgba(25, 118, 210, 0.15); background: rgba(25, 118, 210, 0.08); border-color: #1565c0;`,
-                cardWarningHover: `transform: translateY(-2px); box-shadow: 0 4px 16px rgba(245, 124, 0, 0.15); background: rgba(245, 124, 0, 0.08); border-color: #ef6c00;`,
-                    buttonHover: `background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); border-color: var(--base_gray_015, rgba(23, 46, 71, 0.15));`,
-                    actionButtonHover: `background: var(--theme_primary, #0F7AF5); color: white; transform: translateY(-1px); box-shadow: 0 4px 12px 0 rgba(15, 122, 245, 0.3);`,
-                    actionButtonSecondaryHover: `background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); border-color: var(--base_gray_030, rgba(22, 46, 74, 0.3)); transform: translateY(-1px);`,
-                    primaryButtonHover: `background: var(--theme_lighten_1, #328DF6);`,
-                    downloadButtonHover: `background: #0e66cb; box-shadow: 0 4px 16px 0 rgba(15,122,245,0.13);`,
+                    cardWarningHover: `transform: translateY(-2px); box-shadow: 0 4px 16px rgba(245, 124, 0, 0.15); background: rgba(245, 124, 0, 0.08); border-color: #ef6c00;`,
+                    buttonHover: `background: var(--am-bg-muted, rgba(20, 46, 77, 0.05)); border-color: var(--am-border-strong, rgba(23, 46, 71, 0.15));`,
+                    actionButtonHover: `background: var(--am-accent, #0F7AF5); color: var(--am-text-inverse, white); transform: translateY(-1px); box-shadow: 0 4px 12px 0 rgba(15, 122, 245, 0.3);`,
+                    actionButtonSecondaryHover: `background: var(--am-bg-muted, rgba(20, 46, 77, 0.05)); border-color: var(--am-border-strong, rgba(22, 46, 74, 0.3)); transform: translateY(-1px);`,
+                    primaryButtonHover: `background: var(--am-accent-hover, #328DF6);`,
+                    downloadButtonHover: `background: var(--am-accent-hover, #0e66cb); box-shadow: 0 4px 16px 0 rgba(15,122,245,0.13);`,
                     checkboxHover: `opacity: 1; box-shadow: 0 2px 8px 0 rgba(15,122,245,0.12);`,
                     iconHover: `transform: scale(1.05);`,
                     imageHover: `transform: scale(1.02);`
                 },
                 toolbars: {
-                    overlay: `height: 56px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; z-index: 1000; background: var(--bg_white_web, #FFFFFF); border-bottom: 1px solid var(--base_gray_007, rgba(21, 46, 74, 0.07));`,
+                    overlay: `height: 56px; flex-shrink: 0; box-shadow: var(--am-shadow-sm, 0 1px 3px rgba(0,0,0,0.1)); position: relative; z-index: 1000; background: var(--am-bg, #FFFFFF); border-bottom: 1px solid var(--am-border, rgba(21, 46, 74, 0.07));`,
                     section: `display: flex; align-items: center;`,
                     leftSection: `flex: 1;`,
-                    rightSection: `gap: 12px;`,
-                    middleSection: `gap: 8px;`
+                    rightSection: `gap: var(--am-space-3, 12px);`,
+                    middleSection: `gap: var(--am-space-2, 8px);`
                 },
                 texts: {
-                    title: `margin: 0; font-size: 18px; font-weight: 600; color: #333;`,
-                    subtitle: `margin-left: 12px; font-size: 14px; color: #666;`,
-                    errorIcon: `color: var(--chrome_red, #F73116); font-size: 20px; margin-bottom: 8px;`,
-                    errorText: `color: var(--base_gray_080, rgba(22, 30, 38, 0.8)); font-size: 13px;`,
-                    headerTitle: `font-size: 24px; font-weight: 700; color: var(--base_gray_100, #13181D); margin: 0; line-height: 1.2;`,
-                    headerSubtitle: `font-size: 14px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); margin: 4px 0 0 0; line-height: 1.3;`,
-                    bentoNumber: `font-size: 32px; font-weight: 700; color: var(--base_gray_100, #13181D); margin: 0; line-height: 1.1; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; letter-spacing: -0.02em;`,
-                    bentoNumberLarge: `font-size: 42px; font-weight: 800; color: inherit; margin: 0; line-height: 1; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; letter-spacing: -0.02em;`,
-                    bentoNumberWarning: `font-size: 38px; font-weight: 800; color: inherit; margin: 0; line-height: 1; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; letter-spacing: -0.02em;`,
-                    bentoLabel: `font-size: 14px; font-weight: 600; color: var(--base_gray_080, rgba(22, 30, 38, 0.8)); margin: 6px 0 0 0; line-height: 1.3;`,
-                    bentoLabelLarge: `font-size: 15px; font-weight: 600; color: inherit; opacity: 0.8; margin: 8px 0 0 0; line-height: 1.3;`,
+                    title: `margin: 0; font-size: 18px; font-weight: 600; color: var(--am-text, #333);`,
+                    subtitle: `margin-left: var(--am-space-3, 12px); font-size: 14px; color: var(--am-text-secondary, #666);`,
+                    errorIcon: `color: var(--am-error, #F73116); font-size: 20px; margin-bottom: var(--am-space-2, 8px);`,
+                    errorText: `color: var(--am-text, rgba(22, 30, 38, 0.8)); font-size: 13px;`,
+                    headerTitle: `font-size: 24px; font-weight: 700; color: var(--am-text, #13181D); margin: 0; line-height: 1.2;`,
+                    headerSubtitle: `font-size: 14px; color: var(--am-text-secondary, rgba(22, 30, 38, 0.6)); margin: var(--am-space-1, 4px) 0 0 0; line-height: 1.3;`,
+                    bentoNumber: `font-size: 32px; font-weight: 700; color: var(--am-text, #13181D); margin: 0; line-height: 1.1; font-family: var(--am-font, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif); letter-spacing: -0.02em;`,
+                    bentoNumberLarge: `font-size: 42px; font-weight: 800; color: inherit; margin: 0; line-height: 1; font-family: var(--am-font, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif); letter-spacing: -0.02em;`,
+                    bentoNumberWarning: `font-size: 38px; font-weight: 800; color: inherit; margin: 0; line-height: 1; font-family: var(--am-font, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif); letter-spacing: -0.02em;`,
+                    bentoLabel: `font-size: 14px; font-weight: 600; color: var(--am-text, rgba(22, 30, 38, 0.8)); margin: 6px 0 0 0; line-height: 1.3;`,
+                    bentoLabelLarge: `font-size: 15px; font-weight: 600; color: inherit; opacity: 0.8; margin: var(--am-space-2, 8px) 0 0 0; line-height: 1.3;`,
                     bentoLabelWarning: `font-size: 14px; font-weight: 600; color: inherit; opacity: 0.8; margin: 6px 0 0 0; line-height: 1.3;`,
-                    bentoDesc: `font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); line-height: 1.4; margin: 4px 0 0 0;`,
+                    bentoDesc: `font-size: 12px; color: var(--am-text-secondary, rgba(22, 30, 38, 0.6)); line-height: 1.4; margin: var(--am-space-1, 4px) 0 0 0;`,
                     bentoDescLarge: `font-size: 13px; color: inherit; opacity: 0.7; line-height: 1.4; margin: 6px 0 0 0;`,
-                    bentoDescWarning: `font-size: 12px; color: inherit; opacity: 0.7; line-height: 1.4; margin: 4px 0 0 0;`,
-                    bentoTitle: `font-size: 16px; font-weight: 600; color: var(--base_gray_100, #13181D); margin: 0 0 12px 0; line-height: 1.3;`,
-                    actionButton: `font-size: 13px; font-weight: 600; color: var(--theme_primary, #0F7AF5); text-decoration: none; padding: 8px 16px; border: 1px solid var(--theme_primary, #0F7AF5); border-radius: 6px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px;`,
-                    actionButtonSecondary: `font-size: 13px; font-weight: 600; color: var(--base_gray_080, rgba(22, 30, 38, 0.8)); text-decoration: none; padding: 8px 16px; border: 1px solid var(--base_gray_020, rgba(22, 46, 74, 0.2)); border-radius: 6px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; background: var(--bg_white_web, #FFFFFF);`
+                    bentoDescWarning: `font-size: 12px; color: inherit; opacity: 0.7; line-height: 1.4; margin: var(--am-space-1, 4px) 0 0 0;`,
+                    bentoTitle: `font-size: 16px; font-weight: 600; color: var(--am-text, #13181D); margin: 0 0 var(--am-space-3, 12px) 0; line-height: 1.3;`,
+                    actionButton: `font-size: 13px; font-weight: 600; color: var(--am-accent, #0F7AF5); text-decoration: none; padding: var(--am-space-2, 8px) var(--am-space-4, 16px); border: 1px solid var(--am-accent, #0F7AF5); border-radius: var(--am-radius-md, 6px); transition: all var(--am-duration, 0.2s) ease; display: inline-flex; align-items: center; gap: 6px;`,
+                    actionButtonSecondary: `font-size: 13px; font-weight: 600; color: var(--am-text, rgba(22, 30, 38, 0.8)); text-decoration: none; padding: var(--am-space-2, 8px) var(--am-space-4, 16px); border: 1px solid var(--am-border-strong, rgba(22, 46, 74, 0.2)); border-radius: var(--am-radius-md, 6px); transition: all var(--am-duration, 0.2s) ease; display: inline-flex; align-items: center; gap: 6px; background: var(--am-bg, #FFFFFF);`
                 },
                 toastExtensions: {
-                    custom: `background: var(--bg_white_web, #FFFFFF); color: var(--base_gray_100, #13181D); bottom: 20px; animation: slideIn 0.3s ease-out;`
+                    custom: `background: var(--am-bg, #FFFFFF); color: var(--am-text, #13181D); bottom: var(--am-space-5, 20px); animation: am-slide-in var(--am-duration-slow, 0.3s) ease-out;`
                 },
                 layout: {
-                    overlay: `position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; background: #f5f5f5;`
+                    overlay: `position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; background: var(--am-bg-subtle, #f5f5f5);`
                 }
             };
+            return StyleManager._cache;
         }
 
         static applyStyle(element, styleKey, subKey) {
@@ -205,142 +1119,11 @@
         }
 
         static addSpinnerAnimation() {
-            if (!document.getElementById('attachment-spinner-style')) {
-                const style = document.createElement('style');
-                style.id = 'attachment-spinner-style';
-                style.textContent = `
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
+            StyleManager.inject();
         }
 
         static addLayoutStyles() {
-            if (!document.getElementById('attachment-layout-style')) {
-                const style = document.createElement('style');
-                style.id = 'attachment-layout-style';
-                const layouts = this.getStyles().layouts;
-                style.textContent = `
-                    .attachment-floating-overlay {
-                        ${layouts.floatingOverlay}
-                    }
-                    .attachment-floating-overlay.show {
-                        opacity: 1;
-                    }
-                    .attachment-floating-window {
-                        ${layouts.floatingWindow}
-                        opacity: 0;
-                        transform: translate(-50%, -50%) scale(0.9);
-                        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                    }
-                    .attachment-floating-window.show {
-                        opacity: 1;
-                        transform: translate(-50%, -50%) scale(1);
-                    }
-                    .attachment-window-header {
-                        ${layouts.windowHeader}
-                    }
-                    .attachment-window-content {
-                        ${layouts.windowContent}
-                    }
-                    .attachment-window-controls {
-                        ${layouts.windowControls}
-                    }
-                    .attachment-window-button {
-                        ${layouts.windowButton}
-                    }
-                    .attachment-window-button.close {
-                        ${layouts.closeButton}
-                    }
-                    .attachment-window-button.close:hover {
-                        background: #e0443e;
-                        transform: scale(1.1);
-                    }
-                    .attachment-window-button.minimize {
-                        ${layouts.minimizeButton}
-                    }
-                    .attachment-window-button.minimize:hover {
-                        background: #dea123;
-                        transform: scale(1.1);
-                    }
-                    .attachment-window-button.maximize {
-                        ${layouts.maximizeButton}
-                    }
-                    .attachment-window-button.maximize:hover {
-                        background: #1aab29;
-                        transform: scale(1.1);
-                    }
-                    .attachment-floating-window.maximized {
-                        top: 0 !important;
-                        left: 0 !important;
-                        transform: none !important;
-                        width: 100% !important;
-                        height: 100% !important;
-                        border-radius: 0 !important;
-                        max-width: none !important;
-                        max-height: none !important;
-                    }
-                    .attachment-floating-window.minimized {
-                        height: 60px !important;
-                        overflow: hidden;
-                    }
-                    .attachment-floating-window.minimized .attachment-window-content {
-                        display: none;
-                    }
-                    @keyframes attachmentWindowSlideIn {
-                        from {
-                            opacity: 0;
-                            transform: translate(-50%, -60%) scale(0.8);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translate(-50%, -50%) scale(1);
-                        }
-                    }
-                    
-                    /* 响应式布局 */
-                    @media (max-width: 1024px) {
-                        .attachment-floating-window {
-                            width: 85% !important;
-                            height: 95% !important;
-                            min-width: 500px !important;
-                        }
-                    }
-                    
-                    @media (max-width: 768px) {
-                        .attachment-floating-window {
-                            width: 100% !important;
-                            height: 100% !important;
-                            min-width: 320px !important;
-                            border-radius: 0 !important;
-                            top: 0 !important;
-                            left: 0 !important;
-                            transform: none !important;
-                        }
-                        
-                        /* 移动端卡片布局调整 */
-                        .bento-row-responsive {
-                            grid-template-columns: 1fr !important;
-                            gap: 16px !important;
-                        }
-                        
-                        .bento-stats-responsive {
-                            grid-template-columns: repeat(2, 1fr) !important;
-                            gap: 12px !important;
-                        }
-                    }
-                    
-                    @media (max-width: 480px) {
-                        .bento-stats-responsive {
-                            grid-template-columns: 1fr !important;
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
+            StyleManager.inject();
         }
 
         static applyInteractionStyle(element, styleKey, reset = false) {
@@ -477,6 +1260,7 @@
 
 
         init() {
+            StyleManager.inject();
             window.attachmentManager = this;
             this.loadSavedSettings();
             this.initUrlChangeListener();
@@ -528,9 +1312,9 @@
         hidePanel() {
             try {
                 this.hideAttachmentView();
-                    } catch (error) {
-            this.cleanupAttachmentManager(true);
-        }
+            } catch {
+                this.cleanupAttachmentManager(true);
+            }
         }
 
         // 获取文件夹显示名称
@@ -547,17 +1331,17 @@
     // 显示设置对话框
     async showSettingsDialog() {
         const dialog = this.createUI('div', {
-            styles: StyleManager.getStyles().dialogs.settingsOverlay,
+            className: 'am-dialog-overlay',
             content: `
-                <div style="${StyleManager.getStyles().dialogs.settingsContent}">
-                    <div style="${StyleManager.getStyles().dialogs.settingsTitle}">
+                <div class="am-dialog" style="position: relative;">
+                    <div class="am-dialog-header" style="position: relative;">
                         <span>下载设置</span>
                         <button id="settings-close-x" style="position: absolute; right: 24px; top: 24px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s;">×</button>
                     </div>
                     
                     <!-- 选项卡导航 -->
-                    <div style="display: flex; border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); margin: 0 -32px; padding: 0 32px; margin-top: 20px;">
-                        <div class="settings-tab active" data-tab="basic" style="padding: 12px 24px; cursor: pointer; border-bottom: 2px solid var(--theme_primary, #0F7AF5); color: var(--theme_primary, #0F7AF5); font-weight: 600; transition: all 0.2s;">
+                    <div class="am-tabs" style="margin: var(--am-space-5) calc(-1 * var(--am-space-8)) 0; padding: 0 var(--am-space-8);">
+                        <div class="am-tab active settings-tab" data-tab="basic">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                 <polyline points="14 2 14 8 20 8"/>
@@ -567,14 +1351,14 @@
                             </svg>
                             基础设置
                         </div>
-                        <div class="settings-tab" data-tab="advanced" style="padding: 12px 24px; cursor: pointer; color: var(--base_gray_070, rgba(22, 30, 38, 0.7)); transition: all 0.2s;">
+                        <div class="am-tab settings-tab" data-tab="advanced">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                                 <circle cx="12" cy="12" r="3"/>
                                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                             </svg>
                             高级设置
                         </div>
-                        <div class="settings-tab" data-tab="download" style="padding: 12px 24px; cursor: pointer; color: var(--base_gray_070, rgba(22, 30, 38, 0.7)); transition: all 0.2s;">
+                        <div class="am-tab settings-tab" data-tab="download">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                 <polyline points="7 10 12 15 17 10"/>
@@ -582,7 +1366,7 @@
                             </svg>
                             下载设置
                         </div>
-                        <div class="settings-tab" data-tab="filter" style="padding: 12px 24px; cursor: pointer; color: var(--base_gray_070, rgba(22, 30, 38, 0.7)); transition: all 0.2s;">
+                        <div class="am-tab settings-tab" data-tab="filter">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                             </svg>
@@ -594,61 +1378,61 @@
                     <div style="margin-top: 24px; max-height: calc(80vh - 200px); overflow-y: auto; padding-right: 8px;">
                         <!-- 基础设置面板 -->
                         <div id="settings-panel-basic" class="settings-panel" style="display: block;">
-                            <div style="${StyleManager.getStyles().dialogs.settingsSection}">
+                            <div class="am-form-section">
                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme_primary, #0F7AF5)" stroke-width="2" style="margin-right: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--am-accent)" stroke-width="2" style="margin-right: 12px;">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                         <polyline points="14 2 14 8 20 8"/>
                                     </svg>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsSectionTitle}; margin-bottom: 0;">文件命名</div>
+                                    <div class="am-form-section-title" style="margin-bottom: 0;">文件命名</div>
                                 </div>
                         
-                                <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                    <label style="${StyleManager.getStyles().dialogs.settingsLabel}">命名模式</label>
-                                    <select id="naming-mode" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                <div class="am-form-item">
+                                    <label class="am-form-label">命名模式</label>
+                                    <select id="naming-mode" class="am-select">
                                         <option value="original">原始文件名</option>
                                         <option value="custom">自定义文件名</option>
                                     </select>
                                 </div>
                                 
-                                <div id="custom-naming-options" style="display: none; background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); padding: 16px; border-radius: 8px; margin-top: 12px;">
-                                    <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">命名模板</label>
+                                <div id="custom-naming-options" style="display: none; background: var(--am-bg-subtle); padding: 16px; border-radius: 8px; margin-top: 12px;">
+                                    <div class="am-form-item">
+                                        <label class="am-form-label">命名模板</label>
                                         <div style="position: relative;">
-                                            <input type="text" id="naming-pattern" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                            <input type="text" id="naming-pattern" class="am-input" 
                                                    placeholder="{date}_{subject}_{fileName}" value="{date}_{subject}_{fileName}">
-                                            <button type="button" id="show-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--theme_primary, #0F7AF5); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
+                                            <button type="button" id="show-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--am-accent); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
                                         </div>
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">
+                                        <div class="am-form-desc">
                                             使用变量构建自定义文件名，点击按钮查看所有可用变量
                                         </div>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsRow}; margin-top: 16px;">
+                                    <div class="am-form-row" style="margin-top: var(--am-space-4);">
                                         <div>
-                                            <label style="${StyleManager.getStyles().dialogs.settingsLabel}">前缀</label>
-                                            <input type="text" id="naming-prefix" style="${StyleManager.getStyles().dialogs.settingsInput}" placeholder="可选前缀">
+                                            <label class="am-form-label">前缀</label>
+                                            <input type="text" id="naming-prefix" class="am-input" placeholder="可选前缀">
                                         </div>
                                         <div>
-                                            <label style="${StyleManager.getStyles().dialogs.settingsLabel}">后缀</label>
-                                            <input type="text" id="naming-suffix" style="${StyleManager.getStyles().dialogs.settingsInput}" placeholder="可选后缀">
+                                            <label class="am-form-label">后缀</label>
+                                            <input type="text" id="naming-suffix" class="am-input" placeholder="可选后缀">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- 文件夹结构 -->
-                            <div style="${StyleManager.getStyles().dialogs.settingsSection}">
+                            <div class="am-form-section">
                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme_primary, #0F7AF5)" stroke-width="2" style="margin-right: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--am-accent)" stroke-width="2" style="margin-right: 12px;">
                                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                                     </svg>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsSectionTitle}; margin-bottom: 0;">文件夹结构</div>
+                                    <div class="am-form-section-title" style="margin-bottom: 0;">文件夹结构</div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                    <label style="${StyleManager.getStyles().dialogs.settingsLabel}">组织方式</label>
-                                    <select id="folder-structure" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                <div class="am-form-item">
+                                    <label class="am-form-label">组织方式</label>
+                                    <select id="folder-structure" class="am-select">
                                         <option value="flat" selected>平铺（所有文件在同一文件夹）</option>
                                         <option value="subject">主题</option>
                                         <option value="sender">发件人</option>
@@ -658,15 +1442,15 @@
                                 </div>
                                 
                                 <!-- 自定义文件夹结构配置 -->
-                                <div id="folder-naming-options" style="display: none; background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); padding: 16px; border-radius: 8px; margin-top: 12px;">
-                                    <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">文件夹结构模板</label>
+                                <div id="folder-naming-options" style="display: none; background: var(--am-bg-subtle); padding: 16px; border-radius: 8px; margin-top: 12px;">
+                                    <div class="am-form-item">
+                                        <label class="am-form-label">文件夹结构模板</label>
                                         <div style="position: relative;">
-                                            <input type="text" id="folder-custom-template" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                            <input type="text" id="folder-custom-template" class="am-input" 
                                                    placeholder="{date:YYYY-MM}/{senderName}" value="{date:YYYY-MM}/{senderName}">
-                                            <button type="button" id="show-folder-custom-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--theme_primary, #0F7AF5); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
+                                            <button type="button" id="show-folder-custom-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--am-accent); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
                                         </div>
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">
+                                        <div class="am-form-desc">
                                             使用"/"分隔创建多级文件夹。常用模板：<br>
                                             • {date}/{senderName} - 按日期和发件人<br>
                                             • {subject}/{fileType} - 按主题和文件类型<br>
@@ -675,65 +1459,65 @@
                                     </div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                    <input type="checkbox" id="smart-grouping" style="${StyleManager.getStyles().dialogs.settingsCheckbox}">
-                                    <label for="smart-grouping" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">启用智能分组</label>
+                                <div class="am-form-checkbox">
+                                    <input type="checkbox" id="smart-grouping" class="am-checkbox">
+                                    <label for="smart-grouping" class="am-form-label" style="margin-bottom: 0;">启用智能分组</label>
                                 </div>
-                                <div style="${StyleManager.getStyles().dialogs.settingsDescription}">根据文件名模式自动分组相关文件</div>
+                                <div class="am-form-desc">根据文件名模式自动分组相关文件</div>
                             </div>
                         </div>
 
                         <!-- 高级设置面板 -->
                         <div id="settings-panel-advanced" class="settings-panel" style="display: none;">
                             <!-- 文件名规范检查 -->
-                            <div style="${StyleManager.getStyles().dialogs.settingsSection}">
+                            <div class="am-form-section">
                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme_primary, #0F7AF5)" stroke-width="2" style="margin-right: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--am-accent)" stroke-width="2" style="margin-right: 12px;">
                                         <path d="M9 11l3 3L22 4"/>
                                         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                                     </svg>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsSectionTitle}; margin-bottom: 0;">命名规则验证</div>
+                                    <div class="am-form-section-title" style="margin-bottom: 0;">命名规则验证</div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                    <label style="${StyleManager.getStyles().dialogs.settingsLabel}">启用验证</label>
-                                    <select id="filename-validation" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                <div class="am-form-item">
+                                    <label class="am-form-label">启用验证</label>
+                                    <select id="filename-validation" class="am-select">
                                         <option value="enabled">启用</option>
                                         <option value="disabled">禁用</option>
                                     </select>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsDescription}">使用正则表达式检查文件名是否符合规范</div>
+                                    <div class="am-form-desc">使用正则表达式检查文件名是否符合规范</div>
                                 </div>
                         
-                                <div id="filename-validation-options" style="display: block; background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); padding: 16px; border-radius: 8px; margin-top: 12px;">
-                                    <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">验证正则表达式</label>
-                                        <input type="text" id="validation-pattern" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                <div id="filename-validation-options" style="display: block; background: var(--am-bg-subtle); padding: 16px; border-radius: 8px; margin-top: 12px;">
+                                    <div class="am-form-item">
+                                        <label class="am-form-label">验证正则表达式</label>
+                                        <input type="text" id="validation-pattern" class="am-input" 
                                                placeholder="\\d{6,}" value="\\d{6,}">
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">
+                                        <div class="am-form-desc">
                                             用于验证文件名的正则表达式。例如：\\d{6,} 表示至少6位数字
                                         </div>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">不符合规则时的处理</label>
-                                        <select id="fallback-pattern" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                    <div class="am-form-item">
+                                        <label class="am-form-label">不符合规则时的处理</label>
+                                        <select id="fallback-pattern" class="am-select">
                                             <option value="auto" selected>自动分析</option>
                                             <option value="mailSubject">添加邮件主题</option>
                                             <option value="senderEmail">添加发件人邮箱</option>
                                             <option value="toTime">添加时间戳</option>
                                             <option value="customTemplate">自定义模板</option>
                                         </select>
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">当文件名不符合验证规则时的处理方式</div>
+                                        <div class="am-form-desc">当文件名不符合验证规则时的处理方式</div>
                                     </div>
                                     
-                                    <div id="fallback-template-container" style="${StyleManager.getStyles().dialogs.settingsItem}; display: none;">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">备用命名模板</label>
+                                    <div id="fallback-template-container" class="am-form-item" style="display: none;">
+                                        <label class="am-form-label">备用命名模板</label>
                                         <div style="position: relative;">
-                                            <input type="text" id="fallback-template" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                            <input type="text" id="fallback-template" class="am-input" 
                                                    placeholder="{date}_{subject}_{fileName}" value="{subject}_{fileName}">
-                                            <button type="button" id="show-fallback-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--theme_primary, #0F7AF5); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
+                                            <button type="button" id="show-fallback-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--am-accent); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
                                         </div>
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">
+                                        <div class="am-form-desc">
                                             不符合规则时使用的命名模板
                                         </div>
                                     </div>
@@ -741,90 +1525,90 @@
                             </div>
                             
                             <!-- 内容替换 -->
-                            <div style="${StyleManager.getStyles().dialogs.settingsSection}">
+                            <div class="am-form-section">
                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme_primary, #0F7AF5)" stroke-width="2" style="margin-right: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--am-accent)" stroke-width="2" style="margin-right: 12px;">
                                         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                                     </svg>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsSectionTitle}; margin-bottom: 0;">内容替换</div>
+                                    <div class="am-form-section-title" style="margin-bottom: 0;">内容替换</div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                    <input type="checkbox" id="enable-content-replacement" style="${StyleManager.getStyles().dialogs.settingsCheckbox}">
-                                    <label for="enable-content-replacement" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">启用内容替换</label>
+                                <div class="am-form-checkbox">
+                                    <input type="checkbox" id="enable-content-replacement" class="am-checkbox">
+                                    <label for="enable-content-replacement" class="am-form-label" style="margin-bottom: 0;">启用内容替换</label>
                                 </div>
-                                <div style="${StyleManager.getStyles().dialogs.settingsDescription}">对文件名进行自定义内容替换，支持字符串和正则表达式</div>
+                                <div class="am-form-desc">对文件名进行自定义内容替换，支持字符串和正则表达式</div>
                             
-                                <div id="content-replacement-options" style="display: none; background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); padding: 16px; border-radius: 8px; margin-top: 12px;">
-                                    <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">匹配模式</label>
-                                        <select id="replacement-mode" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                <div id="content-replacement-options" style="display: none; background: var(--am-bg-subtle); padding: 16px; border-radius: 8px; margin-top: 12px;">
+                                    <div class="am-form-item">
+                                        <label class="am-form-label">匹配模式</label>
+                                        <select id="replacement-mode" class="am-select">
                                             <option value="string" selected>字符串匹配</option>
                                             <option value="regex">正则表达式</option>
                                         </select>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">查找内容</label>
-                                        <input type="text" id="replacement-search" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                    <div class="am-form-item">
+                                        <label class="am-form-label">查找内容</label>
+                                        <input type="text" id="replacement-search" class="am-input" 
                                                placeholder="要替换的内容或正则表达式">
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">
+                                        <div class="am-form-desc">
                                             字符串模式：直接输入要替换的文字 | 正则模式：如 \\d{4} 匹配4位数字
                                         </div>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">替换内容</label>
+                                    <div class="am-form-item">
+                                        <label class="am-form-label">替换内容</label>
                                         <div style="position: relative;">
-                                            <input type="text" id="replacement-replace" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                            <input type="text" id="replacement-replace" class="am-input" 
                                                    placeholder="替换后的内容，支持变量">
-                                            <button type="button" id="show-replacement-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--theme_primary, #0F7AF5); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
+                                            <button type="button" id="show-replacement-variables-btn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--am-accent); color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500;">选择变量</button>
                                         </div>
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">
+                                        <div class="am-form-desc">
                                             支持变量如 {subject}、{date} 等，正则模式还支持捕获组 $1、$2
                                         </div>
                                     </div>
                                     
                                     <div style="display: flex; gap: 24px; margin-top: 12px;">
-                                        <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                            <input type="checkbox" id="replacement-global" style="${StyleManager.getStyles().dialogs.settingsCheckbox}" checked>
-                                            <label for="replacement-global" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">全局替换</label>
+                                        <div class="am-form-checkbox">
+                                            <input type="checkbox" id="replacement-global" class="am-checkbox" checked>
+                                            <label for="replacement-global" class="am-form-label" style="margin-bottom: 0;">全局替换</label>
                                         </div>
                                         
-                                        <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                            <input type="checkbox" id="replacement-case-sensitive" style="${StyleManager.getStyles().dialogs.settingsCheckbox}">
-                                            <label for="replacement-case-sensitive" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">区分大小写</label>
+                                        <div class="am-form-checkbox">
+                                            <input type="checkbox" id="replacement-case-sensitive" class="am-checkbox">
+                                            <label for="replacement-case-sensitive" class="am-form-label" style="margin-bottom: 0;">区分大小写</label>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- 文件名字符处理 -->
-                            <div style="${StyleManager.getStyles().dialogs.settingsSection}">
+                            <div class="am-form-section">
                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme_primary, #0F7AF5)" stroke-width="2" style="margin-right: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--am-accent)" stroke-width="2" style="margin-right: 12px;">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                     </svg>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsSectionTitle}; margin-bottom: 0;">字符处理</div>
+                                    <div class="am-form-section-title" style="margin-bottom: 0;">字符处理</div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                    <label style="${StyleManager.getStyles().dialogs.settingsLabel}">无效字符处理方式</label>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsRow}">
+                                <div class="am-form-item">
+                                    <label class="am-form-label">无效字符处理方式</label>
+                                    <div class="am-form-row">
                                         <div style="flex: 1;">
-                                            <select id="invalid-char-handling" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                            <select id="invalid-char-handling" class="am-select">
                                                 <option value="replace" selected>替换无效字符</option>
                                                 <option value="remove">移除无效字符</option>
                                                 <option value="keep">保留原字符</option>
                                             </select>
                                         </div>
                                         <div style="flex: 0 0 120px; margin-left: 10px;">
-                                            <input type="text" id="invalid-char-replacement" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                            <input type="text" id="invalid-char-replacement" class="am-input" 
                                                    value="_" placeholder="_" maxlength="3">
                                         </div>
                                     </div>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsDescription}">
+                                    <div class="am-form-desc">
                                         自动处理系统不允许的文件名字符（如 &lt; &gt; : " | ? * 等）
                                     </div>
                                 </div>
@@ -835,31 +1619,31 @@
                         <!-- 下载设置面板 -->
                         <div id="settings-panel-download" class="settings-panel" style="display: none;">
                             <!-- 下载行为 -->
-                            <div style="${StyleManager.getStyles().dialogs.settingsSection}">
+                            <div class="am-form-section">
                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme_primary, #0F7AF5)" stroke-width="2" style="margin-right: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--am-accent)" stroke-width="2" style="margin-right: 12px;">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                         <polyline points="7 10 12 15 17 10"/>
                                         <line x1="12" y1="15" x2="12" y2="3"/>
                                     </svg>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsSectionTitle}; margin-bottom: 0;">下载行为</div>
+                                    <div class="am-form-section-title" style="margin-bottom: 0;">下载行为</div>
                                 </div>
                         
-                                <div style="${StyleManager.getStyles().dialogs.settingsRow}">
+                                <div class="am-form-row">
                                     <div>
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">并发下载数</label>
-                                        <select id="concurrent-downloads" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                        <label class="am-form-label">并发下载数</label>
+                                        <select id="concurrent-downloads" class="am-select">
                                             <option value="auto" selected>自动调节 (推荐)</option>
                                             <option value="1">1个文件</option>
                                             <option value="2">2个文件</option>
                                             <option value="3">3个文件</option>
                                             <option value="5">5个文件</option>
                                         </select>
-                                        <div style="${StyleManager.getStyles().dialogs.settingsDescription}">自动调节模式会根据下载成功率动态调整并发数（2-5个文件），提供最佳下载性能</div>
+                                        <div class="am-form-desc">自动调节模式会根据下载成功率动态调整并发数（2-5个文件），提供最佳下载性能</div>
                                     </div>
                                     <div>
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">冲突处理</label>
-                                        <select id="conflict-resolution" style="${StyleManager.getStyles().dialogs.settingsSelect}">
+                                        <label class="am-form-label">冲突处理</label>
+                                        <select id="conflict-resolution" class="am-select">
                                             <option value="rename" selected>自动重命名</option>
                                             <option value="skip">跳过已存在</option>
                                             <option value="overwrite">覆盖文件</option>
@@ -868,29 +1652,29 @@
                                 </div>
                                 
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
-                                    <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                        <input type="checkbox" id="show-progress" style="${StyleManager.getStyles().dialogs.settingsCheckbox}" checked>
-                                        <label for="show-progress" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">显示下载进度</label>
+                                    <div class="am-form-checkbox">
+                                        <input type="checkbox" id="show-progress" class="am-checkbox" checked>
+                                        <label for="show-progress" class="am-form-label" style="margin-bottom: 0;">显示下载进度</label>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                        <input type="checkbox" id="retry-on-fail" style="${StyleManager.getStyles().dialogs.settingsCheckbox}" checked>
-                                        <label for="retry-on-fail" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">失败时自动重试</label>
+                                    <div class="am-form-checkbox">
+                                        <input type="checkbox" id="retry-on-fail" class="am-checkbox" checked>
+                                        <label for="retry-on-fail" class="am-form-label" style="margin-bottom: 0;">失败时自动重试</label>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                        <input type="checkbox" id="verify-downloads" style="${StyleManager.getStyles().dialogs.settingsCheckbox}" checked>
-                                        <label for="verify-downloads" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">验证下载完整性</label>
+                                    <div class="am-form-checkbox">
+                                        <input type="checkbox" id="verify-downloads" class="am-checkbox" checked>
+                                        <label for="verify-downloads" class="am-form-label" style="margin-bottom: 0;">验证下载完整性</label>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                        <input type="checkbox" id="notify-complete" style="${StyleManager.getStyles().dialogs.settingsCheckbox}" checked>
-                                        <label for="notify-complete" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">完成时通知</label>
+                                    <div class="am-form-checkbox">
+                                        <input type="checkbox" id="notify-complete" class="am-checkbox" checked>
+                                        <label for="notify-complete" class="am-form-label" style="margin-bottom: 0;">完成时通知</label>
                                     </div>
                                     
-                                    <div style="${StyleManager.getStyles().dialogs.settingsCheckboxItem}">
-                                        <input type="checkbox" id="auto-compare" style="${StyleManager.getStyles().dialogs.settingsCheckbox}" checked>
-                                        <label for="auto-compare" style="${StyleManager.getStyles().dialogs.settingsLabel}; margin-bottom: 0;">下载完成后自动对比本地</label>
+                                    <div class="am-form-checkbox">
+                                        <input type="checkbox" id="auto-compare" class="am-checkbox" checked>
+                                        <label for="auto-compare" class="am-form-label" style="margin-bottom: 0;">下载完成后自动对比本地</label>
                                     </div>
                                 </div>
                             </div>
@@ -898,54 +1682,54 @@
                     
                         <!-- 过滤规则面板 -->
                         <div id="settings-panel-filter" class="settings-panel" style="display: none;">
-                            <div style="${StyleManager.getStyles().dialogs.settingsSection}">
+                            <div class="am-form-section">
                                 <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme_primary, #0F7AF5)" stroke-width="2" style="margin-right: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--am-accent)" stroke-width="2" style="margin-right: 12px;">
                                         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                                     </svg>
-                                    <div style="${StyleManager.getStyles().dialogs.settingsSectionTitle}; margin-bottom: 0;">文件过滤</div>
+                                    <div class="am-form-section-title" style="margin-bottom: 0;">文件过滤</div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsRow}">
+                                <div class="am-form-row">
                                     <div>
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">最小文件大小 (KB)</label>
-                                        <input type="number" id="min-file-size" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                        <label class="am-form-label">最小文件大小 (KB)</label>
+                                        <input type="number" id="min-file-size" class="am-input" 
                                                placeholder="0" min="0">
                                     </div>
                                     <div>
-                                        <label style="${StyleManager.getStyles().dialogs.settingsLabel}">最大文件大小 (MB)</label>
-                                        <input type="number" id="max-file-size" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                        <label class="am-form-label">最大文件大小 (MB)</label>
+                                        <input type="number" id="max-file-size" class="am-input" 
                                                placeholder="无限制" min="0">
                                     </div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                    <label style="${StyleManager.getStyles().dialogs.settingsLabel}">允许的文件类型</label>
-                                    <input type="text" id="allowed-types" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                <div class="am-form-item">
+                                    <label class="am-form-label">允许的文件类型</label>
+                                    <input type="text" id="allowed-types" class="am-input" 
                                            placeholder="jpg,png,pdf,doc,zip (留空表示允许所有类型)">
-                                    <div style="${StyleManager.getStyles().dialogs.settingsDescription}">用逗号分隔多个文件扩展名，留空表示允许所有类型</div>
+                                    <div class="am-form-desc">用逗号分隔多个文件扩展名，留空表示允许所有类型</div>
                                 </div>
                                 
-                                <div style="${StyleManager.getStyles().dialogs.settingsItem}">
-                                    <label style="${StyleManager.getStyles().dialogs.settingsLabel}">排除的文件类型</label>
-                                    <input type="text" id="excluded-types" style="${StyleManager.getStyles().dialogs.settingsInput}" 
+                                <div class="am-form-item">
+                                    <label class="am-form-label">排除的文件类型</label>
+                                    <input type="text" id="excluded-types" class="am-input" 
                                            placeholder="tmp,log,cache">
-                                    <div style="${StyleManager.getStyles().dialogs.settingsDescription}">用逗号分隔多个文件扩展名</div>
+                                    <div class="am-form-desc">用逗号分隔多个文件扩展名</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
                     <!-- 按钮组 -->
-                    <div style="${StyleManager.getStyles().dialogs.settingsButtonGroup}">
-                        <button id="settings-reset" style="${StyleManager.getStyles().texts.actionButtonSecondary}">
+                    <div class="am-form-actions">
+                        <button id="settings-reset" class="am-btn am-btn--ghost">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
                                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                                 <path d="M3 3v5h5"/>
                             </svg>
                             重置默认
                         </button>
-                        <button id="settings-save" style="${StyleManager.getStyles().texts.actionButton}">
+                        <button id="settings-save" class="am-btn am-btn--primary">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                                 <polyline points="17 21 17 13 7 13 7 21"/>
@@ -1192,22 +1976,10 @@
 
     // 切换设置选项卡
     switchSettingsTab(tabName) {
-        // 切换选项卡激活状态
         document.querySelectorAll('.settings-tab').forEach(tab => {
-            if (tab.dataset.tab === tabName) {
-                tab.classList.add('active');
-                tab.style.borderBottom = '2px solid var(--theme_primary, #0F7AF5)';
-                tab.style.color = 'var(--theme_primary, #0F7AF5)';
-                tab.style.fontWeight = '600';
-            } else {
-                tab.classList.remove('active');
-                tab.style.borderBottom = 'none';
-                tab.style.color = 'var(--base_gray_070, rgba(22, 30, 38, 0.7))';
-                tab.style.fontWeight = 'normal';
-            }
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
         });
-        
-        // 切换面板显示
+
         document.querySelectorAll('.settings-panel').forEach(panel => {
             panel.style.display = 'none';
         });
@@ -1229,8 +2001,8 @@
                 user-select: none;
             }
             .settings-tab:hover:not(.active) {
-                color: var(--theme_primary, #0F7AF5) !important;
-                background: var(--base_gray_005, rgba(20, 46, 77, 0.05));
+                color: var(--am-accent) !important;
+                background: var(--am-bg-subtle);
             }
             .settings-tab:active {
                 transform: translateY(1px);
@@ -1242,8 +2014,8 @@
                 transform: scale(1.1);
             }
             #settings-close-x:hover {
-                background: var(--base_gray_005, rgba(20, 46, 77, 0.05));
-                color: var(--base_gray_100, #13181D);
+                background: var(--am-bg-subtle);
+                color: var(--am-text);
             }
             .settings-panel {
                 animation: fadeIn 0.3s ease-out;
@@ -1953,48 +2725,29 @@
 
     // 显示比对结果对话框
     async showComparisonResults(dirHandle) {
-        // 创建比对结果对话框
-        const dialog = this.createUI('div', {
-            className: 'compare-results-dialog',
-            styles: {
-                position: 'fixed',
-                top: '0',
-                left: '0',
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                zIndex: '100000'
-            }
-        });
+        StyleManager.inject();
 
-        const dialogContent = this.createUI('div', {
-            styles: {
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                maxWidth: '900px',
-                width: '95%',
-                maxHeight: '85vh',
-                overflow: 'auto',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
-            }
-        });
+        const dialog = document.createElement('div');
+        dialog.className = 'am-dialog-overlay compare-results-dialog';
+        dialog.style.zIndex = '100000';
+
+        const dialogContent = document.createElement('div');
+        dialogContent.className = 'am-dialog';
+        dialogContent.style.maxWidth = '900px';
+        dialogContent.style.maxHeight = '85vh';
 
         dialogContent.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0; font-size: 18px; color: #13181D;">文件完整性比对结果</h3>
-                <button class="close-dialog-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">×</button>
+            <div class="am-dialog-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>文件完整性比对结果</span>
+                <button class="close-dialog-btn am-btn am-btn--icon" style="font-size: 20px;">×</button>
             </div>
-            <div id="compare-results" style="display: none;">
-                <div id="compare-summary" style="background: #f8f9fa; padding: 16px; border-radius: 6px; margin-bottom: 16px;">
-                    <div style="text-align: center; padding: 20px;">正在比对文件...</div>
+            <div class="am-dialog-body am-scroll" id="compare-results" style="display: none;">
+                <div id="compare-summary" style="background: var(--am-bg-subtle); padding: var(--am-space-4); border-radius: var(--am-radius-lg); margin-bottom: var(--am-space-4);">
+                    <div class="am-state am-state--loading">正在比对文件...</div>
                 </div>
-                <div id="missing-files" style="margin-bottom: 16px;"></div>
-                <div id="duplicate-files" style="margin-bottom: 16px;"></div>
-                <div id="matched-files" style="margin-bottom: 16px;"></div>
+                <div id="missing-files" style="margin-bottom: var(--am-space-4);"></div>
+                <div id="duplicate-files" style="margin-bottom: var(--am-space-4);"></div>
+                <div id="matched-files" style="margin-bottom: var(--am-space-4);"></div>
             </div>
         `;
 
@@ -2032,15 +2785,15 @@
         // 创建进度显示界面
         const createProgressUI = () => {
             return `
-                <div style="text-align: center; padding: 20px;">
-                    <div style="margin-bottom: 16px;">
-                        <div id="progress-title" style="font-size: 16px; font-weight: 500; color: #13181D; margin-bottom: 8px;">正在比对文件...</div>
-                        <div id="progress-subtitle" style="font-size: 14px; color: #666; margin-bottom: 12px;">准备中...</div>
+                <div style="text-align: center; padding: var(--am-space-5);">
+                    <div style="margin-bottom: var(--am-space-4);">
+                        <div id="progress-title" style="font-size: 16px; font-weight: 500; color: var(--am-text); margin-bottom: var(--am-space-2);">正在比对文件...</div>
+                        <div id="progress-subtitle" style="font-size: 14px; color: var(--am-text-secondary); margin-bottom: var(--am-space-3);">准备中...</div>
                     </div>
-                    <div style="background: #f5f5f5; border-radius: 8px; padding: 4px; margin-bottom: 12px;">
-                        <div id="progress-bar" style="height: 8px; background: linear-gradient(90deg, #0F7AF5, #40a9ff); border-radius: 4px; width: 0%; transition: width 0.3s ease;"></div>
+                    <div class="am-progress" style="height: 8px; margin-bottom: var(--am-space-3);">
+                        <div id="progress-bar" class="am-progress-bar" style="width: 0%;"></div>
                     </div>
-                    <div id="progress-details" style="font-size: 12px; color: #999; display: flex; justify-content: space-between;">
+                    <div id="progress-details" style="font-size: 12px; color: var(--am-text-tertiary); display: flex; justify-content: space-between;">
                         <span id="progress-current">0</span>
                         <span id="progress-total">0</span>
                     </div>
@@ -2102,10 +2855,10 @@
 
         } catch (error) {
             console.error('比对过程中出错:', error);
-            summaryDiv.innerHTML = `<div style="color: #e74c3c; text-align: center; padding: 20px;">
-                <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">比对失败</div>
-                <div style="font-size: 14px; margin-bottom: 12px;">${error.message}</div>
-                <div style="font-size: 12px; color: #999;">
+            summaryDiv.innerHTML = `<div class="am-state am-state--error" style="padding: var(--am-space-5);">
+                <div style="font-size: 16px; font-weight: 500; margin-bottom: var(--am-space-2);">比对失败</div>
+                <div style="font-size: 14px; margin-bottom: var(--am-space-3);">${error.message}</div>
+                <div style="font-size: 12px; color: var(--am-text-tertiary);">
                     请检查：<br>
                     1. 是否已选择正确的文件夹<br>
                     2. 文件夹是否有访问权限<br>
@@ -3631,8 +4384,8 @@
         const validationSettingsBtns = dialogContent.querySelectorAll('.validation-settings-btn');
         validationSettingsBtns.forEach(btn => {
             btn.addEventListener('click', () => this.openValidationSettings());
-            btn.addEventListener('mouseenter', (e) => e.target.style.background = 'var(--theme_primary_hover, #0056b3)');
-            btn.addEventListener('mouseleave', (e) => e.target.style.background = 'var(--theme_primary, #007bff)');
+            btn.addEventListener('mouseenter', (e) => e.target.style.background = 'var(--am-accent-hover)');
+            btn.addEventListener('mouseleave', (e) => e.target.style.background = 'var(--am-accent)');
         });
     }
 
@@ -3844,28 +4597,24 @@
             });
     }
 
-    // 字符串和数据处理工具方法
-    // 统一数据处理工具
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    createSafeDate(data) {
+        if (!data) return null;
+        const ts = typeof data === 'number' && data < 10000000000 ? data * 1000 : data;
+        const date = new Date(ts);
+        return isNaN(date.getTime()) ? null : date;
+    }
+
+    // 向后兼容
     processData(data, operation) {
-        switch (operation) {
-            case 'escapeHtml':
-                const div = document.createElement('div');
-                div.textContent = data;
-                return div.innerHTML;
-            case 'createSafeDate':
-                if (!data) return null;
-                let date;
-                if (typeof data === 'string') {
-                    date = new Date(data);
-                } else if (typeof data === 'number') {
-                    date = new Date(data < 10000000000 ? data * 1000 : data);
-                } else {
-                    date = new Date(data);
-                }
-                return isNaN(date.getTime()) ? null : date;
-            default:
-                return data;
-        }
+        if (operation === 'escapeHtml') return this.escapeHtml(data);
+        if (operation === 'createSafeDate') return this.createSafeDate(data);
+        return data;
     }
 
     // 统一UI工厂
@@ -3888,24 +4637,23 @@
                 break;
             case 'dialog':
                 element = document.createElement('div');
-                StyleManager.applyStyle(element, 'dialogs', 'compareDialog');
+                element.className = 'am-dialog';
                 break;
             case 'menu':
                 element = document.createElement('div');
-                StyleManager.applyStyle(element, 'menus', 'dropdown');
+                element.className = 'am-menu';
                 break;
             case 'menuItem':
                 element = document.createElement('div');
-                StyleManager.applyStyle(element, 'menus', 'item');
+                element.className = 'am-menu-item';
                 if (content) element.textContent = content;
                 break;
             case 'card':
                 element = document.createElement('div');
-                StyleManager.applyStyle(element, 'cards', 'attachment');
+                element.className = 'am-card am-card--attachment';
                 break;
             case 'toolbar':
                 element = document.createElement('div');
-                StyleManager.applyStyle(element, 'toolbars', 'overlay');
                 break;
             default:
                 element = document.createElement(type);
@@ -3972,23 +4720,24 @@
 
 
 
+    static _formatTime(seconds) {
+        if (!seconds || seconds <= 0) return '计算中...';
+        if (seconds < 60) return `${Math.round(seconds)}秒`;
+        if (seconds < 3600) return `${Math.round(seconds / 60)}分钟`;
+        return `${Math.round(seconds / 3600)}小时`;
+    }
+
+    static _FILE_ICONS = {
+        jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️', webp: '🖼️',
+        doc: '📄', docx: '📄', pdf: '📄', txt: '📄', rtf: '📄',
+        xls: '📊', xlsx: '📊', csv: '📊',
+        ppt: '📑', pptx: '📑',
+        zip: '🗜️', rar: '🗜️', '7z': '🗜️', tar: '🗜️', gz: '🗜️'
+    };
+
     getFileIcon(filename) {
         const ext = filename?.split('.').pop()?.toLowerCase() || '';
-        const icons = {
-            // 图片
-            'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'bmp': '🖼️', 'webp': '🖼️',
-            // 文档
-            'doc': '📄', 'docx': '📄', 'pdf': '📄', 'txt': '📄', 'rtf': '📄',
-            // 表格
-            'xls': '📊', 'xlsx': '📊', 'csv': '📊',
-            // 演示文稿
-            'ppt': '📑', 'pptx': '📑',
-            // 压缩包
-            'zip': '🗜️', 'rar': '🗜️', '7z': '🗜️', 'tar': '🗜️', 'gz': '🗜️',
-            // 其他
-            'default': '📎'
-        };
-        return icons[ext] || icons.default;
+        return AttachmentManager._FILE_ICONS[ext] || '📎';
     }
 
     // 获取文件缩略图URL
@@ -4138,12 +4887,10 @@
 
     showSortMenu(button) {
         const rect = button.getBoundingClientRect();
-        const menu = this.createUI('menu', {
-            styles: {
-                top: (rect.bottom + 4) + 'px',
-                left: rect.left + 'px'
-            }
-        });
+        const menu = document.createElement('div');
+        menu.className = 'am-menu';
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.style.left = rect.left + 'px';
 
         const sortOptions = [
             { value: 'date', label: '按日期' },
@@ -4152,13 +4899,14 @@
         ];
 
         sortOptions.forEach(option => {
-            const item = this.createUI('menuItem', { content: option.label });
+            const item = document.createElement('div');
+            item.className = 'am-menu-item';
+            item.textContent = option.label;
 
             if (this.filters.sortBy === option.value) {
-                item.style.background = 'var(--base_gray_005, rgba(20, 46, 77, 0.05))';
-                const orderIcon = this.createUI('span', {
-                    content: this.filters.sortOrder === 'asc' ? '↑' : '↓'
-                });
+                item.style.background = 'var(--am-bg-muted)';
+                const orderIcon = document.createElement('span');
+                orderIcon.textContent = this.filters.sortOrder === 'asc' ? ' ↑' : ' ↓';
                 item.appendChild(orderIcon);
             }
 
@@ -4385,81 +5133,58 @@
     }
 
     async downloadAttachment(attachment, dirHandle, namingStrategy = null) {
-        const attachmentName = attachment.name || 'unknown_attachment';
-
-        try {
             // 获取附件内容
             const response = await this.downloader.fetchAttachment(attachment);
 
             // 确定目标文件夹
             const targetFolderHandle = await this.getTargetFolder(dirHandle, attachment);
 
-            // 检查是否支持文件系统访问API
+            const fileNamingConfig = this.downloadSettings.fileNaming;
+
             if (window.showDirectoryPicker) {
-                try {
-                    const fileNamingConfig = this.downloadSettings.fileNaming;
-                    const baseFileName = this.generateFileName(attachment, fileNamingConfig, this.attachments, namingStrategy);
-                    const finalFileName = await this.handleFileConflict(targetFolderHandle, baseFileName);
+                const baseFileName = this.generateFileName(attachment, fileNamingConfig, this.attachments, namingStrategy);
+                const finalFileName = await this.handleFileConflict(targetFolderHandle, baseFileName);
 
-                    const fileHandle = await targetFolderHandle.getFileHandle(finalFileName, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(response.response);
-                    await writable.close();
+                const fileHandle = await targetFolderHandle.getFileHandle(finalFileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(response.response);
+                await writable.close();
 
-                    // 验证下载完整性
-                    if (this.downloadSettings.downloadBehavior.verifyDownloads) {
-                        const isValid = await this.verifyDownload(fileHandle, response.response.size);
-                        if (!isValid) {
-                            console.warn(`文件 ${finalFileName} 下载验证失败`);
-                        }
+                if (this.downloadSettings.downloadBehavior.verifyDownloads) {
+                    const isValid = await this.verifyDownload(fileHandle, response.response.size);
+                    if (!isValid) {
+                        console.warn(`文件 ${finalFileName} 下载验证失败`);
                     }
-
-                    return true;
-                } catch (error) {
-                    throw error;
                 }
-            } else {
-                try {
-                    // 使用GM_download
-                    const fileNamingConfig = this.downloadSettings.fileNaming;
-                    const blob = response.response;
-                    const url = URL.createObjectURL(blob);
-                    const fileName = this.generateFileName(attachment, fileNamingConfig, this.attachments, namingStrategy);
-
-                    await new Promise((resolve, reject) => {
-                        GM_download({
-                            url: url,
-                            name: fileName,
-                            saveAs: true,
-                                onload: function () {
-                                URL.revokeObjectURL(url);
-                                resolve();
-                            },
-                                onerror: function (error) {
-                                URL.revokeObjectURL(url);
-                                reject(error);
-                            }
-                        });
-                    });
-                    return true;
-                } catch (error) {
-                    throw error;
-                }
+                return true;
             }
-        } catch (error) {
-            throw error;
-        }
+
+            // 回退: 使用 GM_download
+            const blob = response.response;
+            const url = URL.createObjectURL(blob);
+            const fileName = this.generateFileName(attachment, fileNamingConfig, this.attachments, namingStrategy);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    GM_download({
+                        url: url,
+                        name: fileName,
+                        saveAs: true,
+                        onload() { resolve(); },
+                        onerror(error) { reject(error); }
+                    });
+                });
+                return true;
+            } finally {
+                URL.revokeObjectURL(url);
+            }
     }
 
     // 验证下载完整性
     async verifyDownload(fileHandle, expectedSize) {
         try {
-            const file = await fileHandle.getFile();
-            const actualSize = file.size;
-            return actualSize === expectedSize;
-        } catch (error) {
-            return false;
-        }
+            return (await fileHandle.getFile()).size === expectedSize;
+        } catch { return false; }
     }
 
     updateDownloadProgress() {
@@ -4488,29 +5213,15 @@
         }
 
         if (statusElement) {
-            // 确保统计数据有效
-            const completedSize = this.downloadStats.completedSize || 0;
-            const totalSize = this.downloadStats.totalSize || 0;
-            const speed = this.downloadStats.speed || 0;
-            
-            // 计算剩余时间
+            const { completedSize = 0, totalSize = 0, speed = 0 } = this.downloadStats;
             const remainingSize = Math.max(0, totalSize - completedSize);
             const remainingTime = speed > 0 ? remainingSize / speed : 0;
 
-            // 格式化时间
-            const formatTime = (seconds) => {
-                if (!seconds || seconds <= 0) return '计算中...';
-                if (seconds < 60) return `${Math.round(seconds)}秒`;
-                if (seconds < 3600) return `${Math.round(seconds / 60)}分钟`;
-                return `${Math.round(seconds / 3600)}小时`;
-            };
-
-            // 更新状态文本
             statusElement.innerHTML = `
                 ${Math.round(progress)}% -
                 ${this.formatData(completedSize, 'size')} / ${this.formatData(totalSize, 'size')} -
                 ${this.formatData(speed, 'size')}/s -
-                剩余时间: ${formatTime(remainingTime)}
+                剩余时间: ${AttachmentManager._formatTime(remainingTime)}
             `;
         }
     }
@@ -4540,13 +5251,13 @@
     showProgress(message = '正在下载附件...') {
         const progressArea = document.getElementById('attachment-progress-area');
         if (progressArea) {
-            StyleManager.applyStyle(progressArea, 'progress', 'area');
+            progressArea.style.cssText = 'display: block; padding: var(--am-space-4) var(--am-space-5); border-top: 1px solid var(--am-border); background: var(--am-bg); position: absolute; bottom: 0; left: 0; right: 0; z-index: 1001;';
             progressArea.innerHTML = `
-                <div style="margin-bottom: 8px; font-weight: 500; color: var(--base_gray_100, #13181D);">${message}</div>
-                <div style="background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 8px;">
-                    <div id="download-progress-bar" style="background: var(--theme_primary, #0F7AF5); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                <div style="margin-bottom: var(--am-space-2); font-weight: 500; color: var(--am-text);">${message}</div>
+                <div class="am-progress" style="height: 6px; margin-bottom: var(--am-space-2);">
+                    <div id="download-progress-bar" class="am-progress-bar" style="width: 0%;"></div>
                 </div>
-                <div id="download-status" style="font-size: 12px; color: var(--base_gray_050, #888);">准备开始...</div>
+                <div id="download-status" style="font-size: 12px; color: var(--am-text-tertiary);">准备开始...</div>
             `;
         }
     }
@@ -4560,47 +5271,24 @@
     }
 
     showToast(message, type = 'info', duration = 3000) {
+        StyleManager.inject();
         const icon = AttachmentManager.TOAST_ICONS[type];
 
-        const toast = this.createUI('div', {
-            content: `${icon} ${message}`,
-            styles: {
-                ...StyleManager.getStyles().toasts.base,
-                ...StyleManager.getStyles().toastExtensions.custom,
-                borderLeft: `3px solid ${this.getToastColor(type)}`
-            }
-        });
-
-        // 确保动画样式已添加
-        this.ensureToastAnimations();
+        const toast = document.createElement('div');
+        toast.className = `am-toast am-toast--${type}`;
+        toast.innerHTML = `${icon} ${message}`;
 
         document.body.appendChild(toast);
 
+        // 触发显示动画
+        requestAnimationFrame(() => toast.classList.add('show'));
+
         setTimeout(() => {
             if (toast.parentElement) {
-                toast.style.animation = 'slideOut 0.3s ease-out';
+                toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 300);
             }
         }, duration);
-    }
-
-    ensureToastAnimations() {
-        // 检查是否已经添加了动画样式
-        if (document.getElementById('toast-animations')) return;
-        
-        const style = document.createElement('style');
-        style.id = 'toast-animations';
-        style.textContent = `
-            @keyframes slideIn { 
-                from { transform: translateX(100%); opacity: 0; } 
-                to { transform: translateX(0); opacity: 1; } 
-            }
-            @keyframes slideOut { 
-                from { transform: translateX(0); opacity: 1; } 
-                to { transform: translateX(100%); opacity: 0; } 
-            }
-        `;
-        document.head.appendChild(style);
     }
 
     ensureVariableSelectorStyles() {
@@ -4717,10 +5405,10 @@
 
     getToastColor(type) {
         const colors = {
-            success: 'var(--chrome_green, #16F761)',
-            error: 'var(--chrome_red, #F73116)',
-            warning: 'var(--chrome_orange, #F7A316)',
-            info: 'var(--theme_primary, #0F7AF5)'
+            success: 'var(--am-success)',
+            error: 'var(--am-error)',
+            warning: 'var(--am-warning)',
+            info: 'var(--am-accent)'
         };
         return colors[type] || colors.info;
     }
@@ -4823,51 +5511,21 @@
 
     // 统一状态显示方法
     showState(type, message = '', container = null) {
-        // 移除已存在的状态
+        StyleManager.inject();
         const existingState = document.getElementById('attachment-state');
-        if (existingState) {
-            existingState.remove();
-        }
+        if (existingState) existingState.remove();
 
-        const stateDiv = this.createUI('div', {
-            styles: { id: 'attachment-state' }
-        });
+        const stateDiv = document.createElement('div');
         stateDiv.id = 'attachment-state';
 
         if (type === 'loading') {
-            const loadingStyles = StyleManager.getStyles().states.loading;
-            stateDiv.style.cssText = loadingStyles;
-            const spinner = this.createUI('div', {
-                styles: StyleManager.getStyles().states.spinner
-            });
-            const text = this.createUI('div', {
-                content: message || '正在加载附件...',
-                styles: StyleManager.getStyles().progress.text
-            });
-            stateDiv.appendChild(spinner);
-            stateDiv.appendChild(text);
-            StyleManager.addSpinnerAnimation();
+            stateDiv.className = 'am-state am-state--loading';
+            stateDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.95); z-index: 1000;';
+            stateDiv.textContent = message || '正在加载附件...';
         } else if (type === 'error') {
-            const errorStyles = {
-                ...StyleManager.getStyles().toasts.base,
-                ...StyleManager.getStyles().errors.centered,
-                borderLeft: '3px solid var(--chrome_red, #F73116)'
-            };
-            Object.entries(errorStyles).forEach(([key, value]) => {
-                if (typeof value === 'string' || typeof value === 'number') {
-                    stateDiv.style[key] = value;
-                }
-            });
-            const icon = this.createUI('div', {
-                content: '!',
-                styles: StyleManager.getStyles().texts.errorIcon
-            });
-            const text = this.createUI('div', {
-                content: message,
-                styles: StyleManager.getStyles().texts.errorText
-            });
-            stateDiv.appendChild(icon);
-            stateDiv.appendChild(text);
+            stateDiv.className = 'am-state am-state--error';
+            stateDiv.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);';
+            stateDiv.innerHTML = `<div style="font-size: 20px; color: var(--am-error); margin-bottom: var(--am-space-2);">!</div><div style="font-size: 13px; color: var(--am-text);">${message}</div>`;
             setTimeout(() => stateDiv.remove(), 5000);
         }
 
@@ -5022,31 +5680,21 @@
         };
     }
 
-    // 处理文件冲突
     async handleFileConflict(folderHandle, fileName) {
-        try {
-            // 检查文件是否存在
+        let fileExists = false;
         try {
             await folderHandle.getFileHandle(fileName);
-                // 文件已存在，需要处理冲突
-                const conflictResolution = this.downloadSettings.conflictResolution;
-                switch (conflictResolution) {
-                    case 'rename':
-                        return this.generateUniqueFileName(folderHandle, fileName);
-                    case 'overwrite':
-                        return fileName;
-                    case 'skip':
-                        throw new Error(`文件 ${fileName}已存在，跳过下载`);
-                    default:
-                        // 默认使用重命名
-                        return this.generateUniqueFileName(folderHandle, fileName);
-                }
-            } catch (error) {
-                // 文件不存在，直接返回原文件名
-                return fileName;
-            }
-        } catch (error) {
-            throw error;
+            fileExists = true;
+        } catch { /* 文件不存在 */ }
+
+        if (!fileExists) return fileName;
+
+        switch (this.downloadSettings.conflictResolution) {
+            case 'overwrite': return fileName;
+            case 'skip': throw new Error(`文件 ${fileName}已存在，跳过下载`);
+            case 'rename':
+            default:
+                return this.generateUniqueFileName(folderHandle, fileName);
         }
     }
 
@@ -5100,13 +5748,17 @@
         
         const activeDownloads = new Set();
 
-        const processNext = async () => {
-            // 检查是否超过并发限制
-            const currentLimit = useAutoMode ? this.concurrentControl.currentConcurrent : maxConcurrent;
-            if (activeDownloads.size >= currentLimit) {
-                return;
+        const getCurrentLimit = () => useAutoMode ? this.concurrentControl.currentConcurrent : maxConcurrent;
+
+        const tryFillSlots = () => {
+            while (activeDownloads.size < getCurrentLimit() && tasks.some(t => t.status === 'pending')) {
+                processNext();
             }
-            
+        };
+
+        const processNext = async () => {
+            if (activeDownloads.size >= getCurrentLimit()) return;
+
             const pendingTask = tasks.find(t => t.status === 'pending');
             if (!pendingTask) return;
 
@@ -5116,60 +5768,36 @@
                     pendingTask.status = 'completed';
                     results.push({ attachment: pendingTask.attachment, error: null });
                     this.completedTasksForProgress++;
-                    
-                    // 更新下载统计数据
-                    const attachmentSize = pendingTask.attachment.size || 0;
-                    this.updateDownloadStats(attachmentSize);
+                    this.updateDownloadStats(pendingTask.attachment.size || 0);
                     this.updateDownloadProgress();
-                    
-                    // 更新成功统计并调整并发数（仅在自动模式下）
+
                     if (useAutoMode) {
                         this.concurrentControl.successCount++;
                         this.adjustConcurrency();
                     }
-                    
+
                     activeDownloads.delete(downloadPromise);
-                    
-                    // 尝试启动更多任务
-                    const currentLimit = useAutoMode ? this.concurrentControl.currentConcurrent : maxConcurrent;
-                    while (activeDownloads.size < currentLimit && 
-                           tasks.some(t => t.status === 'pending')) {
-                        processNext();
-                    }
+                    tryFillSlots();
                 })
                 .catch(error => {
+                    activeDownloads.delete(downloadPromise);
+
                     if (pendingTask.retries < this.retryCount) {
                         pendingTask.retries++;
                         pendingTask.status = 'pending';
-                        activeDownloads.delete(downloadPromise);
-                        
-                        // 重试时也要考虑并发限制
-                        const currentLimit = useAutoMode ? this.concurrentControl.currentConcurrent : maxConcurrent;
-                        while (activeDownloads.size < currentLimit && 
-                               tasks.some(t => t.status === 'pending')) {
-                            processNext();
-                        }
                     } else {
                         pendingTask.status = 'failed';
                         results.push({ attachment: pendingTask.attachment, error });
                         this.completedTasksForProgress++;
                         this.updateDownloadProgress();
-                        
-                        // 更新失败统计并调整并发数（仅在自动模式下）
+
                         if (useAutoMode) {
                             this.concurrentControl.failCount++;
                             this.adjustConcurrency();
                         }
-                        
-                        activeDownloads.delete(downloadPromise);
-                        
-                        // 尝试启动更多任务
-                        const currentLimit = useAutoMode ? this.concurrentControl.currentConcurrent : maxConcurrent;
-                        while (activeDownloads.size < currentLimit && 
-                               tasks.some(t => t.status === 'pending')) {
-                            processNext();
-                        }
                     }
+
+                    tryFillSlots();
                 });
 
             activeDownloads.add(downloadPromise);
@@ -5918,11 +6546,7 @@
     }
 
     async getOrCreateFolder(parentHandle, folderName) {
-        try {
-            return await parentHandle.getDirectoryHandle(folderName, { create: true });
-        } catch (error) {
-            throw error;
-        }
+        return parentHandle.getDirectoryHandle(folderName, { create: true });
     }
 
     formatDate(dateOrTimestamp, format) {
@@ -6052,7 +6676,7 @@
                     </svg>
                     <div>暂无附件</div>
                 `,
-                styles: StyleManager.getStyles().states.empty
+                className: 'am-state am-state--empty'
             });
             this.attachmentList.appendChild(emptyState);
             return;
@@ -6422,27 +7046,26 @@
 
     createWindowHeader() {
         const header = this.createUI('div', {
-            className: 'attachment-window-header'
+            className: 'am-window-header'
         });
 
         // 窗口标题
         const title = this.createUI('div', {
-            styles: 'display: flex; align-items: center; gap: 12px;',
+            styles: 'display: flex; align-items: center; gap: var(--am-space-3);',
             content: `
-                <div style="font-size: 16px; font-weight: 600; color: var(--base_gray_100, #13181D);">
+                <div style="font-size: 15px; font-weight: 600; color: var(--am-text);">
                 ${this.getFolderDisplayName()}
                 </div>
             `
         });
 
-        // 窗口控制按钮
+        // macOS 风格窗口控制点
         const controls = this.createUI('div', {
-            className: 'attachment-window-controls'
+            styles: 'display: flex; align-items: center; gap: var(--am-space-2);'
         });
 
-        // 最小化按钮
         const minimizeBtn = this.createUI('div', {
-            className: 'attachment-window-button minimize',
+            className: 'am-window-dot am-window-dot--minimize',
             title: '最小化',
             events: {
                 click: (e) => {
@@ -6452,9 +7075,8 @@
             }
         });
 
-        // 最大化按钮
         const maximizeBtn = this.createUI('div', {
-            className: 'attachment-window-button maximize',
+            className: 'am-window-dot am-window-dot--maximize',
             title: '最大化/还原',
             events: {
                 click: (e) => {
@@ -6464,9 +7086,8 @@
             }
         });
 
-        // 关闭按钮
         const closeBtn = this.createUI('div', {
-            className: 'attachment-window-button close',
+            className: 'am-window-dot am-window-dot--close',
             title: '关闭',
             events: {
                 click: (e) => {
@@ -6489,13 +7110,13 @@
     createOverlayPanel() {
         this.removeOverlayPanel();
 
-        // 添加布局样式
-        StyleManager.addLayoutStyles();
+        // 注入设计系统样式
+        StyleManager.inject();
 
         // 创建背景遮罩
         this.overlayBackground = this.createUI('div', {
-            className: 'attachment-floating-overlay',
-            events: { 
+            className: 'am-overlay',
+            events: {
                 click: (e) => {
                     if (e.target === this.overlayBackground) {
                         this.hideAttachmentView();
@@ -6506,7 +7127,7 @@
 
         // 创建浮动窗口
         this.overlayPanel = this.createUI('div', {
-            className: 'attachment-floating-window',
+            className: 'am-window',
             events: { keydown: (e) => e.key === 'Escape' && (e.preventDefault(), this.hideAttachmentView()) }
         });
         this.overlayPanel.id = AttachmentManager.SELECTORS.OVERLAY_PANEL.slice(1);
@@ -6514,10 +7135,10 @@
 
         // 创建窗口标题栏
         const header = this.createWindowHeader();
-        
+
         // 创建窗口内容
         const content = this.createUI('div', {
-            className: 'attachment-window-content',
+            className: 'am-window-content',
             content: this.createNativeAttachmentView()
         });
 
@@ -6542,7 +7163,7 @@
         let startX, startY, startLeft, startTop;
 
         header.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('attachment-window-button')) return;
+            if (e.target.classList.contains('am-window-dot')) return;
             if (this.overlayPanel.classList.contains('maximized')) return;
 
             isDragging = true;
@@ -6590,7 +7211,7 @@
 
         // 双击标题栏最大化/还原
         header.addEventListener('dblclick', (e) => {
-            if (e.target.classList.contains('attachment-window-button')) return;
+            if (e.target.classList.contains('am-window-dot')) return;
             this.toggleMaximize();
         });
     }
@@ -6652,7 +7273,7 @@
         }
 
         // 移除可能遗留的浮动窗口
-        const existingOverlays = document.querySelectorAll('.attachment-floating-overlay');
+        const existingOverlays = document.querySelectorAll('.am-overlay, .attachment-floating-overlay');
         existingOverlays.forEach(overlay => overlay.remove());
 
         // 清理引用
@@ -6670,7 +7291,9 @@
                 return;
             }
             
-            if (element.classList.contains('attachment-floating-overlay') ||
+            if (element.classList.contains('am-overlay') ||
+                element.classList.contains('am-window') ||
+                element.classList.contains('attachment-floating-overlay') ||
                 element.classList.contains('attachment-floating-window') ||
                 element.classList.contains('attachment-toast') ||
                 element.classList.contains('attachment-menu') ||
@@ -6784,20 +7407,15 @@
 
 
 
-        // 简化的原生附件视图，适配浮动窗口
     createNativeAttachmentView() {
         return `
-            <div class="mail-list-page-items" style="border: none; box-shadow: none; height: 100%; overflow: hidden;">
-                <div class="mail-list-page-items-inner" style="border: none; border-radius: 0; box-shadow: none; margin: 0; height: 100%; display: flex; flex-direction: column;">
-                    <div class="xmail-ui-float-scroll" style="border: none; flex: 1; overflow: hidden;">
-                        <div class="ui-float-scroll-body" tabindex="0" style="padding: 0; height: 100%; overflow-y: auto;">
-                            <div id="attachment-content-area" style="padding: 20px; min-height: 100%;">
-                                <!-- Bento Grid统计信息将在这里显示 -->
-                            </div>
-                        </div>
+            <div class="am-scroll" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; height: 100%;">
+                <div class="am-scroll" tabindex="0" style="flex: 1; overflow-y: auto;">
+                    <div id="attachment-content-area" style="padding: var(--am-space-5); min-height: 100%;">
+                        <!-- 统计信息和附件网格将在这里显示 -->
                     </div>
-                    <div id="attachment-progress-area" style="display: none; border: none; margin: 0; position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--base_gray_010, #e9e9e9); z-index: 1001;"></div>
                 </div>
+                <div id="attachment-progress-area" style="display: none; position: absolute; bottom: 0; left: 0; right: 0; background: var(--am-bg); border-top: 1px solid var(--am-border); z-index: 1001;"></div>
             </div>
         `;
     }
@@ -6812,7 +7430,7 @@
         document.getElementById('attachment-state')?.remove();
 
         if (!attachments?.length) {
-            container.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">当前文件夹暂无附件</div>`;
+            container.innerHTML = `<div class="am-state am-state--empty">当前文件夹暂无附件</div>`;
             this.updateMailCount([]);
             return;
         }
@@ -6824,46 +7442,44 @@
 
             displayBentoGrid(attachments, container) {
         const bentoGrid = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoGrid
+            className: 'am-bento'
         });
 
         // 立即显示的基础统计
         const basicStats = this.calculateBasicStats(attachments);
-        
+
         // 1. 标题栏
         const headerCard = this.createHeaderCard();
         bentoGrid.appendChild(headerCard);
-        
+
         // 2. 主要功能行（下载卡片 + 快速操作）
         const mainFunctionRow = this.createMainFunctionRow();
         bentoGrid.appendChild(mainFunctionRow);
-        
-        // 添加分隔线
-        const divider1 = this.createUI('div', {
-            styles: 'height: 1px; background: linear-gradient(90deg, transparent, var(--base_gray_010, rgba(22, 46, 74, 0.1)), transparent); margin: 8px 0;'
-        });
+
+        // 分隔线
+        const divider1 = this.createUI('div', { className: 'am-divider' });
         bentoGrid.appendChild(divider1);
-        
+
         // 3. 邮件统计卡片
         const mailStatsCard = this.createMailStatsCard(basicStats.totalMails);
         bentoGrid.appendChild(mailStatsCard);
-        
+
         // 4. 无附件邮件详细列表
         const noAttachmentListCard = this.createNoAttachmentListCard();
         bentoGrid.appendChild(noAttachmentListCard);
-        
+
         // 5. 文件类型和问题文件统计行
         const fileTypeRow = this.createFileTypeRow();
         bentoGrid.appendChild(fileTypeRow);
-        
+
         // 6. 命名异常附件详细列表
         const invalidNamingListCard = this.createInvalidNamingListCard();
         bentoGrid.appendChild(invalidNamingListCard);
-        
+
         // 7. 重复附件详细列表
         const duplicateAttachmentsListCard = this.createDuplicateAttachmentsListCard();
         bentoGrid.appendChild(duplicateAttachmentsListCard);
-        
+
         container.appendChild(bentoGrid);
         
         // 更新文件夹结构预览
@@ -7127,7 +7743,7 @@
     // 更新无附件邮件列表
     updateNoAttachmentList() {
         const container = document.getElementById('no-attachment-list-container');
-        const listCard = container?.closest('.bento-card');
+        const listCard = container?.closest('.am-list-card');
         
         if (!container) return;
         
@@ -7135,16 +7751,16 @@
         
         if (data.length === 0) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 20px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                <div style="text-align: center; padding: 20px; color: var(--am-text-secondary);">
                     暂无无附件邮件
                 </div>
             `;
-            if (listCard) listCard.style.display = 'none';
+            if (listCard) listCard.classList.remove('visible');
             return;
         }
         
         // 显示列表卡片
-        if (listCard) listCard.style.display = 'block';
+        if (listCard) listCard.classList.add('visible');
         
         // 只显示前5条，超过5条显示"查看更多"
         const displayData = data.slice(0, 5);
@@ -7166,9 +7782,9 @@
         // 添加"更多"提示
         if (hasMore) {
             const moreDiv = document.createElement('div');
-            moreDiv.style.cssText = 'padding: 12px; text-align: center; border-top: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); margin-top: 8px;';
+            moreDiv.style.cssText = 'padding: 12px; text-align: center; border-top: 1px solid var(--am-border); margin-top: 8px;';
             moreDiv.innerHTML = `
-                <span style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                <span style="font-size: 12px; color: var(--am-text-secondary);">
                     还有 ${data.length - 5} 封邮件未显示
                 </span>
             `;
@@ -7181,7 +7797,7 @@
     // 更新命名异常附件列表
     updateInvalidNamingList() {
         const container = document.getElementById('invalid-naming-list-container');
-        const listCard = container?.closest('.bento-card');
+        const listCard = container?.closest('.am-list-card');
         
         if (!container) return;
         
@@ -7193,19 +7809,19 @@
         
         if (data.length === 0) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 20px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                <div style="text-align: center; padding: 20px; color: var(--am-text-secondary);">
                     <div style="margin-bottom: 8px;">暂无命名异常附件</div>
-                    <div style="font-size: 11px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5));">
+                    <div style="font-size: 11px; color: var(--am-text-tertiary);">
                         ${validationStatus}
                     </div>
                 </div>
             `;
-            if (listCard) listCard.style.display = 'none';
+            if (listCard) listCard.classList.remove('visible');
             return;
         }
         
         // 显示列表卡片
-        if (listCard) listCard.style.display = 'block';
+        if (listCard) listCard.classList.add('visible');
         
         // 只显示前5条，超过5条显示"查看更多"
         const displayData = data.slice(0, 5);
@@ -7216,10 +7832,10 @@
         
         // 创建验证规则提示
         const validationInfo = document.createElement('div');
-        validationInfo.style.cssText = 'margin-bottom: 12px; padding: 8px; background: var(--base_gray_005, rgba(22, 46, 74, 0.05)); border-radius: 6px; border-left: 3px solid var(--theme_primary, #007bff);';
+        validationInfo.style.cssText = 'margin-bottom: 12px; padding: 8px; background: var(--am-bg-subtle); border-radius: 6px; border-left: 3px solid var(--am-accent);';
         validationInfo.innerHTML = `
-            <div style="font-size: 12px; color: var(--base_gray_070, rgba(22, 30, 38, 0.7)); margin-bottom: 2px;">当前验证规则</div>
-            <div style="font-size: 11px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">${validationStatus}</div>
+            <div style="font-size: 12px; color: var(--am-text-secondary); margin-bottom: 2px;">当前验证规则</div>
+            <div style="font-size: 11px; color: var(--am-text-secondary);">${validationStatus}</div>
         `;
         
         // 创建主容器
@@ -7235,9 +7851,9 @@
         // 添加"更多"提示
         if (hasMore) {
             const moreDiv = document.createElement('div');
-            moreDiv.style.cssText = 'padding: 12px; text-align: center; border-top: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); margin-top: 8px;';
+            moreDiv.style.cssText = 'padding: 12px; text-align: center; border-top: 1px solid var(--am-border); margin-top: 8px;';
             moreDiv.innerHTML = `
-                <span style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                <span style="font-size: 12px; color: var(--am-text-secondary);">
                     还有 ${data.length - 5} 个异常附件未显示
                 </span>
             `;
@@ -7268,7 +7884,7 @@
     // 更新重复附件列表
     updateDuplicateAttachmentsList() {
         const container = document.getElementById('duplicate-attachments-list-container');
-        const listCard = container?.closest('.bento-card');
+        const listCard = container?.closest('.am-list-card');
         
         if (!container) return;
         
@@ -7276,16 +7892,16 @@
         
         if (data.length === 0) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 20px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                <div style="text-align: center; padding: 20px; color: var(--am-text-secondary);">
                     暂无重复附件
                 </div>
             `;
-            if (listCard) listCard.style.display = 'none';
+            if (listCard) listCard.classList.remove('visible');
             return;
         }
         
         // 显示列表卡片
-        if (listCard) listCard.style.display = 'block';
+        if (listCard) listCard.classList.add('visible');
         
         // 按重复组分组显示
         const groupedData = this.groupDuplicateAttachments(data);
@@ -7308,9 +7924,9 @@
         // 添加"更多"提示
         if (hasMore) {
             const moreDiv = document.createElement('div');
-            moreDiv.style.cssText = 'padding: 12px; text-align: center; border-top: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); margin-top: 8px;';
+            moreDiv.style.cssText = 'padding: 12px; text-align: center; border-top: 1px solid var(--am-border); margin-top: 8px;';
             moreDiv.innerHTML = `
-                <span style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                <span style="font-size: 12px; color: var(--am-text-secondary);">
                     还有 ${groupedData.length - 3} 组重复文件未显示
                 </span>
             `;
@@ -7361,24 +7977,23 @@
         }));
         
         const groupDiv = document.createElement('div');
-        groupDiv.style.cssText = 'padding: 12px; background: var(--base_gray_005, rgba(22, 46, 74, 0.05)); border-radius: 6px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1));';
-        
-        // 创建头部信息
+        groupDiv.className = 'am-group-card';
+
         const headerDiv = document.createElement('div');
-        headerDiv.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;';
+        headerDiv.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--am-space-2);';
         headerDiv.innerHTML = `
             <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 500; color: var(--base_gray_090, rgba(22, 30, 38, 0.9)); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${fileName}</div>
-                <div style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); display: flex; align-items: center; gap: 8px;">
-                    <span style="background: var(--theme_warning_light, rgba(255, 193, 7, 0.1)); color: var(--theme_warning, #ffc107); padding: 1px 4px; border-radius: 3px; font-size: 11px;">重复 ${duplicateCount} 次</span>
+                <div class="am-text-truncate" style="font-weight: 500; color: var(--am-text); margin-bottom: 2px; font-size: 14px;">${fileName}</div>
+                <div style="font-size: 12px; color: var(--am-text-secondary); display: flex; align-items: center; gap: var(--am-space-2);">
+                    <span class="am-tag am-tag--warning">重复 ${duplicateCount} 次</span>
                     <span>${fileSize}</span>
                 </div>
             </div>
         `;
-        
-        // 创建附件列表容器
+
         const itemsContainer = document.createElement('div');
-        itemsContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto;';
+        itemsContainer.className = 'am-scroll';
+        itemsContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px; max-height: 120px;';
         
         // 添加附件项目
         groupWithLatestFlag.forEach((attachment, index) => {
@@ -7403,22 +8018,23 @@
         const senderEmail = attachment.senderEmail || attachment.sender || '';
         
         const div = document.createElement('div');
-        div.style.cssText = `padding: 8px; background: white; border-radius: 4px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); cursor: pointer; transition: all 0.2s;`;
+        div.className = 'am-list-item';
+        div.style.cssText = 'padding: var(--am-space-2);';
         div.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--am-space-2);">
                 <div style="flex: 1; min-width: 0;">
-                    <div style="font-size: 12px; color: var(--base_gray_070, rgba(22, 30, 38, 0.7)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <div class="am-text-truncate" style="font-size: 12px; color: var(--am-text-secondary); display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
                         <span>来自邮件: ${mailSubject}</span>
-                        ${isLatest ? '<span style="background: var(--theme_success, #28a745); color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; font-weight: 500;">最新</span>' : ''}
+                        ${isLatest ? '<span class="am-tag am-tag--success">最新</span>' : ''}
                     </div>
-                    <div style="font-size: 10px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); margin-bottom: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div class="am-text-truncate" style="font-size: 10px; color: var(--am-text-tertiary); margin-bottom: 1px;">
                         发件人: ${senderName}${senderEmail ? ` (${senderEmail})` : ''}
                     </div>
-                    <div style="font-size: 10px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div class="am-text-truncate" style="font-size: 10px; color: var(--am-text-tertiary);">
                         时间: ${dateStr}
                     </div>
                 </div>
-                <div style="color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); font-size: 10px;">
+                <div style="color: var(--am-text-tertiary);">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                         <polyline points="15 3 21 3 21 9"/>
@@ -7427,37 +8043,31 @@
                 </div>
             </div>
         `;
-        
-        // 添加事件监听器
+
         div.addEventListener('click', () => this.openMail(mailId));
-        div.addEventListener('mouseenter', (e) => e.target.style.background = 'var(--base_gray_005, rgba(22, 46, 74, 0.05))');
-        div.addEventListener('mouseleave', (e) => e.target.style.background = 'white');
         
         return div;
     }
 
-    // 渲染紧凑的邮件项目
     renderCompactMailItem(mail, index) {
         const subject = mail.subject;
         const senderData = mail.senders?.item?.[0];
         const senderName = senderData?.name || senderData?.nick || '未知发件人';
         const senderEmail = senderData?.email || '';
-        // 修复时间字段：使用totime而不是date
         const timestamp = mail.totime || mail.date;
         const date = timestamp ? this.formatDate(this.processData(timestamp, 'createSafeDate'), 'MM-DD HH:mm') : '未知时间';
-        // 修复邮件ID字段：使用emailid而不是id
         const mailId = mail.emailid || mail.id;
-        
+
         const div = document.createElement('div');
-        div.style.cssText = `padding: 12px; background: var(--base_gray_005, rgba(22, 46, 74, 0.05)); border-radius: 6px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); cursor: pointer; transition: all 0.2s;`;
+        div.className = 'am-list-item';
         div.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--am-space-3);">
                 <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 500; color: var(--base_gray_090, rgba(22, 30, 38, 0.9)); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${subject}</div>
-                    <div style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">发件人: ${senderName}${senderEmail ? ` (${senderEmail})` : ''}</div>
-                    <div style="font-size: 11px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">时间: ${date}</div>
+                    <div class="am-text-truncate" style="font-weight: 500; color: var(--am-text); margin-bottom: 3px; font-size: 14px;">${subject}</div>
+                    <div class="am-text-truncate" style="font-size: 12px; color: var(--am-text-secondary); margin-bottom: 2px;">发件人: ${senderName}${senderEmail ? ` (${senderEmail})` : ''}</div>
+                    <div class="am-text-truncate" style="font-size: 11px; color: var(--am-text-tertiary);">时间: ${date}</div>
                 </div>
-                <div style="color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); font-size: 12px;">
+                <div style="color: var(--am-text-tertiary);">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                         <polyline points="15 3 21 3 21 9"/>
@@ -7466,16 +8076,11 @@
                 </div>
             </div>
         `;
-        
-        // 添加事件监听器
+
         div.addEventListener('click', () => this.openMail(mailId));
-        div.addEventListener('mouseenter', (e) => e.target.style.background = 'var(--base_gray_010, rgba(22, 46, 74, 0.1))');
-        div.addEventListener('mouseleave', (e) => e.target.style.background = 'var(--base_gray_005, rgba(22, 46, 74, 0.05))');
-        
         return div;
     }
 
-    // 渲染紧凑的附件项目
     renderCompactAttachmentItem(attachment, index) {
         const fileName = attachment.name;
         const fileSize = this.formatFileSize(parseInt(attachment.size) || parseInt(attachment.filesize));
@@ -7486,35 +8091,32 @@
         const senderEmail = attachment.senderEmail || attachment.sender || '';
         const attachmentDate = this.processData(attachment.date || attachment.totime, 'createSafeDate');
         const dateStr = attachmentDate ? this.formatDate(attachmentDate, 'MM-DD HH:mm') : '未知时间';
-        
-        // 获取文件图标和缩略图
+
         const fileIcon = this.getFileIcon(fileName);
         const thumbnailUrl = this.getThumbnailUrl(attachment);
         const supportsThumbnail = this.supportsThumbnail(fileName);
-        
+
         const div = document.createElement('div');
-        div.style.cssText = `padding: 12px; background: var(--base_gray_005, rgba(22, 46, 74, 0.05)); border-radius: 6px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); cursor: pointer; transition: all 0.2s;`;
+        div.className = 'am-list-item';
         div.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-                <!-- 文件图标/缩略图 -->
-                <div class="file-preview-container" style="width: 36px; height: 36px; border-radius: 6px; background: var(--base_gray_010, rgba(22, 46, 74, 0.1)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; position: relative;">
-                    ${supportsThumbnail && thumbnailUrl ? 
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--am-space-3);">
+                <div class="file-preview-container" style="width: 36px; height: 36px; border-radius: var(--am-radius-md); background: var(--am-bg-muted); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; position: relative;">
+                    ${supportsThumbnail && thumbnailUrl ?
                         `<img class="file-thumbnail" src="${thumbnailUrl}" alt="${fileName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 5px; opacity: 0; transition: opacity 0.3s;" data-fallback-icon="${fileIcon}">
-                         <span class="file-icon-fallback" style="font-size: 14px; display: none; position: absolute; width: 100%; height: 100%; align-items: center; justify-content: center;">${fileIcon}</span>` : 
+                         <span class="file-icon-fallback" style="font-size: 14px; display: none; position: absolute; width: 100%; height: 100%; align-items: center; justify-content: center;">${fileIcon}</span>` :
                         `<span style="font-size: 14px;">${fileIcon}</span>`
                     }
                 </div>
-                
                 <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 500; color: var(--base_gray_090, rgba(22, 30, 38, 0.9)); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                    <div class="am-text-truncate" style="font-weight: 500; color: var(--am-text); margin-bottom: 3px; font-size: 14px; display: flex; align-items: center; gap: 6px;">
                         <span>${fileName}</span>
-                        ${invalidReason ? `<span style="background: var(--theme_danger_light, rgba(220, 53, 69, 0.1)); color: var(--theme_danger, #dc3545); padding: 1px 4px; border-radius: 3px; font-size: 10px;">${invalidReason}</span>` : ''}
+                        ${invalidReason ? `<span class="am-tag am-tag--error">${invalidReason}</span>` : ''}
                     </div>
-                    <div style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">大小: ${fileSize} · 时间: ${dateStr}</div>
-                    <div style="font-size: 11px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); margin-bottom: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">来自邮件: ${mailSubject}</div>
-                    <div style="font-size: 11px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">发件人: ${senderName}${senderEmail ? ` (${senderEmail})` : ''}</div>
+                    <div class="am-text-truncate" style="font-size: 12px; color: var(--am-text-secondary); margin-bottom: 2px;">大小: ${fileSize} · 时间: ${dateStr}</div>
+                    <div class="am-text-truncate" style="font-size: 11px; color: var(--am-text-tertiary); margin-bottom: 1px;">来自邮件: ${mailSubject}</div>
+                    <div class="am-text-truncate" style="font-size: 11px; color: var(--am-text-tertiary);">发件人: ${senderName}${senderEmail ? ` (${senderEmail})` : ''}</div>
                 </div>
-                <div style="color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); font-size: 12px;">
+                <div style="color: var(--am-text-tertiary);">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                         <polyline points="15 3 21 3 21 9"/>
@@ -7523,29 +8125,16 @@
                 </div>
             </div>
         `;
-        
-        // 添加事件监听器
+
         div.addEventListener('click', () => this.openMail(mailId));
-        div.addEventListener('mouseenter', (e) => e.target.style.background = 'var(--base_gray_010, rgba(22, 46, 74, 0.1))');
-        div.addEventListener('mouseleave', (e) => e.target.style.background = 'var(--base_gray_005, rgba(22, 46, 74, 0.05))');
-        
-        // 为缩略图添加事件监听器
+
         const thumbnailImg = div.querySelector('.file-thumbnail');
         const fallbackIcon = div.querySelector('.file-icon-fallback');
-        
         if (thumbnailImg && fallbackIcon) {
-            // 图片加载成功
-            thumbnailImg.addEventListener('load', () => {
-                thumbnailImg.style.opacity = '1';
-            });
-            
-            // 图片加载失败，显示fallback图标
-            thumbnailImg.addEventListener('error', () => {
-                thumbnailImg.style.display = 'none';
-                fallbackIcon.style.display = 'flex';
-            });
+            thumbnailImg.addEventListener('load', () => { thumbnailImg.style.opacity = '1'; });
+            thumbnailImg.addEventListener('error', () => { thumbnailImg.style.display = 'none'; fallbackIcon.style.display = 'flex'; });
         }
-        
+
         return div;
     }
 
@@ -7636,33 +8225,33 @@
             content: `
                 <div style="background: white; border-radius: 12px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); width: 95%; max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
                     <!-- 头部区域 -->
-                    <div style="padding: 24px; border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); display: flex; align-items: center; justify-content: space-between;">
+                    <div style="padding: 24px; border-bottom: 1px solid var(--am-border); display: flex; align-items: center; justify-content: space-between;">
                         <div style="flex: 1;">
-                            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: var(--base_gray_090, rgba(22, 30, 38, 0.9));">${title}</h3>
-                            <p id="list-stats" style="margin: 4px 0 0 0; font-size: 14px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: var(--am-text);">${title}</h3>
+                            <p id="list-stats" style="margin: 4px 0 0 0; font-size: 14px; color: var(--am-text-secondary);">
                                 ${title.includes('重复附件') ? 
                                     `共 <span id="total-count">${data.length}</span> 组重复文件 · 显示 <span id="showing-count">${Math.min(data.length, 20)}</span> 组` :
                                     `共 <span id="total-count">${data.length}</span> 项 · 显示 <span id="showing-count">${Math.min(data.length, 20)}</span> 项`
                                 }
                             </p>
                         </div>
-                        <button id="close-detail-dialog" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); padding: 8px; border-radius: 6px; transition: all 0.2s; margin-left: 16px;">×</button>
+                        <button id="close-detail-dialog" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--am-text-secondary); padding: 8px; border-radius: 6px; transition: all 0.2s; margin-left: 16px;">×</button>
                     </div>
                     
                     <!-- 工具栏区域 -->
-                    <div style="padding: 16px 24px; border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); background: var(--base_gray_005, rgba(22, 46, 74, 0.05));">
+                    <div style="padding: 16px 24px; border-bottom: 1px solid var(--am-border); background: var(--am-bg-subtle);">
                         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                             <!-- 搜索框 -->
                             <div style="flex: 1; min-width: 200px; position: relative;">
-                                <input id="detail-search" type="text" placeholder="搜索..." style="width: 70%; padding: 8px 12px 8px 36px; border: 1px solid var(--base_gray_020, rgba(22, 46, 74, 0.2)); border-radius: 6px; font-size: 14px; outline: none; transition: all 0.2s;">
-                                <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5));" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <input id="detail-search" type="text" placeholder="搜索..." style="width: 70%; padding: 8px 12px 8px 36px; border: 1px solid var(--am-border-strong); border-radius: 6px; font-size: 14px; outline: none; transition: all 0.2s;">
+                                <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--am-text-tertiary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="11" cy="11" r="8"></circle>
                                     <path d="m21 21-4.35-4.35"></path>
                                 </svg>
                             </div>
                             
                             <!-- 排序选择 -->
-                            <select id="detail-sort" style="padding: 8px 12px; border: 1px solid var(--base_gray_020, rgba(22, 46, 74, 0.2)); border-radius: 6px; font-size: 14px; background: white; cursor: pointer;">
+                            <select id="detail-sort" style="padding: 8px 12px; border: 1px solid var(--am-border-strong); border-radius: 6px; font-size: 14px; background: white; cursor: pointer;">
                                 <option value="default">默认排序</option>
                                 <option value="name">按名称排序</option>
                                 <option value="time">按时间排序</option>
@@ -7670,7 +8259,7 @@
                             </select>
                             
                             <!-- 显示数量选择 -->
-                            <select id="detail-page-size" style="padding: 8px 12px; border: 1px solid var(--base_gray_020, rgba(22, 46, 74, 0.2)); border-radius: 6px; font-size: 14px; background: white; cursor: pointer;">
+                            <select id="detail-page-size" style="padding: 8px 12px; border: 1px solid var(--am-border-strong); border-radius: 6px; font-size: 14px; background: white; cursor: pointer;">
                                 <option value="20">显示 20 项</option>
                                 <option value="50">显示 50 项</option>
                                 <option value="100">显示 100 项</option>
@@ -7678,7 +8267,7 @@
                             </select>
                             
                             <!-- 刷新按钮 -->
-                            <button id="detail-refresh" style="padding: 8px 12px; background: var(--theme_primary, #0F7AF5); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <button id="detail-refresh" style="padding: 8px 12px; background: var(--am-accent); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="23 4 23 10 17 10"></polyline>
                                     <polyline points="1 20 1 14 7 14"></polyline>
@@ -7697,14 +8286,14 @@
                         
                         <!-- 加载更多按钮 -->
                         <div id="load-more-section" style="padding: 16px; text-align: center; margin-top: 16px; display: none;">
-                            <button id="load-more-items" style="background: var(--theme_primary, #0F7AF5); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                            <button id="load-more-items" style="background: var(--am-accent); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s;">
                                 加载更多
                                     </button>
                                 </div>
                         
                         <!-- 空状态提示 -->
-                        <div id="empty-state" style="text-align: center; padding: 40px 20px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); display: none;">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 16px; color: var(--base_gray_040, rgba(22, 30, 38, 0.4));">
+                        <div id="empty-state" style="text-align: center; padding: 40px 20px; color: var(--am-text-secondary); display: none;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 16px; color: var(--am-text-tertiary);">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <path d="m21 21-4.35-4.35"></path>
                             </svg>
@@ -7806,11 +8395,11 @@
                         
                         // 悬停效果
                         duplicateItem.addEventListener('mouseenter', () => {
-                            duplicateItem.style.background = 'var(--base_gray_010, rgba(22, 46, 74, 0.1))';
+                            duplicateItem.style.background = 'var(--am-border)';
                         });
                         
                         duplicateItem.addEventListener('mouseleave', () => {
-                            duplicateItem.style.background = 'var(--base_gray_005, rgba(22, 46, 74, 0.05))';
+                            duplicateItem.style.background = 'var(--am-bg-subtle)';
                         });
                     });
                 } else {
@@ -7994,12 +8583,12 @@
         
         // 搜索框焦点样式
         elements.searchInput.addEventListener('focus', () => {
-            elements.searchInput.style.borderColor = 'var(--theme_primary, #0F7AF5)';
+            elements.searchInput.style.borderColor = 'var(--am-accent)';
             elements.searchInput.style.boxShadow = '0 0 0 2px rgba(15, 122, 245, 0.2)';
         });
         
         elements.searchInput.addEventListener('blur', () => {
-            elements.searchInput.style.borderColor = 'var(--base_gray_020, rgba(22, 46, 74, 0.2))';
+            elements.searchInput.style.borderColor = 'var(--am-border-strong)';
             elements.searchInput.style.boxShadow = 'none';
         });
         
@@ -8027,25 +8616,25 @@
         const mailId = mail.emailid || mail.id;
         
         const element = this.createUI('div', {
-            styles: `padding: 12px; background: white; border-radius: 8px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); cursor: pointer; transition: all 0.2s; margin-bottom: 8px;`,
+            styles: `padding: 12px; background: white; border-radius: 8px; border: 1px solid var(--am-border); cursor: pointer; transition: all 0.2s; margin-bottom: 8px;`,
             content: `
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                            <div style="font-weight: 600; color: var(--base_gray_090, rgba(22, 30, 38, 0.9)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; flex: 1; margin-right: 12px;">
+                            <div style="font-weight: 600; color: var(--am-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; flex: 1; margin-right: 12px;">
                                 ${subject}
                         </div>
-                            <div style="font-size: 12px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); white-space: nowrap;">
+                            <div style="font-size: 12px; color: var(--am-text-tertiary); white-space: nowrap;">
                                 ${date}
                         </div>
                     </div>
                         <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="font-size: 13px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                            <div style="font-size: 13px; color: var(--am-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
                                 ${senderName}
                             </div>
                         </div>
                     </div>
-                    <div style="color: var(--base_gray_040, rgba(22, 30, 38, 0.4)); margin-left: 12px;">
+                    <div style="color: var(--am-text-tertiary); margin-left: 12px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                             <polyline points="15 3 21 3 21 9"/>
@@ -8056,7 +8645,7 @@
             `,
             events: {
                 click: () => this.openMail(mailId),
-                mouseenter: (e) => e.target.style.background = 'var(--base_gray_005, rgba(22, 46, 74, 0.05))',
+                mouseenter: (e) => e.target.style.background = 'var(--am-bg-subtle)',
                 mouseleave: (e) => e.target.style.background = 'white'
             }
         });
@@ -8082,12 +8671,12 @@
         const supportsThumbnail = this.supportsThumbnail(fileName);
         
         const element = this.createUI('div', {
-            styles: `padding: 12px; background: white; border-radius: 8px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); cursor: pointer; transition: all 0.2s; margin-bottom: 8px;`,
+            styles: `padding: 12px; background: white; border-radius: 8px; border: 1px solid var(--am-border); cursor: pointer; transition: all 0.2s; margin-bottom: 8px;`,
             content: `
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
                         <!-- 文件图标/缩略图 -->
-                        <div class="file-preview-container" style="width: 48px; height: 48px; border-radius: 6px; background: var(--base_gray_005, rgba(22, 46, 74, 0.05)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); overflow: hidden; position: relative;">
+                        <div class="file-preview-container" style="width: 48px; height: 48px; border-radius: 6px; background: var(--am-bg-subtle); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--am-border); overflow: hidden; position: relative;">
                             ${supportsThumbnail && thumbnailUrl ? 
                                 `<img class="file-thumbnail" src="${thumbnailUrl}" alt="${fileName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 5px; opacity: 0; transition: opacity 0.3s;" data-fallback-icon="${fileIcon}">
                                  <span class="file-icon-fallback" style="font-size: 16px; display: none; position: absolute; width: 100%; height: 100%; align-items: center; justify-content: center;">${fileIcon}</span>` : 
@@ -8098,25 +8687,25 @@
                         <!-- 文件信息 -->
                     <div style="flex: 1; min-width: 0;">
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                <div style="font-weight: 600; color: var(--base_gray_090, rgba(22, 30, 38, 0.9)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; flex: 1;">
+                                <div style="font-weight: 600; color: var(--am-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; flex: 1;">
                                     ${fileName}
                         </div>
-                                ${isLatest ? '<span style="background: var(--theme_success, #28a745); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; white-space: nowrap;">最新</span>' : ''}
-                                ${invalidReason ? `<span style="background: var(--theme_danger_light, rgba(220, 53, 69, 0.1)); color: var(--theme_danger, #dc3545); padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap;">${invalidReason}</span>` : ''}
+                                ${isLatest ? '<span style="background: var(--am-success); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; white-space: nowrap;">最新</span>' : ''}
+                                ${invalidReason ? `<span style="background: var(--am-error-subtle); color: var(--am-error); padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap;">${invalidReason}</span>` : ''}
                         </div>
-                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--am-text-secondary);">
                                 <span>${fileSize}</span>
                                 <span>•</span>
                                 <span>${dateStr}</span>
                                 <span>•</span>
                                 <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${senderName}</span>
                     </div>
-                            <div style="font-size: 11px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <div style="font-size: 11px; color: var(--am-text-tertiary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                 来自: ${mailSubject}
                             </div>
                         </div>
                     </div>
-                    <div style="color: var(--base_gray_040, rgba(22, 30, 38, 0.4)); margin-left: 12px;">
+                    <div style="color: var(--am-text-tertiary); margin-left: 12px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                             <polyline points="15 3 21 3 21 9"/>
@@ -8127,7 +8716,7 @@
             `,
             events: {
                 click: () => this.openMail(mailId),
-                mouseenter: (e) => e.target.style.background = 'var(--base_gray_005, rgba(22, 46, 74, 0.05))',
+                mouseenter: (e) => e.target.style.background = 'var(--am-bg-subtle)',
                 mouseleave: (e) => e.target.style.background = 'white'
             }
         });
@@ -8166,11 +8755,11 @@
         }));
         
         const element = this.createUI('div', {
-            styles: `padding: 16px; background: white; border-radius: 8px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); margin-bottom: 8px;`,
+            styles: `padding: 16px; background: white; border-radius: 8px; border: 1px solid var(--am-border); margin-bottom: 8px;`,
             content: `
                 <div style="display: flex; align-items: flex-start; gap: 12px;">
                     <!-- 文件图标/缩略图 -->
-                    <div class="file-preview-container" style="width: 40px; height: 40px; border-radius: 8px; background: var(--base_gray_005, rgba(22, 46, 74, 0.05)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); overflow: hidden; position: relative;">
+                    <div class="file-preview-container" style="width: 40px; height: 40px; border-radius: 8px; background: var(--am-bg-subtle); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--am-border); overflow: hidden; position: relative;">
                         ${supportsThumbnail && thumbnailUrl ? 
                             `<img class="file-thumbnail" src="${thumbnailUrl}" alt="${fileName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 7px; opacity: 0; transition: opacity 0.3s;" data-fallback-icon="${fileIcon}">
                              <span class="file-icon-fallback" style="font-size: 16px; display: none; position: absolute; width: 100%; height: 100%; align-items: center; justify-content: center;">${fileIcon}</span>` : 
@@ -8182,22 +8771,22 @@
                     <div style="flex: 1; min-width: 0;">
                         <!-- 文件头部信息 -->
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <div style="font-weight: 600; color: var(--base_gray_090, rgba(22, 30, 38, 0.9)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; flex: 1;">
+                            <div style="font-weight: 600; color: var(--am-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; flex: 1;">
                                 ${fileName}
                             </div>
-                            <span style="background: var(--theme_warning_light, rgba(255, 193, 7, 0.1)); color: var(--theme_warning, #ffc107); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap;">
+                            <span style="background: var(--am-warning-subtle); color: var(--am-warning); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap;">
                                 重复 ${duplicateCount} 次
                             </span>
                         </div>
                         
                         <!-- 文件基本信息 -->
-                        <div style="font-size: 13px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); margin-bottom: 12px;">
+                        <div style="font-size: 13px; color: var(--am-text-secondary); margin-bottom: 12px;">
                             文件大小: ${fileSize}
                         </div>
                         
                         <!-- 重复附件详情列表 -->
-                        <div style="border-top: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); padding-top: 12px;">
-                            <div style="font-size: 12px; color: var(--base_gray_070, rgba(22, 30, 38, 0.7)); margin-bottom: 8px; font-weight: 500;">
+                        <div style="border-top: 1px solid var(--am-border); padding-top: 12px;">
+                            <div style="font-size: 12px; color: var(--am-text-secondary); margin-bottom: 8px; font-weight: 500;">
                                 重复附件详情:
                             </div>
                             <div id="duplicate-items-container-${index}" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
@@ -8209,22 +8798,22 @@
                                     const isLatest = attachment.isLatest;
                                     
                                     return `
-                                        <div class="duplicate-item" data-mail-id="${attachment.mailId}" style="padding: 8px 12px; background: var(--base_gray_005, rgba(22, 46, 74, 0.05)); border-radius: 6px; border: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1)); cursor: pointer; transition: all 0.2s;">
+                                        <div class="duplicate-item" data-mail-id="${attachment.mailId}" style="padding: 8px 12px; background: var(--am-bg-subtle); border-radius: 6px; border: 1px solid var(--am-border); cursor: pointer; transition: all 0.2s;">
                                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                                                 <div style="flex: 1; min-width: 0;">
                                                     <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                                                        <span style="font-size: 11px; color: var(--base_gray_070, rgba(22, 30, 38, 0.7)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                                                        <span style="font-size: 11px; color: var(--am-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
                                                             ${mailSubject}
                                                         </span>
-                                                        ${isLatest ? '<span style="background: var(--theme_success, #28a745); color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 500;">最新</span>' : ''}
+                                                        ${isLatest ? '<span style="background: var(--am-success); color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 500;">最新</span>' : ''}
                                                     </div>
-                                                    <div style="font-size: 10px; color: var(--base_gray_050, rgba(22, 30, 38, 0.5)); display: flex; align-items: center; gap: 8px;">
+                                                    <div style="font-size: 10px; color: var(--am-text-tertiary); display: flex; align-items: center; gap: 8px;">
                                                         <span>${senderName}</span>
                                                         <span>•</span>
                                                         <span>${dateStr}</span>
                                                     </div>
                                                 </div>
-                                                <div style="color: var(--base_gray_040, rgba(22, 30, 38, 0.4)); font-size: 10px;">
+                                                <div style="color: var(--am-text-tertiary); font-size: 10px;">
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                                                         <polyline points="15 3 21 3 21 9"/>
@@ -8385,7 +8974,7 @@
         if (preview) {
             previewCard.style.display = 'block';
             previewContent.innerHTML = preview.folders.slice(0, 3).map(folder => `📁 ${folder}`).join('<br>') + 
-                (preview.folders.length > 3 ? `<br><span style="color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">... 共 ${preview.folders.length} 个文件夹</span>` : '');
+                (preview.folders.length > 3 ? `<br><span style="color: var(--am-text-secondary);">... 共 ${preview.folders.length} 个文件夹</span>` : '');
         } else {
             previewCard.style.display = 'none';
         }
@@ -8394,28 +8983,28 @@
     createHeaderCard() {
         const folderName = this.getFolderDisplayName();
         const headerCard = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoCardHeader,
+            className: 'am-bento-header',
             content: `
-                <div style="display: flex; align-items: center; gap: 16px;">
-                    <button style="background: none; border: none; padding: 8px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); cursor: pointer; border-radius: 6px; transition: all 0.2s ease;" id="back-btn" title="返回邮件列表">
+                <div style="display: flex; align-items: center; gap: var(--am-space-4);">
+                    <button class="am-btn am-btn--icon" id="back-btn" title="返回邮件列表">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
                         </svg>
                     </button>
                     <div style="flex: 1;">
-                        <div style="${StyleManager.getStyles().texts.headerTitle}">${folderName}</div>
-                        <div style="${StyleManager.getStyles().texts.headerSubtitle}" id="attachment-count-info">实时分析邮箱附件分布情况</div>
+                        <div style="font-size: 24px; font-weight: 700; color: var(--am-text); line-height: 1.2;">${folderName}</div>
+                        <div style="font-size: 14px; color: var(--am-text-secondary); margin-top: var(--am-space-1);" id="attachment-count-info">实时分析邮箱附件分布情况</div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <button style="${StyleManager.getStyles().texts.actionButtonSecondary}" id="settings-btn">
+                <div style="display: flex; gap: var(--am-space-3); align-items: center;">
+                    <button class="am-btn am-btn--ghost" id="settings-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3"/>
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                         </svg>
                         设置
                     </button>
-                    <button style="${StyleManager.getStyles().texts.actionButtonSecondary}${!window.showDirectoryPicker ? '; opacity: 0.5; cursor: not-allowed;' : ''}" id="compare-btn" ${!window.showDirectoryPicker ? 'disabled title="需要 Chrome 86+ 或 Edge 86+ 浏览器支持"' : ''}>
+                    <button class="am-btn am-btn--ghost" id="compare-btn" ${!window.showDirectoryPicker ? 'disabled style="opacity:0.5;cursor:not-allowed" title="需要 Chrome 86+ 或 Edge 86+ 浏览器支持"' : ''}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/>
                             <path d="M19 11h-4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/>
@@ -8445,52 +9034,17 @@
             }
         });
 
-        // 添加按钮悬停效果
-        const backBtn = headerCard.querySelector('#back-btn');
-        const settingsBtn = headerCard.querySelector('#settings-btn');
-        const compareBtn = headerCard.querySelector('#compare-btn');
-        
-        if (backBtn) {
-            backBtn.addEventListener('mouseenter', () => {
-                backBtn.style.background = 'var(--base_gray_005, rgba(20, 46, 77, 0.05))';
-                backBtn.style.color = 'var(--base_gray_080, rgba(22, 30, 38, 0.8))';
-            });
-            backBtn.addEventListener('mouseleave', () => {
-                backBtn.style.background = 'none';
-                backBtn.style.color = 'var(--base_gray_060, rgba(22, 30, 38, 0.6))';
-            });
-        }
-        
-        if (settingsBtn) {
-            settingsBtn.addEventListener('mouseenter', () => {
-                StyleManager.applyInteractionStyle(settingsBtn, 'actionButtonSecondaryHover');
-            });
-            settingsBtn.addEventListener('mouseleave', () => {
-                StyleManager.applyInteractionStyle(settingsBtn, 'actionButtonSecondaryHover', true);
-            });
-        }
-        
-        if (compareBtn) {
-            compareBtn.addEventListener('mouseenter', () => {
-                StyleManager.applyInteractionStyle(compareBtn, 'actionButtonSecondaryHover');
-            });
-            compareBtn.addEventListener('mouseleave', () => {
-                StyleManager.applyInteractionStyle(compareBtn, 'actionButtonSecondaryHover', true);
-            });
-        }
-
         return headerCard;
     }
 
     createMainFunctionRow() {
         const row = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoRowResponsive,
-            className: 'bento-row-responsive',
+            className: 'am-bento-row',
             content: `
-                <div style="${StyleManager.getStyles().layouts.bentoCardPrimary}">
+                <div class="am-bento-card am-bento-card--primary">
                     <div style="display: flex; flex-direction: column; height: 100%;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoLabelLarge}">📎 附件下载</div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--am-space-3);">
+                            <div style="font-size: 15px; font-weight: 600; color: inherit; opacity: 0.8;">📎 附件下载</div>
                             <div style="opacity: 0.6;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -8500,86 +9054,67 @@
                             </div>
                         </div>
                         <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumberLarge}" id="attachment-count">计算中...</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDescLarge}; margin-top: 6px;" id="total-size">计算中...</div>
-                            <div id="folder-structure-preview-card" style="margin-top: 12px; display: none;">
-                                <div style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6)); margin-bottom: 6px;">文件夹结构预览</div>
-                                <div id="folder-structure-preview-content" style="background: var(--base_gray_005, rgba(20, 46, 77, 0.05)); padding: 8px 12px; border-radius: 6px; font-size: 11px; font-family: monospace; color: var(--base_gray_080, rgba(22, 30, 38, 0.8)); text-align: left; max-height: 80px; overflow-y: auto;">
-                                </div>
+                            <div class="am-stat-number am-stat-number--lg" id="attachment-count">计算中...</div>
+                            <div style="font-size: 13px; color: inherit; opacity: 0.7; margin-top: 6px;" id="total-size">计算中...</div>
+                            <div id="folder-structure-preview-card" style="margin-top: var(--am-space-3); display: none;">
+                                <div style="font-size: 12px; color: var(--am-text-secondary); margin-bottom: 6px;">文件夹结构预览</div>
+                                <div id="folder-structure-preview-content" style="background: var(--am-bg-subtle); padding: var(--am-space-2) var(--am-space-3); border-radius: var(--am-radius-md); font-size: 11px; font-family: var(--am-font-mono); color: var(--am-text); text-align: left; max-height: 80px; overflow-y: auto;"></div>
                             </div>
                         </div>
-                        <div style="text-align: center; margin-top: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoDescLarge}; font-weight: 600;">点击下载全部附件</div>
+                        <div style="text-align: center; margin-top: var(--am-space-3);">
+                            <div style="font-size: 13px; color: inherit; opacity: 0.7; font-weight: 600;">点击下载全部附件</div>
                         </div>
                     </div>
                 </div>
-                <div style="${StyleManager.getStyles().layouts.bentoCard}">
+                <div class="am-bento-card">
                     <div style="display: flex; flex-direction: column; height: 100%;">
-                        <div style="margin-bottom: 16px;">
-                            <div style="${StyleManager.getStyles().texts.bentoTitle}">📊 统计概览</div>
-                        </div>
+                        <div class="am-bento-title">📊 统计概览</div>
                         <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1));">
-                                <span style="font-size: 14px; color: var(--base_gray_070, rgba(22, 30, 38, 0.7));">邮件总数</span>
-                                <span style="font-size: 16px; font-weight: 600; color: var(--base_gray_100, #13181D);" id="quick-mail-count">计算中...</span>
+                            <div class="am-overview-row">
+                                <span class="am-overview-row-label">邮件总数</span>
+                                <span class="am-overview-row-value" id="quick-mail-count">计算中...</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--base_gray_010, rgba(22, 46, 74, 0.1));">
-                                <span style="font-size: 14px; color: var(--base_gray_070, rgba(22, 30, 38, 0.7));">发件人数量</span>
-                                <span style="font-size: 16px; font-weight: 600; color: var(--base_gray_100, #13181D);" id="quick-sender-count">计算中...</span>
+                            <div class="am-overview-row">
+                                <span class="am-overview-row-label">发件人数量</span>
+                                <span class="am-overview-row-value" id="quick-sender-count">计算中...</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
-                                <span style="font-size: 14px; color: var(--base_gray_070, rgba(22, 30, 38, 0.7));">无附件邮件</span>
-                                <span style="font-size: 16px; font-weight: 600; color: var(--base_gray_100, #13181D);" id="quick-no-attachment-mails">计算中...</span>
+                            <div class="am-overview-row">
+                                <span class="am-overview-row-label">无附件邮件</span>
+                                <span class="am-overview-row-value" id="quick-no-attachment-mails">计算中...</span>
                             </div>
                         </div>
                     </div>
                 </div>
             `
         });
-        
-        // 添加下载点击事件和悬停效果到第一个卡片
+
+        // 下载卡片点击事件
         const downloadCard = row.children[0];
-        const operationCard = row.children[1];
-        
-        downloadCard.addEventListener('click', () => {
-            this.downloadAll();
-        });
-        
-        // 添加悬停效果
-        downloadCard.addEventListener('mouseenter', () => {
-            StyleManager.applyInteractionStyle(downloadCard, 'cardPrimaryHover');
-        });
-        downloadCard.addEventListener('mouseleave', () => {
-            StyleManager.applyInteractionStyle(downloadCard, 'cardPrimaryHover', true);
-        });
-        
-        // 移除统计卡片的悬停效果，因为它不可点击
-        
+        downloadCard.addEventListener('click', () => this.downloadAll());
+
         return row;
     }
 
     createMailStatsCard(totalMails) {
         const card = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoCard,
+            className: 'am-bento-card',
             content: `
-                <div style="margin-bottom: 16px;">
-                    <div style="${StyleManager.getStyles().texts.bentoTitle}">邮件统计概览</div>
-                </div>
-                <div style="${StyleManager.getStyles().layouts.bentoStatsResponsive}" class="bento-stats-responsive">
-                    <div style="text-align: center; padding: 16px;">
-                        <div style="${StyleManager.getStyles().texts.bentoNumber}">${totalMails}</div>
-                        <div style="${StyleManager.getStyles().texts.bentoLabel}">有附件邮件</div>
-                        <div style="${StyleManager.getStyles().texts.bentoDesc}">包含附件的邮件总数</div>
+                <div class="am-bento-title">邮件统计概览</div>
+                <div class="am-stat-grid">
+                    <div class="am-stat-item">
+                        <div class="am-stat-number">${totalMails}</div>
+                        <div class="am-stat-label">有附件邮件</div>
+                        <div class="am-stat-desc">包含附件的邮件总数</div>
                     </div>
-                    <div style="text-align: center; padding: 16px;">
-                        <div style="${StyleManager.getStyles().texts.bentoNumber}" id="sender-count">计算中...</div>
-                        <div style="${StyleManager.getStyles().texts.bentoLabel}">发件人数量</div>
-                        <div style="${StyleManager.getStyles().texts.bentoDesc}">不同发件人总数</div>
+                    <div class="am-stat-item">
+                        <div class="am-stat-number" id="sender-count">计算中...</div>
+                        <div class="am-stat-label">发件人数量</div>
+                        <div class="am-stat-desc">不同发件人总数</div>
                     </div>
-                                        <div style="text-align: center; padding: 16px;">
-                        <div style="${StyleManager.getStyles().texts.bentoNumber}" id="no-attachment-mails">计算中...</div>
-                        <div style="${StyleManager.getStyles().texts.bentoLabel}">无附件邮件</div>
-                        <div style="${StyleManager.getStyles().texts.bentoDesc}">需要检查的邮件</div>
+                    <div class="am-stat-item">
+                        <div class="am-stat-number" id="no-attachment-mails">计算中...</div>
+                        <div class="am-stat-label">无附件邮件</div>
+                        <div class="am-stat-desc">需要检查的邮件</div>
                     </div>
                 </div>
             `
@@ -8589,13 +9124,12 @@
 
     createNoAttachmentListCard() {
         const card = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoCard + '; display: none;',
-            className: 'bento-card no-attachment-list-card',
+            className: 'am-list-card',
             content: `
-                <div style="margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="${StyleManager.getStyles().texts.bentoTitle}">无附件邮件列表</div>
-                        <button id="view-all-no-attachment-mails" style="padding: 6px 12px; font-size: 12px; background: var(--theme_primary, #007bff); color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                <div style="margin-bottom: var(--am-space-4);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--am-space-2);">
+                        <div class="am-bento-title">无附件邮件列表</div>
+                        <button class="am-btn am-btn--primary am-btn--sm" id="view-all-no-attachment-mails">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                 <circle cx="12" cy="12" r="3"/>
@@ -8603,12 +9137,10 @@
                             查看完整列表
                         </button>
                     </div>
-                    <div style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">点击邮件可在新标签页中打开</div>
+                    <div style="font-size: 12px; color: var(--am-text-secondary);">点击邮件可在新标签页中打开</div>
                 </div>
-                <div id="no-attachment-list-container" style="max-height: 300px; overflow-y: auto;">
-                    <div style="text-align: center; padding: 20px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
-                        加载中...
-                    </div>
+                <div id="no-attachment-list-container" class="am-scroll" style="max-height: 300px;">
+                    <div class="am-state am-state--loading">加载中...</div>
                 </div>
             `,
             events: {
@@ -8626,35 +9158,32 @@
 
     createInvalidNamingListCard() {
         const card = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoCard + '; display: none;',
-            className: 'bento-card invalid-naming-list-card',
+            className: 'am-list-card',
             content: `
-                <div style="margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                        <div style="${StyleManager.getStyles().texts.bentoTitle}">命名异常附件列表</div>
-                        <div style="display: flex; gap: 8px;">
-                            <button id="view-all-invalid-naming" style="padding: 6px 12px; font-size: 12px; background: var(--theme_success, #28a745); color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                <div style="margin-bottom: var(--am-space-4);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--am-space-2);">
+                        <div class="am-bento-title">命名异常附件列表</div>
+                        <div style="display: flex; gap: var(--am-space-2);">
+                            <button class="am-btn am-btn--sm" style="background:var(--am-success);color:var(--am-text-inverse);border-color:var(--am-success);" id="view-all-invalid-naming">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                     <circle cx="12" cy="12" r="3"/>
                                 </svg>
                                 查看完整列表
                             </button>
-                            <button id="open-validation-settings" class="validation-settings-btn" style="padding: 6px 12px; font-size: 12px; background: var(--theme_primary, #007bff); color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="3"/>
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                            </svg>
-                            修改验证规则
-                        </button>
+                            <button class="am-btn am-btn--primary am-btn--sm" id="open-validation-settings">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                修改验证规则
+                            </button>
                         </div>
                     </div>
-                    <div style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">点击附件可在新标签页中打开对应邮件</div>
+                    <div style="font-size: 12px; color: var(--am-text-secondary);">点击附件可在新标签页中打开对应邮件</div>
                 </div>
-                <div id="invalid-naming-list-container" style="max-height: 300px; overflow-y: auto;">
-                    <div style="text-align: center; padding: 20px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
-                        加载中...
-                    </div>
+                <div id="invalid-naming-list-container" class="am-scroll" style="max-height: 300px;">
+                    <div class="am-state am-state--loading">加载中...</div>
                 </div>
             `,
             events: {
@@ -8674,16 +9203,14 @@
         return card;
     }
 
-    // 创建重复附件列表卡片
     createDuplicateAttachmentsListCard() {
         const card = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoCard + '; display: none;',
-            className: 'bento-card duplicate-attachments-list-card',
+            className: 'am-list-card',
             content: `
-                <div style="margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                        <div style="${StyleManager.getStyles().texts.bentoTitle}">重复附件列表</div>
-                        <button id="view-all-duplicate-attachments" style="padding: 6px 12px; font-size: 12px; background: var(--theme_warning, #ffc107); color: #212529; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s; font-weight: 500;">
+                <div style="margin-bottom: var(--am-space-4);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--am-space-2);">
+                        <div class="am-bento-title">重复附件列表</div>
+                        <button class="am-btn am-btn--sm" style="background:var(--am-warning);color:var(--am-text);border-color:var(--am-warning);font-weight:500;" id="view-all-duplicate-attachments">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                 <circle cx="12" cy="12" r="3"/>
@@ -8691,12 +9218,10 @@
                             查看完整列表
                         </button>
                     </div>
-                    <div style="font-size: 12px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">点击附件可在新标签页中打开对应邮件</div>
+                    <div style="font-size: 12px; color: var(--am-text-secondary);">点击附件可在新标签页中打开对应邮件</div>
                 </div>
-                <div id="duplicate-attachments-list-container" style="max-height: 300px; overflow-y: auto;">
-                    <div style="text-align: center; padding: 20px; color: var(--base_gray_060, rgba(22, 30, 38, 0.6));">
-                        加载中...
-                    </div>
+                <div id="duplicate-attachments-list-container" class="am-scroll" style="max-height: 300px;">
+                    <div class="am-state am-state--loading">加载中...</div>
                 </div>
             `,
             events: {
@@ -8714,60 +9239,55 @@
 
     createFileTypeRow() {
         const row = this.createUI('div', {
-            styles: StyleManager.getStyles().layouts.bentoRowResponsive,
-            className: 'bento-row-responsive',
+            className: 'am-bento-row',
             content: `
-                <div style="${StyleManager.getStyles().layouts.bentoCard}">
-                    <div style="margin-bottom: 16px;">
-                        <div style="${StyleManager.getStyles().texts.bentoTitle}">文件类型分布</div>
-                    </div>
-                    <div style="${StyleManager.getStyles().layouts.bentoStatsResponsive}" class="bento-stats-responsive">
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="image-files">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">图片</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">JPG, PNG, GIF等</div>
+                <div class="am-bento-card">
+                    <div class="am-bento-title">文件类型分布</div>
+                    <div class="am-stat-grid">
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="image-files">0</div>
+                            <div class="am-stat-label">图片</div>
+                            <div class="am-stat-desc">JPG, PNG, GIF等</div>
                         </div>
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="archive-files">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">压缩包</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">ZIP, RAR, 7Z等</div>
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="archive-files">0</div>
+                            <div class="am-stat-label">压缩包</div>
+                            <div class="am-stat-desc">ZIP, RAR, 7Z等</div>
                         </div>
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="document-files">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">文档</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">PDF, DOC, XLS等</div>
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="document-files">0</div>
+                            <div class="am-stat-label">文档</div>
+                            <div class="am-stat-desc">PDF, DOC, XLS等</div>
                         </div>
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="other-files">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">其他</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">其他格式文件</div>
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="other-files">0</div>
+                            <div class="am-stat-label">其他</div>
+                            <div class="am-stat-desc">其他格式文件</div>
                         </div>
                     </div>
                 </div>
-                <div style="${StyleManager.getStyles().layouts.bentoCard}">
-                    <div style="margin-bottom: 16px;">
-                        <div style="${StyleManager.getStyles().texts.bentoTitle}">问题文件检测</div>
-                    </div>
-                    <div style="${StyleManager.getStyles().layouts.bentoStatsResponsive}" class="bento-stats-responsive">
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="invalid-naming">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">命名异常</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">无扩展名、空文件、特殊字符等</div>
+                <div class="am-bento-card">
+                    <div class="am-bento-title">问题文件检测</div>
+                    <div class="am-stat-grid">
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="invalid-naming">0</div>
+                            <div class="am-stat-label">命名异常</div>
+                            <div class="am-stat-desc">无扩展名、空文件、特殊字符等</div>
                         </div>
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="large-files">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">超大文件</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">&gt;10MB</div>
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="large-files">0</div>
+                            <div class="am-stat-label">超大文件</div>
+                            <div class="am-stat-desc">&gt;10MB</div>
                         </div>
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="duplicate-attachments">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">重复文件</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">相同名称且相同大小的文件</div>
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="duplicate-attachments">0</div>
+                            <div class="am-stat-label">重复文件</div>
+                            <div class="am-stat-desc">相同名称且相同大小的文件</div>
                         </div>
-                        <div style="text-align: center; padding: 12px;">
-                            <div style="${StyleManager.getStyles().texts.bentoNumber}" id="duplicate-mails">0</div>
-                            <div style="${StyleManager.getStyles().texts.bentoLabel}">重复邮件</div>
-                            <div style="${StyleManager.getStyles().texts.bentoDesc}">相同发件人的相同主题且相同附件的邮件</div>
+                        <div class="am-stat-item">
+                            <div class="am-stat-number" id="duplicate-mails">0</div>
+                            <div class="am-stat-label">重复邮件</div>
+                            <div class="am-stat-desc">相同发件人的相同主题且相同附件的邮件</div>
                         </div>
                     </div>
                 </div>
@@ -8792,531 +9312,251 @@
         }
     }
 
-        createBentoCard(label, value, description, size = 'normal', icon = '', action = '') {
-            const isPrimary = size === 'primary';
-            const sizeClass = isPrimary ? 'bentoCardPrimary' :
-                size === 'wide' ? 'bentoCardWide' :
-                size === 'tall' ? 'bentoCardTall' :
-                size === 'small' ? 'bentoCardSmall' : '';
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
 
-            const isClickable = action === 'download';
-            let cardStyle = StyleManager.getStyles().layouts.bentoCard;
-            if (sizeClass) {
-                cardStyle += '; ' + StyleManager.getStyles().layouts[sizeClass];
-            }
-            // 只有可点击的卡片才添加cursor: pointer
-            if (isClickable) {
-                cardStyle += '; cursor: pointer;';
-            }
+    // ─── 按钮注入系统（v2）─────────────────────────
+    // 设计原则：
+    //   1. 优先注入工具栏，找不到就用浮动按钮，一次决策不循环
+    //   2. 不用 CSS 媒体查询控制可见性，JS 只创建一种按钮
+    //   3. 不用 MutationObserver 监听重复，从源头保证只创建一次
+    //   4. resize 只在按钮类型真正需要切换时才重建
 
-            const numberStyle = isPrimary ? StyleManager.getStyles().texts.bentoNumberPrimary : StyleManager.getStyles().texts.bentoNumber;
-            const labelStyle = isPrimary ? StyleManager.getStyles().texts.bentoLabelPrimary : StyleManager.getStyles().texts.bentoLabel;
-            const descStyle = isPrimary ? StyleManager.getStyles().texts.bentoDescPrimary : StyleManager.getStyles().texts.bentoDesc;
+    static _BTN_ICON = `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M768 810.7H256c-44.2 0-80-35.8-80-80V547.2c0-17.7 14.3-32 32-32s32 14.3 32 32v183.5c0 8.8 7.2 16 16 16h512c8.8 0 16-7.2 16-16V547.2c0-17.7 14.3-32 32-32s32 14.3 32 32v183.5c0 44.2-35.8 80-80 80zM480 614.4c-8.2 0-16.4-3.1-22.6-9.4L234.8 382.3c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L480 536.7l199.9-199.7c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3L502.6 605c-6.3 6.3-14.4 9.4-22.6 9.4z" fill="currentColor"/><path d="M512 646.4c-17.7 0-32-14.3-32-32V172.8c0-17.7 14.3-32 32-32s32 14.3 32 32v441.6c0 17.7-14.3 32-32 32z" fill="currentColor"/></svg>`;
 
-            const card = this.createUI('div', {
-                styles: cardStyle,
-                content: `
-                <div>
-                    <div style="${numberStyle}">${value}</div>
-                    <div style="${labelStyle}">${label}</div>
-                </div>
-                <div style="${descStyle}">${description}</div>
-                ${isClickable ? `<div style="position: absolute; top: 16px; right: 16px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.7;">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7,10 12,15 17,10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                </div>` : ''}
-            `,
-                events: isClickable ? {
-                    mouseenter: (e) => {
-                        if (isPrimary) {
-                            StyleManager.applyInteractionStyle(e.target, 'cardPrimaryHover');
-                        } else {
-                            StyleManager.applyInteractionStyle(e.target, 'cardHover');
-                        }
-                    },
-                    mouseleave: (e) => {
-                        StyleManager.applyInteractionStyle(e.target, isPrimary ? 'cardPrimaryHover' : 'cardHover', true);
-                    },
-                    click: () => {
-                        if (action === 'download') {
-                            this.downloadAll();
-                        }
-                    }
-                } : {}
-            });
+    static _TOOLBAR_SELECTORS = [
+        '.xmail-ui-ellipsis-toolbar .ui-ellipsis-toolbar-btns',
+        '.ui-ellipsis-toolbar-btns',
+        '.toolbar-btns',
+        '.mail-toolbar .toolbar-btns',
+        '.xmail-ui-toolbar .ui-toolbar-btns'
+    ];
 
-            return card;
+    static _BTN_SELECTOR = '[data-attachment-manager-btn]';
+
+    _removeExistingButtons() {
+        document.querySelectorAll(AttachmentManager._BTN_SELECTOR).forEach(b => b.remove());
+    }
+
+    _findToolbar() {
+        for (const sel of AttachmentManager._TOOLBAR_SELECTORS) {
+            const el = document.querySelector(sel);
+            if (el) return el;
         }
-
-        formatFileSize(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
-        // 保留这些方法以防其他地方需要使用，但简化实现
-        async renderGroupsInBatches(groups, container) {
-            // 简化版本，不再使用
-            return;
-        }
-
-        createGroupContainer(group, index) {
-            // 简化版本，不再使用
-            return this.createUI('div');
+        return null;
     }
 
     createAndInjectButton() {
-        console.log('[按钮创建] 开始创建附件管理按钮');
-        
-        // 先清理已存在的按钮 - 使用更全面的清理方式
-        const existingButtons = document.querySelectorAll('#attachment-downloader-btn, [data-attachment-manager-btn="true"], .attachment-floating-btn');
-        if (existingButtons.length > 0) {
-            console.log('[按钮创建] 清理已存在的按钮，数量:', existingButtons.length);
-            existingButtons.forEach(btn => btn.remove());
+        this._removeExistingButtons();
+        this._injectButtonStyles();
+
+        const toolbar = this._findToolbar();
+        if (toolbar) {
+            this._injectToolbarButton(toolbar);
+        } else {
+            this._injectFloatingButton();
         }
-
-        // 检查屏幕宽度决定显示方式
-        const screenWidth = window.innerWidth;
-        console.log('[按钮创建] 屏幕宽度:', screenWidth);
-        
-        try {
-            if (screenWidth < 1340) {
-                this.createFloatingButton();
-            } else {
-                this.createToolbarButton();
-            }
-            
-            // 设置按钮重复检查机制
-            this.setupButtonDuplicationCheck();
-            
-            // 设置窗口大小变化监听
-            this.setupResponsiveListener();
-            
-            console.log('[按钮创建] 附件管理按钮创建完成');
-        } catch (error) {
-            console.error('[按钮创建] 创建按钮时出现错误:', error);
-            // 延迟重试
-            setTimeout(() => {
-                console.log('[按钮创建] 重试创建按钮');
-                this.createAndInjectButton();
-            }, 2000);
-        }
+        this._currentButtonType = toolbar ? 'toolbar' : 'floating';
+        this._setupResizeListener();
     }
 
-    createToolbarButton() {
-            // 尝试多个可能的工具栏选择器
-            const toolbarSelectors = [
-                '.xmail-ui-ellipsis-toolbar .ui-ellipsis-toolbar-btns',
-                '.ui-ellipsis-toolbar-btns',
-                '.toolbar-btns',
-                '.mail-toolbar .toolbar-btns',
-                '.xmail-ui-toolbar .ui-toolbar-btns',
-                '.toolbar-right',
-                '.toolbar-actions'
-            ];
-
-            let toolbar = null;
-            for (const selector of toolbarSelectors) {
-                toolbar = document.querySelector(selector);
-                if (toolbar) break;
-            }
-
-            if (!toolbar) {
-                // 如果找不到工具栏，延迟重试
-                setTimeout(() => this.createAndInjectButton(), 1000);
-                return;
-            }
-
-            const button = this.createUI('button', {
-                id: 'attachment-downloader-btn',
-                className: 'xmail-ui-btn ui-btn-size32 ui-btn-border ui-btn-them-clear-gray',
-                attributes: { 'data-attachment-manager-btn': 'true' },
-                content: `
-                    <span class="xmail-ui-icon ui-btn-icon" style="width: 16px; height: 16px; margin-right: 4px;">
-                <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M768 810.7H256c-44.2 0-80-35.8-80-80V547.2c0-17.7 14.3-32 32-32s32 14.3 32 32v183.5c0 8.8 7.2 16 16 16h512c8.8 0 16-7.2 16-16V547.2c0-17.7 14.3-32 32-32s32 14.3 32 32v183.5c0 44.2-35.8 80-80 80zM480 614.4c-8.2 0-16.4-3.1-22.6-9.4L234.8 382.3c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L480 536.7l199.9-199.7c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3L502.6 605c-6.3 6.3-14.4 9.4-22.6 9.4z" fill="#2c2c2c"></path>
-                    <path d="M512 646.4c-17.7 0-32-14.3-32-32V172.8c0-17.7 14.3-32 32-32s32 14.3 32 32v441.6c0 17.7-14.3 32-32 32z" fill="#2c2c2c"></path>
-                </svg>
-                    </span>
-                    <span>附件管理</span>
-                `,
-                styles: { marginLeft: '8px' },
-                events: {
-                    click: (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        this.toggleAttachmentManager();
-                    }
-                }
-            });
-
-            toolbar.appendChild(button);
-    }
-
-    createFloatingButton() {
-            // 添加浮动按钮样式
-            this.addFloatingButtonStyles();
-
-            const floatingButton = this.createUI('div', {
-                className: 'attachment-floating-btn',
-                attributes: { 'data-attachment-manager-btn': 'true' },
-                content: `
-                    <div class="floating-btn-icon">
-                        <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M768 810.7H256c-44.2 0-80-35.8-80-80V547.2c0-17.7 14.3-32 32-32s32 14.3 32 32v183.5c0 8.8 7.2 16 16 16h512c8.8 0 16-7.2 16-16V547.2c0-17.7 14.3-32 32-32s32 14.3 32 32v183.5c0 44.2-35.8 80-80 80zM480 614.4c-8.2 0-16.4-3.1-22.6-9.4L234.8 382.3c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L480 536.7l199.9-199.7c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3L502.6 605c-6.3 6.3-14.4 9.4-22.6 9.4z" fill="currentColor"></path>
-                            <path d="M512 646.4c-17.7 0-32-14.3-32-32V172.8c0-17.7 14.3-32 32-32s32 14.3 32 32v441.6c0 17.7-14.3 32-32 32z" fill="currentColor"></path>
-                        </svg>
-                    </div>
-                    <div class="floating-btn-tooltip">附件管理</div>
-                `,
-                events: {
-                    click: (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        this.toggleAttachmentManager();
-                    }
-                }
-            });
-
-            document.body.appendChild(floatingButton);
-    }
-
-    addFloatingButtonStyles() {
-            // 检查是否已经添加了样式
-            if (document.getElementById('attachment-floating-btn-styles')) {
-                return;
-            }
-
-            const styles = document.createElement('style');
-            styles.id = 'attachment-floating-btn-styles';
-            styles.textContent = `
-                .attachment-floating-btn {
-                    position: fixed;
-                    right: 20px;
-                    bottom: 60px;
-                    width: 56px;
-                    height: 56px;
-                    background: var(--theme_primary, #0F7AF5);
-                    border-radius: 50%;
-                    box-shadow: 0 4px 12px rgba(15, 122, 245, 0.3);
-                    cursor: pointer;
-                    z-index: 1000;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    user-select: none;
-                }
-
-                .attachment-floating-btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 16px rgba(15, 122, 245, 0.4);
-                    background: var(--theme_darken_1, #0E6FD9);
-                }
-
-                .attachment-floating-btn:active {
-                    transform: translateY(0);
-                    box-shadow: 0 2px 8px rgba(15, 122, 245, 0.3);
-                }
-
-                .floating-btn-icon {
-                    width: 24px;
-                    height: 24px;
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .floating-btn-icon svg {
-                    width: 100%;
-                    height: 100%;
-                }
-
-                .floating-btn-tooltip {
-                    position: absolute;
-                    right: 64px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    background: rgba(0, 0, 0, 0.8);
-                    color: white;
-                    padding: 8px 12px;
-                    border-radius: 4px;
-                    font-size: 14px;
-                    white-space: nowrap;
-                    opacity: 0;
-                    visibility: hidden;
-                    transition: all 0.2s;
-                    pointer-events: none;
-                }
-
-                .floating-btn-tooltip::after {
-                    content: '';
-                    position: absolute;
-                    left: 100%;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    border: 6px solid transparent;
-                    border-left-color: rgba(0, 0, 0, 0.8);
-                }
-
-                .attachment-floating-btn:hover .floating-btn-tooltip {
-                    opacity: 1;
-                    visibility: visible;
-                }
-
-                /* 响应式隐藏规则 */
-                @media (min-width: 1300px) {
-                    .attachment-floating-btn {
-                        display: none !important;
-                    }
-                }
-
-                @media (max-width: 1299px) {
-                    #attachment-downloader-btn {
-                        display: none !important;
-                    }
-                }
-            `;
-            document.head.appendChild(styles);
-    }
-
-    setupResponsiveListener() {
-            // 防抖函数
-            let resizeTimeout;
-            const handleResize = () => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    const screenWidth = window.innerWidth;
-                    const hasToolbarBtn = document.getElementById('attachment-downloader-btn');
-                    const hasFloatingBtn = document.querySelector('.attachment-floating-btn');
-
-                    if (screenWidth < 1300 && hasToolbarBtn && !hasFloatingBtn) {
-                        // 需要切换到浮动按钮
-                        this.createAndInjectButton();
-                    } else if (screenWidth >= 1300 && !hasToolbarBtn && hasFloatingBtn) {
-                        // 需要切换到工具栏按钮
-                        this.createAndInjectButton();
-                    }
-                }, 200);
-            };
-
-            // 移除旧的监听器
-            if (this.resizeListener) {
-                window.removeEventListener('resize', this.resizeListener);
-            }
-
-            this.resizeListener = handleResize;
-            window.addEventListener('resize', this.resizeListener);
-    }
-
-    setupButtonDuplicationCheck() {
-        // 防止重复按钮的观察器
-        if (this.buttonObserver) {
-            this.buttonObserver.disconnect();
-        }
-        
-        this.buttonObserver = new MutationObserver((mutations) => {
-            // 避免在面板初始化过程中进行检查
-            if (this.isLoading) {
-                return;
-            }
-            
-            const buttons = document.querySelectorAll('#attachment-downloader-btn, [data-attachment-manager-btn="true"], .attachment-floating-btn');
-            if (buttons.length > 1) {
-                console.log('[按钮检查] 发现重复按钮，数量:', buttons.length);
-                // 保留第一个，移除其他的
-                for (let i = 1; i < buttons.length; i++) {
-                    console.log('[按钮检查] 移除重复按钮:', buttons[i]);
-                    buttons[i].remove();
-                }
-            }
+    _injectToolbarButton(toolbar) {
+        const btn = this.createUI('button', {
+            id: 'attachment-downloader-btn',
+            className: 'xmail-ui-btn ui-btn-size32 ui-btn-border ui-btn-them-clear-gray',
+            attributes: { 'data-attachment-manager-btn': 'true' },
+            content: `
+                <span class="xmail-ui-icon ui-btn-icon" style="width:16px;height:16px;margin-right:4px;">${AttachmentManager._BTN_ICON}</span>
+                <span>附件管理</span>`,
+            styles: { marginLeft: '8px' },
+            events: { click: (e) => { e.preventDefault(); e.stopPropagation(); this.toggleAttachmentManager(); } }
         });
-        
-        this.buttonObserver.observe(document.body, {
-            childList: true,
-            subtree: true
+        toolbar.appendChild(btn);
+    }
+
+    _injectFloatingButton() {
+        const btn = this.createUI('div', {
+            className: 'attachment-floating-btn',
+            attributes: { 'data-attachment-manager-btn': 'true' },
+            content: `
+                <div class="floating-btn-icon">${AttachmentManager._BTN_ICON}</div>
+                <div class="floating-btn-tooltip">附件管理</div>`,
+            events: { click: (e) => { e.preventDefault(); e.stopPropagation(); this.toggleAttachmentManager(); } }
         });
+        document.body.appendChild(btn);
+    }
+
+    _injectButtonStyles() {
+        if (document.getElementById('attachment-floating-btn-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'attachment-floating-btn-styles';
+        style.textContent = `
+            .attachment-floating-btn {
+                position: fixed; right: 20px; bottom: 60px;
+                width: 56px; height: 56px;
+                background: var(--am-accent); border-radius: 50%;
+                box-shadow: 0 4px 12px rgba(15, 122, 245, 0.3);
+                cursor: pointer; z-index: 1000;
+                display: flex; align-items: center; justify-content: center;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                user-select: none;
+            }
+            .attachment-floating-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(15, 122, 245, 0.4);
+                background: var(--am-accent-hover);
+            }
+            .attachment-floating-btn:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 8px rgba(15, 122, 245, 0.3);
+            }
+            .floating-btn-icon {
+                width: 24px; height: 24px; color: white;
+                display: flex; align-items: center; justify-content: center;
+            }
+            .floating-btn-icon svg { width: 100%; height: 100%; }
+            .floating-btn-tooltip {
+                position: absolute; right: 64px; top: 50%; transform: translateY(-50%);
+                background: rgba(0,0,0,0.8); color: white;
+                padding: 8px 12px; border-radius: 4px; font-size: 14px;
+                white-space: nowrap; opacity: 0; visibility: hidden;
+                transition: all 0.2s; pointer-events: none;
+            }
+            .floating-btn-tooltip::after {
+                content: ''; position: absolute; left: 100%; top: 50%;
+                transform: translateY(-50%);
+                border: 6px solid transparent; border-left-color: rgba(0,0,0,0.8);
+            }
+            .attachment-floating-btn:hover .floating-btn-tooltip {
+                opacity: 1; visibility: visible;
+            }`;
+        document.head.appendChild(style);
+    }
+
+    _setupResizeListener() {
+        if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
+        let timer;
+        this._resizeHandler = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                const toolbarNow = this._findToolbar();
+                const needType = toolbarNow ? 'toolbar' : 'floating';
+                if (needType !== this._currentButtonType) {
+                    this.createAndInjectButton();
+                }
+            }, 300);
+        };
+        window.addEventListener('resize', this._resizeHandler);
     }
 }
 
 class QQMailDownloader {
+    static _REDIRECT_PATTERNS = [
+        /window\.location\.href\s*=\s*['"]([^'"]+)['"]/,
+        /location\.href\s*=\s*['"]([^'"]+)['"]/,
+        /window\.location\s*=\s*['"]([^'"]+)['"]/,
+        /location\s*=\s*['"]([^'"]+)['"]/,
+        /window\.location\.replace\(['"]([^'"]+)['"]\)/,
+        /location\.replace\(['"]([^'"]+)['"]\)/,
+        /document\.location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/,
+        /<meta[^>]+http-equiv=['"]refresh['"][^>]+content=['"][^'"]*url=([^'"]+)['"]/i,
+        /href=['"]([^'"]*download[^'"]*)['"]/i,
+        /url\(['"]([^'"]*download[^'"]*)['"]\)/i,
+        /(https?:\/\/[^'">\s]+download[^'">\s]*)/i
+    ];
+
+    static _DEFAULT_HEADERS = Object.freeze({
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'accept-language': 'en,zh-CN;q=0.9,zh;q=0.8',
+        'priority': 'u=0, i',
+        'sec-ch-ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1'
+    });
+
     constructor() {
         this.sid = null;
-        this.headers = this._getDefaultHeaders();
+        this.headers = QQMailDownloader._DEFAULT_HEADERS;
         this.attachmentManager = null;
     }
 
     _getDefaultHeaders() {
-        return {
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'accept-language': 'en,zh-CN;q=0.9,zh;q=0.8',
-            'priority': 'u=0, i',
-            'sec-ch-ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            'sec-fetch-dest': 'iframe',
-            'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'same-origin',
-            'sec-fetch-user': '?1',
-            'upgrade-insecure-requests': '1'
-        };
+        return QQMailDownloader._DEFAULT_HEADERS;
+    }
+
+    _ensureSidInUrl(url, sid) {
+        if (!url.startsWith('http')) url = MAIL_CONSTANTS.BASE_URL + url;
+        if (!url.includes('sid=')) url += `${url.includes('?') ? '&' : '?'}sid=${sid}`;
+        return url;
     }
 
     async fetchAttachment(attachment) {
-        try {
-            // 构建初始URL
             const downloadUrlObj = new URL(attachment.download_url, MAIL_CONSTANTS.BASE_URL);
             const params = new URLSearchParams(downloadUrlObj.search);
-            const pageUrl = new URL(window.location.href);
-            const sid = pageUrl.searchParams.get('sid') || this.sid;
+            const sid = new URL(window.location.href).searchParams.get('sid') || this.sid;
             const initialUrl = `${MAIL_CONSTANTS.BASE_URL}${MAIL_CONSTANTS.API_ENDPOINTS.ATTACH_DOWNLOAD}?mailid=${params.get('mailid')}&fileid=${params.get('fileid')}&name=${encodeURIComponent(attachment.name)}&sid=${sid}`;
 
-            let finalDownloadUrl = null;
-
+            let finalDownloadUrl;
             try {
-                // 尝试获取重定向URL
                 finalDownloadUrl = await this._fetchRedirectUrl(initialUrl, attachment.name);
-            } catch (redirectError) {
-
-                // 回退方案1: 尝试直接使用原始下载URL
-                if (attachment.download_url) {
-                    let directUrl = attachment.download_url;
-                    if (!directUrl.startsWith('http')) {
-                        directUrl = MAIL_CONSTANTS.BASE_URL + directUrl;
-                    }
-                    // 确保包含SID参数
-                    if (!directUrl.includes('sid=')) {
-                        const separator = directUrl.includes('?') ? '&' : '?';
-                        directUrl += `${separator}sid=${sid}`;
-                    }
-                    finalDownloadUrl = directUrl;
-                } else {
-                    // 回退方案2: 使用初始URL
-                    finalDownloadUrl = initialUrl;
-                }
+            } catch {
+                // 回退: 优先用原始下载URL, 其次用初始URL
+                finalDownloadUrl = attachment.download_url
+                    ? this._ensureSidInUrl(attachment.download_url, sid)
+                    : initialUrl;
             }
 
-            // 获取文件内容
-            const response = await new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: finalDownloadUrl,
-                    headers: {
-                        ...this.headers,
-                        'Referer': MAIL_CONSTANTS.BASE_URL + '/'
-                    },
-                    responseType: 'blob',
-                        onload: function (response) {
-                        if (response.status === 200) {
-                            resolve(response);
-                        } else {
-                            reject(new Error(`Failed to fetch content: ${response.status} ${response.statusText}`));
-                        }
-                    },
-                        onerror: function (error) {
-                        reject(error);
-                    }
-                });
-            });
+            return this._gmRequest(finalDownloadUrl, 'blob');
+    }
 
-            return response;
-        } catch (error) {
-            throw error;
-        }
+    _gmRequest(url, responseType = '') {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url,
+                headers: { ...this.headers, 'Referer': MAIL_CONSTANTS.BASE_URL + '/' },
+                responseType,
+                onload(res) { res.status === 200 ? resolve(res) : reject(new Error(`HTTP ${res.status} ${res.statusText}`)); },
+                onerror(err) { reject(err); }
+            });
+        });
     }
 
     async _fetchRedirectUrl(initialUrl, attachmentName) {
-        try {
-            const response = await new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: initialUrl,
-                    headers: {
-                        ...this.headers,
-                        'Referer': MAIL_CONSTANTS.BASE_URL + '/'
-                    },
-                        onload: function (response) {
-                        if (response.status === 200) {
-                            resolve(response);
-                        } else {
-                            reject(new Error(`Failed to fetch redirect: ${response.status}`));
-                        }
-                    },
-                        onerror: function (error) {
-                        reject(error);
-                    }
-                });
-            });
+            const response = await this._gmRequest(initialUrl);
 
-            // 方法1: 检查是否已经重定向到最终URL
+            // 检查是否已经重定向到最终URL
             if (response.finalUrl && response.finalUrl !== initialUrl) {
                 return response.finalUrl;
             }
 
-            // 方法2: 从响应中提取JavaScript重定向URL
+            // 从响应中提取重定向URL
             const responseText = response.responseText;
 
-            // 尝试多种JavaScript重定向模式
-            const redirectPatterns = [
-                /window\.location\.href\s*=\s*['"]([^'"]+)['"]/,
-                /location\.href\s*=\s*['"]([^'"]+)['"]/,
-                /window\.location\s*=\s*['"]([^'"]+)['"]/,
-                /location\s*=\s*['"]([^'"]+)['"]/,
-                /window\.location\.replace\(['"]([^'"]+)['"]\)/,
-                /location\.replace\(['"]([^'"]+)['"]\)/,
-                /document\.location\s*=\s*['"]([^'"]+)['"]/,
-                /document\.location\.href\s*=\s*['"]([^'"]+)['"]/
-            ];
-
-            for (const pattern of redirectPatterns) {
+            // 依次尝试: JS重定向 → meta refresh → 下载链接 → JSON
+            for (const pattern of QQMailDownloader._REDIRECT_PATTERNS) {
                 const match = responseText.match(pattern);
-                if (match && match[1]) {
-                    return match[1];
-                }
+                if (match?.[1]) return match[1];
             }
 
-            // 方法3: 查找HTML meta refresh重定向
-            const metaRefreshMatch = responseText.match(/<meta[^>]+http-equiv=['"]refresh['"][^>]+content=['"][^'"]*url=([^'"]+)['"]/i);
-            if (metaRefreshMatch && metaRefreshMatch[1]) {
-                return metaRefreshMatch[1];
-            }
-
-            // 方法4: 查找可能的下载链接
-            const downloadLinkPatterns = [
-                /href=['"]([^'"]*download[^'"]*)['"]/i,
-                /url\(['"]([^'"]*download[^'"]*)['"]\)/i,
-                /(https?:\/\/[^'">\s]+download[^'">\s]*)/i
-            ];
-
-            for (const pattern of downloadLinkPatterns) {
-                const match = responseText.match(pattern);
-                if (match && match[1]) {
-                    return match[1];
-                }
-            }
-
-            // 方法5: 如果响应是JSON格式，尝试解析
+            // JSON 格式回退
             try {
                 const jsonData = JSON.parse(responseText);
-                if (jsonData.url || jsonData.download_url || jsonData.redirect_url) {
-                    const foundUrl = jsonData.url || jsonData.download_url || jsonData.redirect_url;
-                    return foundUrl;
-                }
-            } catch (e) {
-                // 不是JSON格式，继续其他方法
-            }
+                const foundUrl = jsonData.url || jsonData.download_url || jsonData.redirect_url;
+                if (foundUrl) return foundUrl;
+            } catch { /* not JSON */ }
 
             throw new Error(`No redirect URL found in response for ${attachmentName}`);
-
-        } catch (error) {
-            throw error;
-        }
     }
 
     async init() {
@@ -9345,12 +9585,7 @@ class QQMailDownloader {
     }
 
     handleLoginPage() {
-        // 可以添加登录页面的特定处理逻辑
-    }
-
-    handleMainPage() {
-        // 初始化附件管理器
-        this.attachmentManager = new AttachmentManager(this);
+        // 登录页面的特定处理逻辑（预留）
     }
 
     getSid() {
@@ -9461,7 +9696,7 @@ class QQMailDownloader {
 
     async getAllMails(folderId) {
         const result = await this.fetchMailList(folderId, 0, 50);
-                    return result.mails;
+        return result.mails;
     }
 
     async getMailsWithPagination(folderId, maxPages = 5) {
@@ -9489,21 +9724,20 @@ let downloader = null;
 const observer = new MutationObserver(mutationCallback);
 
 function initDownloader() {
-        if (downloader?.attachmentManager) return;
-
-        downloader = new QQMailDownloader();
-        observer.disconnect();
-        downloader.init();
+    if (downloader?.attachmentManager) return;
+    downloader = new QQMailDownloader();
+    observer.disconnect();
+    downloader.init();
 }
 
-function mutationCallback(mutationsList, obs) {
-        if (document.querySelector('#mailMainApp') && !downloader?.attachmentManager) {
-            initDownloader();
+function mutationCallback() {
+    if (document.querySelector('#mailMainApp') && !downloader?.attachmentManager) {
+        initDownloader();
     }
 }
 
 function startObserver() {
-        observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true });
 }
 
 (function initializeScript() {
