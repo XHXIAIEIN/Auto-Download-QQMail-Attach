@@ -1,22 +1,22 @@
 /* ========================================
    AM Design System — Design Tokens
-   Inspired by Linear + Superhuman, light theme
+   Matched to QQ Mail (wx.mail.qq.com) native styles
    ======================================== */
 :root {
     --am-bg: #ffffff;
-    --am-bg-subtle: #f8f9fa;
-    --am-bg-muted: #f1f3f5;
+    --am-bg-subtle: #f5f6f7;
+    --am-bg-muted: #f0f1f2;
     --am-bg-elevated: #ffffff;
     --am-overlay: rgba(0, 0, 0, 0.4);
     --am-overlay-blur: 4px;
 
-    --am-text: #1a1d21;
-    --am-text-secondary: #5e6370;
-    --am-text-tertiary: #8b8f98;
+    --am-text: rgba(19, 24, 29, 1);
+    --am-text-secondary: rgba(22, 30, 38, 0.8);
+    --am-text-tertiary: rgba(25, 38, 54, 0.3);
     --am-text-inverse: #ffffff;
 
-    --am-border: rgba(0, 0, 0, 0.08);
-    --am-border-strong: rgba(0, 0, 0, 0.15);
+    --am-border: rgba(22, 46, 74, 0.1);
+    --am-border-strong: rgba(22, 46, 74, 0.15);
 
     --am-accent: #0F7AF5;
     --am-accent-hover: #0E6FD9;
@@ -30,7 +30,7 @@
     --am-error: #d03050;
     --am-error-subtle: rgba(208, 48, 80, 0.08);
 
-    --am-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    --am-font: -apple-system, BlinkMacSystemFont, system-ui, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
     --am-font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
 
     --am-space-1: 4px;
@@ -44,7 +44,7 @@
     --am-space-12: 48px;
 
     --am-radius-sm: 4px;
-    --am-radius-md: 6px;
+    --am-radius-md: 4px;
     --am-radius-lg: 8px;
     --am-radius-xl: 12px;
     --am-radius-2xl: 16px;
@@ -157,19 +157,21 @@
    Buttons
    ======================================== */
 .am-btn {
-    padding: var(--am-space-2) var(--am-space-4);
-    border-radius: var(--am-radius-md);
+    height: 32px;
+    padding: 0 7px;
+    border-radius: var(--am-radius-sm);
     font-family: var(--am-font);
-    font-size: 13px; font-weight: 500;
+    font-size: 14px; font-weight: 400;
     cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center; gap: var(--am-space-1);
     transition: all var(--am-duration) var(--am-ease);
-    border: 1px solid var(--am-border);
+    border: 0.667px solid var(--am-border);
     background: var(--am-bg);
     color: var(--am-text);
     line-height: 1.4;
     text-decoration: none;
     white-space: nowrap;
+    box-sizing: border-box;
 }
 .am-btn:hover { background: var(--am-bg-muted); border-color: var(--am-border-strong); }
 .am-btn:active { transform: scale(0.98); }
@@ -277,9 +279,10 @@
    ======================================== */
 .am-input {
     width: 100%;
-    padding: var(--am-space-3) var(--am-space-4);
-    border: 1px solid var(--am-border-strong);
-    border-radius: var(--am-radius-lg);
+    height: 32px;
+    padding: 0 var(--am-space-3);
+    border: 0.667px solid var(--am-border);
+    border-radius: var(--am-radius-sm);
     font-family: var(--am-font);
     font-size: 14px;
     color: var(--am-text);
@@ -296,9 +299,10 @@
 
 .am-select {
     width: 100%;
-    padding: var(--am-space-3) var(--am-space-4);
-    border: 1px solid var(--am-border-strong);
-    border-radius: var(--am-radius-lg);
+    height: 32px;
+    padding: 0 var(--am-space-3);
+    border: 0.667px solid var(--am-border);
+    border-radius: var(--am-radius-sm);
     font-family: var(--am-font);
     font-size: 14px;
     color: var(--am-text);

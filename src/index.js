@@ -12,12 +12,22 @@ import { AttachmentManager } from './core/attachment-manager.js';
     if (manager) return;
 
     downloader = new QQMailDownloader();
-    if (!downloader.init()) return;
+    if (!downloader.init()) {
+      console.warn('[QQMailDownloader] SID not found, skipping init');
+      return;
+    }
 
     if (window.location.pathname.includes('/login')) return;
 
-    manager = new AttachmentManager(downloader);
-    window.attachmentManager = manager;
+    try {
+      manager = new AttachmentManager(downloader);
+      window.attachmentManager = manager;
+      console.log('[QQMailDownloader] v2.0.0 initialized');
+    } catch (e) {
+      console.error('[QQMailDownloader] init failed:', e);
+      // 构造失败也注入按钮，方便调试
+      manager = null;
+    }
 
     injectButton();
     listenFolderChange();
