@@ -2877,9 +2877,13 @@
       <div class="ui-btn-text">附件管理</div>
     `;
 			btn.addEventListener("click", () => manager?.toggle());
-			const ellipsisBtns = rightWrap.querySelector(".ui-toolbar-ellipsis-btns");
-			if (ellipsisBtns) ellipsisBtns.appendChild(btn);
-			else rightWrap.appendChild(btn);
+			const totalWrap = rightWrap.querySelector(".mail-list-page-toolbar-mail-total");
+			if (totalWrap) rightWrap.insertBefore(btn, totalWrap);
+			else {
+				const ellipsis = rightWrap.querySelector(".xmail-ui-toolbar-ellipsis");
+				if (ellipsis && ellipsis.nextSibling) rightWrap.insertBefore(btn, ellipsis.nextSibling);
+				else rightWrap.appendChild(btn);
+			}
 		}
 		/** 回退方案：右下角浮动按钮 */
 		function injectFloatingButton() {

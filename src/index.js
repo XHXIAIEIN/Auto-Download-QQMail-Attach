@@ -65,13 +65,17 @@ import { AttachmentManager } from './core/attachment-manager.js';
     `;
     btn.addEventListener('click', () => manager?.toggle());
 
-    // 插入到 ellipsis 按钮容器内部（和删除/转发等同级），
-    // 这样小屏时会被原生收纳到"更多"菜单里
-    const ellipsisBtns = rightWrap.querySelector('.ui-toolbar-ellipsis-btns');
-    if (ellipsisBtns) {
-      ellipsisBtns.appendChild(btn);
+    // 插入到 ellipsis 组件之后、"共 N 封"之前，始终可见
+    const totalWrap = rightWrap.querySelector('.mail-list-page-toolbar-mail-total');
+    if (totalWrap) {
+      rightWrap.insertBefore(btn, totalWrap);
     } else {
-      rightWrap.appendChild(btn);
+      const ellipsis = rightWrap.querySelector('.xmail-ui-toolbar-ellipsis');
+      if (ellipsis && ellipsis.nextSibling) {
+        rightWrap.insertBefore(btn, ellipsis.nextSibling);
+      } else {
+        rightWrap.appendChild(btn);
+      }
     }
   }
 
