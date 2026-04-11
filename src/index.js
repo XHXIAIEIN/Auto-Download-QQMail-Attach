@@ -25,18 +25,63 @@ import { AttachmentManager } from './core/attachment-manager.js';
       console.log('[QQMailDownloader] v2.0.0 initialized');
     } catch (e) {
       console.error('[QQMailDownloader] init failed:', e);
-      // 构造失败也注入按钮，方便调试
       manager = null;
     }
 
-    injectButton();
+    injectToolbarButton();
     listenFolderChange();
   }
 
-  function injectButton() {
-    document.querySelectorAll('#attachment-downloader-btn, [data-attachment-manager-btn]')
-      .forEach(el => el.remove());
+  /** 在邮件列表工具栏（删除/转发那一栏）中注入"附件管理"按钮 */
+  function injectToolbarButton(retries = 0) {
+    // 清理旧按钮
+    document.querySelectorAll('[data-attachment-manager-btn]').forEach(el => el.remove());
 
+    const rightWrap = document.querySelector('.mail-list-page-toolbar .right-wrap');
+    if (!rightWrap) {
+      if (retries < 10) {
+        // 工具栏还没渲染，等待重试
+        setTimeout(() => injectToolbarButton(retries + 1), 500);
+        return;
+      }
+      // 重试耗尽，回退到浮动按钮
+      injectFloatingButton();
+      return;
+    }
+
+    // 用 QQ 邮箱原生按钮的类名和结构，完全融入
+    const btn = document.createElement('div');
+    btn.className = 'xmail-ui-btn ui-btn-size32 ui-btn-border ui-btn-them-clear-gray';
+    btn.setAttribute('data-attachment-manager-btn', 'true');
+    btn.setAttribute('data-a11y', 'button');
+    btn.style.marginRight = '8px';
+    btn.innerHTML = `
+      <div class="xmail-ui-icon ui-btn-icon" style="width:20px;height:20px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </div>
+      <div class="ui-btn-text">附件管理</div>
+    `;
+    btn.addEventListener('click', () => manager?.toggle());
+
+    // 插入到"共 N 封"之前（如果它是 rightWrap 的直接子元素）
+    const totalBtn = rightWrap.querySelector(':scope > .mail-total-btn');
+    if (totalBtn) {
+      rightWrap.insertBefore(btn, totalBtn);
+    } else {
+      // 找到 ellipsis 容器，插入到它后面
+      const ellipsis = rightWrap.querySelector('.ui-toolbar-ellipsis-btns');
+      if (ellipsis) {
+        ellipsis.parentNode.insertBefore(btn, ellipsis.nextSibling);
+      } else {
+        rightWrap.appendChild(btn);
+      }
+    }
+  }
+
+  /** 回退方案：右下角浮动按钮 */
+  function injectFloatingButton() {
     const btn = document.createElement('button');
     btn.id = 'attachment-downloader-btn';
     btn.setAttribute('data-attachment-manager-btn', 'true');
@@ -53,7 +98,8 @@ import { AttachmentManager } from './core/attachment-manager.js';
       const newFolder = downloader.getCurrentFolderId();
       if (currentFolder !== newFolder) {
         currentFolder = newFolder;
-        setTimeout(() => injectButton(), 500);
+        // 文件夹切换后重新注入工具栏按钮
+        setTimeout(() => injectToolbarButton(), 500);
       }
     });
   }
