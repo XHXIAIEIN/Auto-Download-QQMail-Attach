@@ -1,0 +1,14 @@
+{
+  "name": "qqmail-downloader",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch --config build/vite.config.js",
+    "build": "vite build --config build/vite.config.js"
+  },
+  "devDependencies": {
+    "vite": "^8.0.8",
+    "vite-plugin-css-injected-by-js": "^4.0.1"
+  }
+}

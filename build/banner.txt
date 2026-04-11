@@ -1,0 +1,18 @@
+// ==UserScript==
+// @name         QQ邮箱附件批量下载器
+// @namespace    http://tampermonkey.net/
+// @version      2.0.0
+// @description  批量下载QQ邮箱附件，支持筛选、排序和批量操作
+// @author       XHXIAIEIN
+// @homepage     https://github.com/XHXIAIEIN/Auto-Download-QQMail-Attach/
+// @match        https://wx.mail.qq.com/*
+// @grant        GM_xmlhttpRequest
+// @grant        GM_download
+// @grant        GM_notification
+// @connect      mail.qq.com
+// @connect      wx.mail.qq.com
+// @license      MIT
+// @connect      gzc-dfsdown.mail.ftn.qq.com
+// @downloadURL   https://update.greasyfork.org/scripts/535160/qqmail-downloader.user.js
+// @updateURL     https://update.greasyfork.org/scripts/535160/qqmail-downloader.meta.js
+// ==/UserScript==
