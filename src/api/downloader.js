@@ -86,10 +86,11 @@ export class QQMailDownloader {
 
   async _fetchMailListPage(folderId, page) {
     const params = new URLSearchParams({
-      r: Date.now(), sid: this.sid, dir: folderId,
+      sid: this.sid, r: Date.now(),
+      dir: folderId, dirid: folderId,
+      func: 1, sort_type: 1, sort_direction: 1,
       page_now: page, page_size: PAGE_SIZE,
-      sort_type: 1, sort_direction: 0,
-      func: 1, tag: '', enable_topmail: true,
+      enable_topmail: true,
     });
     const url = `${MAIL_CONSTANTS.BASE_URL}${MAIL_CONSTANTS.API_ENDPOINTS.MAIL_LIST}?${params}`;
 
