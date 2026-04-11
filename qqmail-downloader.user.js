@@ -40,19 +40,6 @@
 			ATTACH_PREVIEW: "/attach/preview"
 		}
 	};
-	var REDIRECT_PATTERNS = [
-		/window\.location\.href\s*=\s*['"]([^'"]+)['"]/,
-		/location\.href\s*=\s*['"]([^'"]+)['"]/,
-		/window\.location\s*=\s*['"]([^'"]+)['"]/,
-		/location\s*=\s*['"]([^'"]+)['"]/,
-		/window\.location\.replace\(['"]([^'"]+)['"]\)/,
-		/location\.replace\(['"]([^'"]+)['"]\)/,
-		/document\.location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/,
-		/<meta[^>]+http-equiv=['"]refresh['"][^>]+content=['"][^'"]*url=([^'"]+)['"]/i,
-		/href=['"]([^'"]*download[^'"]*)['"]/i,
-		/url\(['"]([^'"]*download[^'"]*)['"]\)/i,
-		/(https?:\/\/[^'">\s]+download[^'">\s]*)/i
-	];
 	var DEFAULT_HEADERS = Object.freeze({
 		"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
 		"accept-language": "en,zh-CN;q=0.9,zh;q=0.8",
@@ -352,39 +339,14 @@
 				download_url: downloadUrl
 			};
 		}
-		async resolveDownloadUrl(attachment) {
-			if (attachment._attachType === ATTACH_SOURCE.CLOUD) return this._resolveCloudUrl(attachment);
-			return this._resolveNormalUrl(attachment);
-		}
-		async _resolveNormalUrl(attachment) {
-			const urlObj = new URL(attachment.download_url, MAIL_CONSTANTS.BASE_URL);
-			const params = new URLSearchParams(urlObj.search);
+		/**
+		* 返回附件的下载 URL。
+		* QQ 邮箱的 /attach/download 是 302 重定向，
+		* GM_xmlhttpRequest 会自动跟随，不需要手动解析。
+		*/
+		resolveDownloadUrl(attachment) {
 			const sid = new URLSearchParams(window.location.search).get("sid") || this.sid;
-			const initialUrl = `${MAIL_CONSTANTS.BASE_URL}${MAIL_CONSTANTS.API_ENDPOINTS.ATTACH_DOWNLOAD}?mailid=${params.get("mailid")}&fileid=${params.get("fileid")}&name=${encodeURIComponent(attachment.name)}&sid=${sid}`;
-			try {
-				return await this._fetchRedirectUrl(initialUrl);
-			} catch {
-				return attachment.download_url ? this._ensureSid(attachment.download_url, sid) : initialUrl;
-			}
-		}
-		async _resolveCloudUrl(attachment) {
-			if (attachment.download_url?.startsWith("http")) return attachment.download_url;
-			return this._resolveNormalUrl(attachment);
-		}
-		async _fetchRedirectUrl(url) {
-			const response = await this._gmRequest(url);
-			if (response.finalUrl && response.finalUrl !== url) return response.finalUrl;
-			const text = response.responseText;
-			for (const pattern of REDIRECT_PATTERNS) {
-				const match = text.match(pattern);
-				if (match?.[1]) return match[1];
-			}
-			try {
-				const json = JSON.parse(text);
-				const found = json.url || json.download_url || json.redirect_url;
-				if (found) return found;
-			} catch {}
-			throw new Error("No redirect URL found");
+			return this._ensureSid(attachment.download_url, sid);
 		}
 		_gmRequest(url, responseType = "", timeout = 0) {
 			return new Promise((resolve, reject) => {
