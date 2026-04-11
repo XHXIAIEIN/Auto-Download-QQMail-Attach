@@ -1,10 +1,22 @@
 import { defineConfig } from 'vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 const root = resolve(import.meta.dirname, '..');
-const bannerText = readFileSync(resolve(root, 'build/banner.txt'), 'utf-8');
+const bannerText = readFileSync(resolve(root, 'build/banner.txt'), 'utf-8').trim();
+const outFile = resolve(root, 'dist/qqmail-downloader.user.js');
+
+/** Post-build plugin: prepend UserScript banner to output */
+function userscriptBanner() {
+  return {
+    name: 'userscript-banner',
+    closeBundle() {
+      const code = readFileSync(outFile, 'utf-8');
+      writeFileSync(outFile, bannerText + '\n' + code);
+    },
+  };
+}
 
 export default defineConfig({
   root,
@@ -18,9 +30,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
         extend: true,
-        banner: bannerText,
       },
     },
     minify: false,
@@ -29,5 +39,6 @@ export default defineConfig({
   },
   plugins: [
     cssInjectedByJsPlugin(),
+    userscriptBanner(),
   ],
 });
