@@ -1762,7 +1762,9 @@
 
 		const currentSid = getSidFromUrl();
 		for (const t of failedTasks) {
-			t.url = replaceSid(t.url, currentSid);
+			// If sid is missing (e.g. user navigated to a page without sid), keep the old URL
+			// and let the engine's session-expiry recovery kick in instead of writing sid=null.
+			if (currentSid) t.url = replaceSid(t.url, currentSid);
 			t.status = 'pending';
 			t.error = undefined;
 		}
