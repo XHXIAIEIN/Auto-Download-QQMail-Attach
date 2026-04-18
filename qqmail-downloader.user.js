@@ -16,7 +16,6 @@
 	//  Constants
 	// ============================================================
 
-	// File type sets
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'bmp', 'tiff', 'tif', 'raw', 'cr2', 'cr3', 'nef', 'arw', 'dng', 'orf', 'rw2', 'raf']);
 	const PROJECT_EXTS = new Set(['psd', 'ai', 'sketch', 'fig', 'xd', 'indd', 'cdr', 'eps', 'afdesign', 'afphoto', 'blend', 'c4d', 'max', 'ma', 'mb']);
 	const DOC_EXTS = new Set(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'csv', 'md', 'epub']);
@@ -24,25 +23,33 @@
 	const VIDEO_EXTS = new Set(['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'mpg', 'mpeg', 'm4v', 'gif']);
 	const ARCHIVE_EXTS = new Set(['zip', 'rar', '7z', 'gz', 'tar', 'bz2', 'xz', 'zst']);
 
-	const PHONE_RE = /1[3-9]\d{9}/g;
-	const QQ_RE = /(?<!\d)[1-9]\d{4,10}(?!\d)/g;
-	const DATE_RE = /^202[0-9](0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/;
 	const DB_NAME = 'mail_downloader_db';
 	const DB_VERSION = 30000;
 	const CONCURRENCY = 10;
 
-	// Directory classification names
-	const DIR_IMAGE = '图片';
-	const DIR_DOC = '文档';
-	const DIR_AUDIO = '音频';
-	const DIR_VIDEO = '视频';
-	const DIR_ARCHIVE = '压缩文件';
+	const DIR_IMAGE   = '图片';
 	const DIR_PROJECT = '项目文件';
-	const DIR_DUP = '重复';
-	const DIR_OTHER = '其他';
-	const DIR_MANUAL = '转人工';
+	const DIR_DOC     = '文档';
+	const DIR_AUDIO   = '音频';
+	const DIR_VIDEO   = '视频';
+	const DIR_ARCHIVE = '压缩文件';
+	const DIR_DUP     = '重复';
+	const DIR_OTHER   = '其他';
+	const DIR_MANUAL  = '转人工';
 
-	// Tag IDs
+	// `detailTitle` absent → category has a custom report section (DUP / MANUAL) instead of a plain listing.
+	const DIR_META = [
+		{ name: DIR_IMAGE,   desc: 'jpg/png/webp/heic/ 等', detailTitle: '图片清单' },
+		{ name: DIR_PROJECT, desc: 'psd/ai/sketch/xd 等',   detailTitle: '项目文件清单' },
+		{ name: DIR_DOC,     desc: 'pdf/doc/xls/ppt 等',    detailTitle: '文档清单' },
+		{ name: DIR_AUDIO,   desc: 'mp3/wav/flac 等',       detailTitle: '音频清单' },
+		{ name: DIR_VIDEO,   desc: 'mp4/mov/avi 等',        detailTitle: '视频清单' },
+		{ name: DIR_ARCHIVE, desc: 'zip/rar/7z 等',         detailTitle: '压缩文件清单' },
+		{ name: DIR_DUP,     desc: '已保留最新' },
+		{ name: DIR_OTHER,   desc: '未归类格式',            detailTitle: '其他文件清单' },
+		{ name: DIR_MANUAL,  desc: '第三方链接' },
+	];
+
 	const TAG_NO_ATTACH = 4001;
 	const TAG_READ = 4004;
 	const TAG_DOWNLOADED = 4008;
@@ -96,9 +103,26 @@
 		return name.replace(/[<>:"|?*]/g, '_').replace(/\//g, '_');
 	}
 
-	// A "convention-compliant" filename contains 6+ consecutive digits (QQ/phone) with
-	// clean boundaries — both sides must be separator / CJK / edge / QQ-prefix marker.
-	// Rejects digit runs embedded in hex/hash strings (e.g. "6992751ddbd0...").
+	// HTML-escape before writing to innerHTML. Mail subject / sender nick / attachment name
+	// are attacker-controlled: a subject like `<img src=x onerror=...>` would execute in the
+	// wx.mail.qq.com origin, where this script has full session access.
+	function escapeHtml(s) {
+		return String(s ?? '')
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	// Escape for markdown table cells: pipe would break table structure, newline would split row.
+	function escapeMd(s) {
+		return String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+	}
+
+	// A "convention-compliant" filename has 6+ consecutive digits (QQ/phone) with clean boundaries
+	// on both sides — separator / CJK / edge / QQ-prefix marker. This rejects digit runs embedded
+	// in hex/hash strings like "6992751ddbd0..." that would otherwise pollute identity extraction.
 	const CONV_BOUNDARY_RE = /[-_\s+·()（）【】\[\]、，\u4e00-\u9fa5QqＱ]/;
 	const CONV_TRAIL_SEP_RE = /[-_\s+·]/;
 
@@ -106,7 +130,6 @@
 		return ch === '' || CONV_BOUNDARY_RE.test(ch);
 	}
 
-	/** Find all digit runs matching `re` that have clean boundaries on both sides. */
 	function findBoundedDigitRuns(s, re) {
 		const runs = [];
 		re.lastIndex = 0;
@@ -127,11 +150,9 @@
 		return findBoundedDigitRuns(s, /\d{6,}/g).length > 0;
 	}
 
-	/** Prefix = everything up to the end of the last valid digit run (+ trailing separator). */
 	function extractConventionPrefix(s) {
 		const runs = findBoundedDigitRuns(s, /\d{6,}/g);
 		if (runs.length === 0) return null;
-		// exec yields matches in order; the last run has the largest end.
 		let end = runs[runs.length - 1].end;
 		if (end < s.length && CONV_TRAIL_SEP_RE.test(s[end])) end++;
 		return s.slice(0, end);
@@ -167,7 +188,12 @@
 		return s;
 	}
 
-	/** Run async fn on items in parallel batches */
+	function formatDirStats(stats) {
+		return DIR_META.map(({ name }) =>
+			name === DIR_IMAGE ? `${name} ${stats[name] || 0}` : stats[name] ? `${name} ${stats[name]}` : ''
+		).filter(Boolean);
+	}
+
 	async function batchParallel(items, concurrency, fn) {
 		for (let i = 0; i < items.length; i += concurrency) {
 			await Promise.all(items.slice(i, i + concurrency).map(fn));
@@ -184,11 +210,15 @@
 		return url.replace(/sid=[^&]+/, 'sid=' + newSid);
 	}
 
+	// Filter out date-like digit strings (YYYYMMDD, YYMMDD) that otherwise look like QQ numbers.
+	// Accepts 19xx/20xx so it doesn't silently break in 2030.
+	const DATE8_RE = /^(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/;
+	const DATE6_RE = /^\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/;
 	function cleanQQs(qqs) {
 		return qqs.filter(q => {
-			if (DATE_RE.test(q)) return false;
+			if (DATE8_RE.test(q)) return false;
 			if (q.length < 5) return false;
-			if (/^[0-2]\d[0-5]\d\d\d$/.test(q) && q.length === 6) return false;
+			if (q.length === 6 && DATE6_RE.test(q)) return false;
 			return true;
 		});
 	}
@@ -219,15 +249,6 @@
 		});
 	}
 
-	function dbGet(store, key) {
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(store, 'readonly');
-			const req = tx.objectStore(store).get(key);
-			req.onsuccess = () => resolve(req.result);
-			tx.onerror = () => reject(tx.error);
-		});
-	}
-
 	function dbGetAll(store) {
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction(store, 'readonly');
@@ -247,7 +268,6 @@
 		});
 	}
 
-	/** Delete tasks matching a folderId (or all if not specified) */
 	async function dbDeleteByFolder(targetFolderId) {
 		const all = await dbGetAll('tasks');
 		const toDelete = all.filter(t => t.folderId === targetFolderId);
@@ -256,15 +276,6 @@
 			const tx = db.transaction('tasks', 'readwrite');
 			const store = tx.objectStore('tasks');
 			for (const t of toDelete) store.delete(t.id);
-			tx.oncomplete = () => resolve();
-			tx.onerror = () => reject(tx.error);
-		});
-	}
-
-	function dbClear(store) {
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(store, 'readwrite');
-			tx.objectStore(store).clear();
 			tx.oncomplete = () => resolve();
 			tx.onerror = () => reject(tx.error);
 		});
@@ -311,12 +322,10 @@
 		return data;
 	}
 
-	// Mark single mail as read
 	async function markMailRead(mailId) {
 		return apiPost('/mgr/mailmgr', { func: 4, mailid: mailId, folderid: folderId, choose_type: 1 });
 	}
 
-	// Add tag to a mail
 	async function addTag(mailId, tagId) {
 		return apiPost('/mgr/mailmgr', { func: 12, mailid: mailId, tagid: tagId, folderid: folderId, choose_type: 1 });
 	}
@@ -325,7 +334,6 @@
 		await Promise.all(tagIds.map(t => addTag(mailId, t)));
 	}
 
-	// Poll async task until complete
 	async function pollAsyncTask(taskId) {
 		for (let i = 0; i < 60; i++) {
 			const r = await apiPost('/mgr/mailmgr', { func: 26, async_task_func: 1, async_taskid: taskId });
@@ -336,7 +344,6 @@
 		return false;
 	}
 
-	// Mark all mails in folder as unread (batch + async poll)
 	async function markAllUnread() {
 		const r = await apiPost('/mgr/mailmgr', { func: 5, folderid: folderId, choose_type: 2 });
 		if (r.head.ret !== 0) return false;
@@ -373,12 +380,10 @@
 	//  Phase 3: Build identity map
 	// ============================================================
 
-	/** Build identity map from attach_list entries (or legacy mail objects) */
+	// Accepts both attach_list entries and legacy mail objects.
 	function buildIdentityMap(items) {
 		identityMap = new Map();
 
-		// Require clean boundaries on matches so hex/hash strings like
-		// "6992751ddbd06697d3528577" don't pollute the identity map.
 		function extractPhoneQQ(text, id) {
 			for (const r of findBoundedDigitRuns(text, /1[3-9]\d{9}/g)) id.phones.add(r.text);
 			for (const r of findBoundedDigitRuns(text, /(?<!\d)[1-9]\d{4,10}(?!\d)/g)) {
@@ -394,7 +399,6 @@
 		}
 
 		for (const item of items) {
-			// Support both attach_list format and legacy mail format
 			const email = item.sender?.addr || getSenderEmail(item);
 			const nick = item.sender?.name || getSenderNick(item);
 			if (!email) continue;
@@ -409,9 +413,7 @@
 			const eqq = email.match(/^(\d{5,11})@qq\.com$/);
 			if (eqq) id.qqs.add(eqq[1]);
 
-			// attach_list entry: extract from filename
 			if (item.name) extractPhoneQQ(item.name, id);
-			// legacy mail: extract from attachment names
 			if (item.normal_attach || item.cloud_attach) {
 				for (const a of getAttachments(item)) {
 					if (a.name) extractPhoneQQ(a.name, id);
@@ -424,7 +426,6 @@
 		const id = identityMap.get(email);
 		if (!id) return { name: '', qq: '', phone: '' };
 		const qqs = cleanQQs([...id.qqs]);
-		// Reject pure-digit entries in both names (from subject parts[2]) and nicks
 		const pickNonDigit = set => [...set].find(n => n && !/^\d+$/.test(n)) || '';
 		return {
 			name: pickNonDigit(id.names) || pickNonDigit(id.nicks) || '',
@@ -476,14 +477,9 @@
 		}
 	}
 
-	/**
-	 * After buildIdentityMap, enhance entries that regex couldn't parse.
-	 * Only runs if Chrome Built-in AI is available.
-	 */
 	async function enhanceIdentityWithAI(allMails, onProgress) {
 		if (!aiAvailable) return 0;
 
-		// Collect mails where regex found no name
 		const needAI = [];
 		for (const mail of allMails) {
 			const email = mail.senders?.item?.[0]?.email;
@@ -497,7 +493,6 @@
 		if (needAI.length === 0) return 0;
 
 		let enhanced = 0;
-		// Dedupe by email — only parse once per sender
 		const seen = new Set();
 		for (let i = 0; i < needAI.length; i++) {
 			const mail = needAI[i];
@@ -525,7 +520,6 @@
 	//  Phase 3b: Recalled mails + innerpiclist + tagging
 	// ============================================================
 
-	/** Separate recalled mails, tag them in batches, return remaining */
 	async function processRecalledMails(allMails, onProgress) {
 		const recalled = [];
 		const remaining = [];
@@ -544,14 +538,9 @@
 		return { recalled, remaining };
 	}
 
-	/**
-	 * For mails with no attachments, call readmail to check innerpiclist.
-	 * Returns inline attachment entries to add to the download list.
-	 */
 	async function processInnerPicList(noAttachMails, sendersWithAttach, onProgress) {
 		const inlineEntries = [];
 		const emptyMails = [];
-		const skippedMails = [];
 		let processed = 0;
 
 		async function processOne(mail) {
@@ -569,18 +558,17 @@
 
 				const senderEmail = getSenderEmail(mail);
 				if (sendersWithAttach.has(senderEmail)) {
-					skippedMails.push(mail);
 					await addTags(mail.emailid, [TAG_NO_ATTACH, TAG_READ]);
 					return;
 				}
 
-				// Mark as no-attachment (will get TAG_DOWNLOADED after download completes)
+				// Only TAG_NO_ATTACH here — TAG_DOWNLOADED is applied after all its inline pics download.
 				await addTag(mail.emailid, TAG_NO_ATTACH);
 
 				for (let pi = 0; pi < picList.length; pi++) {
 					const pic = picList[pi];
 					let ext = 'jpg';
-					const nameMatch = (pic.name || '').match(/\.([a-zA-Z]{3,4})(?:\.[a-zA-Z]{3,4})?$/);
+					const nameMatch = (pic.name || '').match(/\.([a-zA-Z0-9]{2,5})(?:\.[a-zA-Z0-9]{2,5})?$/);
 					if (nameMatch) ext = nameMatch[1].toLowerCase();
 
 					const identity = getIdentity(senderEmail);
@@ -601,19 +589,18 @@
 					});
 				}
 			} catch (e) {
-				// Skip on error, don't block pipeline
+				// swallow per-mail failures — inner-pic check is best-effort
 			}
 		}
 
 		await batchParallel(noAttachMails, 5, processOne);
-		return { inlineEntries, emptyMails, skippedMails };
+		return { inlineEntries, emptyMails };
 	}
 
 	// ============================================================
 	//  Phase 4: Build mail map + classify + generate download list
 	// ============================================================
 
-	/** Build mailMap from attach_list entries */
 	function buildMailMapFromAttach(attachments) {
 		mailMap = {};
 		const byMail = new Map();
@@ -639,7 +626,6 @@
 		}
 	}
 
-	/** Build mailMap from legacy maillist entries (used by resume path) */
 	function buildMailMap(allMails) {
 		mailMap = {};
 		let mailIdx = 0;
@@ -661,7 +647,6 @@
 		}
 	}
 
-	/** Classify extension into directory */
 	function classifyExt(ext) {
 		if (ARCHIVE_EXTS.has(ext)) return DIR_ARCHIVE;
 		if (IMAGE_EXTS.has(ext)) return DIR_IMAGE;
@@ -672,9 +657,8 @@
 		return DIR_OTHER;
 	}
 
-	/** Build download list from attach_list API entries */
 	function buildDownloadListFromAttach(attachments) {
-		// Duplicate detection: sender_email + file_size
+		// Duplicates keyed by sender_email + file_size; newest (by ctime) wins within each group.
 		const ssMap = new Map();
 		for (const a of attachments) {
 			const k = `${a.sender?.addr || ''}_${a.size}`;
@@ -683,7 +667,7 @@
 		}
 		const dupKeys = new Set();
 		const dupGroupMap = new Map();
-		const dupKeptMap = new Map(); // groupKey → "mailid_fileid" of kept (newest) item
+		const dupKeptMap = new Map();
 		for (const [groupKey, items] of ssMap) {
 			if (items.length > 1) {
 				items.sort((a, b) => b.t - a.t);
@@ -694,7 +678,6 @@
 			}
 		}
 
-		// Resolve file extension (prefers attach.type over filename) and strip it from the name.
 		function resolveStemExt(a) {
 			let ext = (a.type || '').toLowerCase();
 			if (!ext && a.name?.includes('.')) ext = a.name.split('.').pop().toLowerCase();
@@ -703,8 +686,7 @@
 			return { stem, ext };
 		}
 
-		// Pass 1: derive each sender's naming-convention prefix from their compliant files.
-		// If multiple prefixes exist, pick the most common one (handles one-off outliers).
+		// Most-common prefix per sender — tolerates one-off outliers if a sender has mixed naming.
 		const senderPrefix = new Map();
 		{
 			const prefixCounts = new Map();
@@ -747,10 +729,8 @@
 
 			const sender = a.sender?.addr || '';
 
-			// Naming strategies (in priority order):
-			// 1. File already compliant (has 6+ digit identity token) → keep as-is
-			// 2. Sender has other compliant files → mirror their prefix
-			// 3. Otherwise → fall back to "name_qq_phone_" from identity map
+			// Priority: (1) filename already has identity token → keep as-is;
+			// (2) sender has compliant siblings → mirror their prefix; (3) synthesize from identity map.
 			let filename;
 			if (hasConventionDigits(origName)) {
 				filename = (origName || 'unnamed') + '.' + ext;
@@ -784,7 +764,6 @@
 			downloads.push(task);
 		}
 
-		// Resolve filename collisions within the same directory
 		const nameCount = new Map();
 		for (const task of downloads) {
 			const key = `${task.dir}/${task.filename}`;
@@ -825,11 +804,11 @@
 		await w.close();
 	}
 
-	// Append a single entry and flush — batched via a write queue to avoid conflicts
 	let manifestCache = null;
 	let manifestDirty = false;
 	let manifestFlushTimer = null;
 
+	// Debounce: coalesce bursts of appends from parallel workers into at most one write per 2s.
 	async function manifestAppend(entry) {
 		if (!manifestCache) manifestCache = await readManifest();
 		const key = `${entry.mailid}_${entry.fileid}`;
@@ -838,7 +817,6 @@
 		manifestCache[key] = val;
 		manifestDirty = true;
 
-		// Debounce flush: write every 2 seconds max
 		if (!manifestFlushTimer) {
 			manifestFlushTimer = setTimeout(() => {
 				manifestFlushTimer = null;
@@ -871,34 +849,25 @@
 		const done = tasks.filter(t => t.status === 'done');
 		const failed = tasks.filter(t => t.status === 'failed');
 
-		// Group by dir
 		const byDir = {};
 		for (const t of tasks) {
 			byDir[t.dir] = byDir[t.dir] || [];
 			byDir[t.dir].push(t);
 		}
 
-		// Build report
 		const lines = [];
 		lines.push(`# ${folderName} · 投稿收集报告`);
 		lines.push(``);
 		lines.push(`> ${now} · ${done.length} 个文件 · ${failed.length > 0 ? failed.length + ' 失败' : '全部成功'}`);
 		lines.push(``);
 
-		// Overview table
 		lines.push(`## 概览`);
 		lines.push(``);
 		lines.push(`| 分类 | 数量 | 说明 |`);
 		lines.push(`|------|------|------|`);
-		lines.push(`| ${DIR_IMAGE} | ${(byDir[DIR_IMAGE] || []).length} | jpg/png/webp/heic/ 等 |`);
-		lines.push(`| ${DIR_PROJECT} | ${(byDir[DIR_PROJECT] || []).length} | psd/ai/sketch/xd 等 |`);
-		lines.push(`| ${DIR_DOC} | ${(byDir[DIR_DOC] || []).length} | pdf/doc/xls/ppt 等 |`);
-		lines.push(`| ${DIR_AUDIO} | ${(byDir[DIR_AUDIO] || []).length} | mp3/wav/flac 等 |`);
-		lines.push(`| ${DIR_VIDEO} | ${(byDir[DIR_VIDEO] || []).length} | mp4/mov/avi 等 |`);
-		lines.push(`| ${DIR_ARCHIVE} | ${(byDir[DIR_ARCHIVE] || []).length} | zip/rar/7z 等 |`);
-		lines.push(`| ${DIR_DUP} | ${(byDir[DIR_DUP] || []).length} | 已保留最新 |`);
-		lines.push(`| ${DIR_OTHER} | ${(byDir[DIR_OTHER] || []).length} | 未归类格式 |`);
-		lines.push(`| ${DIR_MANUAL} | ${(byDir[DIR_MANUAL] || []).length} | 第三方链接 |`);
+		for (const { name, desc } of DIR_META) {
+			lines.push(`| ${name} | ${(byDir[name] || []).length} | ${desc} |`);
+		}
 		if (pipelineStats) {
 			lines.push(`| 已撤回 | ${pipelineStats.recalledCount || 0} | 发信方已撤回 |`);
 			lines.push(`| 空邮件 | ${pipelineStats.emptyCount || 0} | 无附件无内嵌图 |`);
@@ -907,7 +876,6 @@
 		lines.push(`| **合计** | **${tasks.length}** | 下载成功 ${done.length}，失败 ${failed.length} |`);
 		lines.push(``);
 
-		// Audit
 		const totalMailsInTasks = new Set(tasks.map(t => t.mailid)).size;
 		const totalScanned = pipelineStats?.totalScanned || totalMailsInTasks;
 		const noAttachCount = Math.max(0, totalScanned - totalMailsInTasks - (pipelineStats?.recalledCount || 0));
@@ -924,37 +892,27 @@
 		lines.push(`| 落盘 | manifest ${manifestCount} 条记录 ${diskMatch ? '✓' : '⚠ 不一致'} |`);
 		lines.push(``);
 
-		// Detail sections for each category
-		const detailDirs = [
-			[DIR_IMAGE, '图片清单'],
-			[DIR_PROJECT, '项目文件清单'],
-			[DIR_DOC, '文档清单'],
-			[DIR_AUDIO, '音频清单'],
-			[DIR_VIDEO, '视频清单'],
-			[DIR_ARCHIVE, '压缩文件清单'],
-			[DIR_OTHER, '其他文件清单'],
-		];
-		for (const [dirName, title] of detailDirs) {
-			const items = byDir[dirName] || [];
+		// DIRs without `detailTitle` (DUP, MANUAL) get their own custom sections below.
+		for (const { name, detailTitle } of DIR_META) {
+			if (!detailTitle) continue;
+			const items = byDir[name] || [];
 			if (items.length === 0) continue;
-			lines.push(`## ${title}`);
+			lines.push(`## ${detailTitle}`);
 			lines.push(``);
 			lines.push(`| # | 发件人 | 主题 | 最终文件名 |`);
 			lines.push(`|---|--------|------|------------|`);
 			items.forEach((t, i) => {
 				const info = mailMap[t.mailid];
-				lines.push(`| ${i + 1} | ${info?.senderEmail || ''} | ${(info?.subject || '').slice(0, 30)} | ${t.filename} |`);
+				lines.push(`| ${i + 1} | ${escapeMd(info?.senderEmail)} | ${escapeMd((info?.subject || '').slice(0, 30))} | ${escapeMd(t.filename)} |`);
 			});
 			lines.push(``);
 		}
 
-		// Duplicates — grouped comparison table
 		const dups = byDir[DIR_DUP] || [];
 		if (dups.length > 0) {
 			lines.push(`## 重复投稿`);
 			lines.push(``);
 
-			// Group all tasks (kept + dup) by dupGroup
 			const dupGroups = new Map();
 			for (const t of tasks) {
 				if (!t.dupGroup) continue;
@@ -970,7 +928,6 @@
 
 			let groupIdx = 0;
 			for (const [, group] of dupGroups) {
-				// Sort: kept (non-dup dir) first, then by time desc
 				group.sort((a, b) => {
 					if (a.dir !== DIR_DUP && b.dir === DIR_DUP) return -1;
 					if (a.dir === DIR_DUP && b.dir !== DIR_DUP) return 1;
@@ -987,13 +944,12 @@
 					const info = mailMap[t.mailid] || {};
 					const kept = t.dir !== DIR_DUP ? '● 保留' : '○ 重复';
 					const subject = (info.subject || '').slice(0, 25);
-					lines.push(`| ${kept} | ${t.filename} | ${info.senderNick || ''} | ${info.senderEmail || ''} | ${subject} | ${fmtTime(info.totime)} |`);
+					lines.push(`| ${kept} | ${escapeMd(t.filename)} | ${escapeMd(info.senderNick)} | ${escapeMd(info.senderEmail)} | ${escapeMd(subject)} | ${fmtTime(info.totime)} |`);
 				}
 				lines.push(``);
 			}
 		}
 
-		// Manual
 		const manual = byDir[DIR_MANUAL] || [];
 		if (manual.length > 0) {
 			lines.push(`## 待人工处理`);
@@ -1002,26 +958,24 @@
 			lines.push(`|--------|--------|-----|`);
 			for (const t of manual) {
 				const info = mailMap[t.mailid];
-				lines.push(`| ${t.filename} | ${info?.senderEmail || ''} | ${t.url.slice(0, 60)}... |`);
+				lines.push(`| ${escapeMd(t.filename)} | ${escapeMd(info?.senderEmail)} | ${escapeMd(t.url.slice(0, 60))}... |`);
 			}
 			lines.push(``);
 		}
 
-		// Failed
 		if (failed.length > 0) {
 			lines.push(`## 下载失败`);
 			lines.push(``);
 			lines.push(`| 文件名 | 错误 |`);
 			lines.push(`|--------|------|`);
 			for (const t of failed) {
-				lines.push(`| ${t.filename} | ${t.error || 'unknown'} |`);
+				lines.push(`| ${escapeMd(t.filename)} | ${escapeMd(t.error || 'unknown')} |`);
 			}
 			lines.push(``);
 		}
 
 		const content = lines.join('\n');
 
-		// Write to FSAPI
 		try {
 			const fh = await rootHandle.getFileHandle('report.md', { create: true });
 			const w = await fh.createWritable();
@@ -1041,7 +995,6 @@
 	let sessionExpired = false;
 	let sessionRecoverResolve = null;
 
-	/** Pause engine, show recovery UI, wait for new sid */
 	function waitForSessionRecovery() {
 		sessionExpired = true;
 		return new Promise(resolve => {
@@ -1052,7 +1005,6 @@
 
 	function showSessionExpiredUI() {
 		const panel = getOrCreatePanel();
-		// Keep existing content but prepend warning banner
 		const banner = document.createElement('div');
 		banner.id = '__dl_session_banner';
 		banner.style.cssText = 'background:#FFF3E0;border:1px solid #FFB74D;border-radius:6px;padding:10px 16px;margin-bottom:10px;display:flex;align-items:center;gap:8px;';
@@ -1063,7 +1015,6 @@
       <button id="__dl_recover" style="background:#0F7AF5;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;">已刷新，继续下载</button>
     `;
 
-		// Insert banner at top of panel
 		const existing = document.getElementById('__dl_session_banner');
 		if (existing) existing.remove();
 		banner.querySelector('#__dl_recover').addEventListener('click', async () => {
@@ -1072,7 +1023,6 @@
 				banner.querySelector('span:nth-child(2)').textContent = 'URL 中未找到 sid，请确认已刷新并进入文件夹';
 				return;
 			}
-			// Verify new session works
 			const oldSid = sid;
 			sid = newSid;
 			const check = await verifySession();
@@ -1124,7 +1074,7 @@
 					xhr.send();
 				});
 
-				// Session expired: QQ Mail returns JSON error instead of file blob
+				// QQ Mail returns a JSON error body (not HTTP 4xx) when the session expires.
 				if (blob.type === 'application/json' && blob.size < 1000) {
 					const j = JSON.parse(await blob.text());
 					if (j.head?.ret === -20002 || j.ret === -20002) throw new Error('session_expired');
@@ -1139,17 +1089,13 @@
 				task.status = 'done';
 				await manifestAppend({ mailid: task.mailid, fileid: task.fileid, dir: task.dir, filename: task.filename, size: blob.size, keptBy: task.keptBy });
 			} catch (e) {
-				if (e.message === 'session_expired') {
-					// Don't mark as failed — will retry after recovery
-					throw e;
-				}
+				if (e.message === 'session_expired') throw e; // bubble up for retry; caller requeues
 				task.status = 'failed';
 				task.error = e.message;
 			}
 			if (task.status !== 'pending') await dbPut('tasks', task);
 		}
 
-		// Per-mail completion tracking → mark mail as read once all its attachments finish.
 		const mailTotalCount = new Map();
 		const mailDoneCount = new Map();
 		for (const task of tasks) {
@@ -1180,17 +1126,14 @@
 							wrappedProgress(task);
 						} catch (e) {
 							if (e.message === 'session_expired') {
-								// Put task back in queue
 								queue.unshift(task);
-								// Only one worker triggers recovery; others wait
+								// Exactly one worker drives recovery; the rest poll until sessionExpired clears.
 								if (!sessionExpired) {
 									const newSid = await waitForSessionRecovery();
-									// Update sid in all remaining queue tasks
 									for (const t of queue) {
 										t.url = replaceSid(t.url, newSid);
 									}
 								} else {
-									// Wait for recovery triggered by another worker
 									await new Promise(r => {
 										const iv = setInterval(() => {
 											if (!sessionExpired) {
@@ -1238,8 +1181,7 @@
 	const BTN_PRIMARY_STYLE = 'background:#0F7AF5;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:14px;cursor:pointer;font-family:inherit;';
 	const TEXT_MUTED = 'font-size:14px;color:rgba(20,46,77,0.45);';
 
-	// Header row shared by Start/Resume/Progress/Scanning/PickDir/Complete UIs.
-	// `subtitleId` ties the subtitle to updateScanMessage() — only set for UIs that update.
+	// `subtitleId` is set only for UIs whose subtitle is live-updated by updateScanMessage().
 	function headerRow(subtitle, right = '', subtitleId = '') {
 		const idAttr = subtitleId ? ` id="${subtitleId}"` : '';
 		return `<div style="display:flex;align-items:center;gap:8px;height:32px;">
@@ -1265,7 +1207,6 @@
 		if (mailApp?.firstChild) mailApp.insertBefore(panel, mailApp.firstChild);
 	}
 
-	// -- Prompt UI: pick folder + start scan --
 	function showStartUI() {
 		const panel = getOrCreatePanel();
 		panel.innerHTML = headerRow('点击开始扫描当前文件夹', `<button id="__dl_start" style="${BTN_PRIMARY_STYLE}">开始扫描</button>`);
@@ -1273,7 +1214,6 @@
 		mountPanel(panel);
 	}
 
-	// -- Resume UI: continue from IndexedDB --
 	function showResumeUI(pendingCount) {
 		const panel = getOrCreatePanel();
 		panel.innerHTML = headerRow(
@@ -1285,9 +1225,7 @@
 			try {
 				rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
 				await resumeDownloads();
-			} catch (e) {
-				// User cancelled
-			}
+			} catch (e) {}
 		};
 		panel.querySelector('#__dl_reset').onclick = async () => {
 			await dbDeleteByFolder(folderId);
@@ -1296,7 +1234,6 @@
 		mountPanel(panel);
 	}
 
-	// -- Progress UI --
 	function showProgressUI(done, total, failed, mailCount) {
 		const panel = getOrCreatePanel();
 		const pct = total > 0 ? (((done + failed) / total) * 100).toFixed(1) : '0';
@@ -1324,7 +1261,6 @@
 		const failedTasks = [];
 		const recentTasks = [];
 
-		// Cache DOM refs once — avoids getElementById on every task completion.
 		const bar = document.getElementById('__dl_bar');
 		const pctEl = document.getElementById('__dl_pct');
 		const doneEl = document.getElementById('__dl_done');
@@ -1338,10 +1274,10 @@
 
 		function renderMailInfo(mInfo) {
 			const idx = mInfo.mailIdx || '';
-			const email = mInfo.senderEmail || '';
-			const nick = mInfo.senderNick || '';
 			const count = mInfo.attachCount || 0;
-			const subject = mInfo.subject || '';
+			const email = escapeHtml(mInfo.senderEmail || '');
+			const nick = escapeHtml(mInfo.senderNick || '');
+			const subject = escapeHtml(mInfo.subject || '');
 			mailDiv.innerHTML = `
 				<div style="display:flex;align-items:center;gap:8px;color:rgba(20,46,77,0.55);margin-bottom:2px;">
 					${ICONS.mail}
@@ -1358,7 +1294,7 @@
 				.slice(-3)
 				.map(t => {
 					const ai = mailMap[t.mailid + '|' + t.fileid];
-					const name = ai?.origName || t.filename;
+					const name = escapeHtml(ai?.origName || t.filename);
 					const idx = ai?.attachIdx || '';
 					const tot = ai?.attachTotal || '';
 					return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;line-height:1.6;color:rgba(20,46,77,0.55);">
@@ -1382,7 +1318,7 @@
 					${failedTasks
 						.slice(-3)
 						.map(
-							t => `<div style="font-size:12px;color:rgba(20,46,77,0.55);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.filename}</div>`
+							t => `<div style="font-size:12px;color:rgba(20,46,77,0.55);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.filename)}</div>`
 						)
 						.join('')}
 				</div>`;
@@ -1415,7 +1351,6 @@
 					speedEl.textContent = done + failed >= total ? `已完成 · ${Math.floor(el)}秒` : `${speed.toFixed(1)}/秒 · ${etaMin > 0 ? etaMin + '分' : ''}${etaSec}秒`;
 				}
 
-				// Only rebuild mail header when mailid actually changes.
 				if (mailDiv && task.mailid !== lastMailId) {
 					const mInfo = mailMap[task.mailid];
 					if (mInfo) renderMailInfo(mInfo);
@@ -1423,7 +1358,6 @@
 				}
 				if (filesDiv) renderRecentFiles();
 
-				// Only rebuild fail section when failure count changes.
 				if (failSection && failedTasks.length !== lastFailCount) {
 					lastFailCount = failedTasks.length;
 					if (failedTasks.length > 0) renderFailSection();
@@ -1467,12 +1401,11 @@
 			await _runFullPipeline();
 		} catch (e) {
 			console.error('[QQMailDL] pipeline error:', e);
-			showScanningUI(`出错: ${e.message || e}`);
+			showScanningUI(`出错: ${escapeHtml(e.message || String(e))}`);
 		}
 	}
 
 	async function _runFullPipeline() {
-		// Verify session
 		showScanningUI('验证登录状态...');
 		const folderData = await verifySession();
 		if (!folderData) {
@@ -1480,24 +1413,21 @@
 			return;
 		}
 
-		// Get folder name + total mail count
 		const allFolders = [...(folderData.body.list.personal_list || []), ...(folderData.body.list.sys_list || [])];
 		const folder = allFolders.find(f => f.dirid === folderId);
 		folderName = folder?.name || `文件夹${folderId}`;
 		const totalMailNum = folder?.total_num || 0;
 
 		if (totalMailNum === 0) {
-			showScanningUI(`${folderName} 中没有邮件`);
+			showScanningUI(`${escapeHtml(folderName)} 中没有邮件`);
 			return;
 		}
 
-		// ── Phase 1: Scan all mails via maillist API ──
 		showScanningUI(`扫描邮件...`);
 		const allMails = await scanAllMails(totalMailNum, (loaded, total) => {
 			updateScanMessage(`扫描邮件 ${loaded}/${total}`);
 		});
 
-		// Extract attachments from mail objects into attach_list-compatible format
 		const attachments = [];
 		let mailTotal = 0;
 		for (const mail of allMails) {
@@ -1521,17 +1451,11 @@
 			}
 		}
 
-		// ── Phase 2: Build identity + mailMap ──
 		buildIdentityMap(attachments);
 		buildMailMapFromAttach(attachments);
 
-		// ── Phase 3: Background tasks (run in parallel) ──
-		// 3a: Mark all as unread
-		const markUnreadPromise = (async () => {
-			await markAllUnread();
-		})();
+		const markUnreadPromise = markAllUnread();
 
-		// 3b: AI enhance identity
 		const aiReady = await initBuiltinAI();
 		let aiEnhancedCount = 0;
 		if (aiReady) {
@@ -1539,7 +1463,6 @@
 			aiEnhancedCount = await enhanceIdentityWithAI(allMails, updateScanMessage);
 		}
 
-		// 3c: Process recalled / empty / innerpiclist
 		updateScanMessage(`检查撤回和空邮件...`);
 		const { recalled } = await processRecalledMails(allMails, updateScanMessage);
 
@@ -1548,19 +1471,15 @@
 
 		let inlineEntries = [];
 		let emptyMails = [];
-		let skippedInlineMails = [];
 		if (noAttachMails.length > 0) {
 			updateScanMessage(`检查 ${noAttachMails.length} 封无附件邮件...`);
 			const innerResult = await processInnerPicList(noAttachMails, sendersWithAttach, updateScanMessage);
 			inlineEntries = innerResult.inlineEntries;
 			emptyMails = innerResult.emptyMails;
-			skippedInlineMails = innerResult.skippedMails;
 		}
 
 		await markUnreadPromise;
 
-		// ── Phase 4: Build download list ──
-		// Build scan summary stats
 		const statParts = [
 			`${totalMailNum} 封邮件`,
 			`${attachments.length} 个附件（${mailTotal} 封有附件）`,
@@ -1582,32 +1501,26 @@
 				try {
 					const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
 					resolve(handle);
-				} catch (e) {
-					// User cancelled — keep waiting
-				}
+				} catch (e) {}
 			});
 		});
 		mountPanel(panel);
 		rootHandle = await pickPromise;
 
-		// ── Build download list ──
 		showScanningUI('分析分类...');
 		const downloads = buildDownloadListFromAttach(attachments);
 
-		// Merge inline entries
 		for (const entry of inlineEntries) {
 			entry.id = downloads.length;
 			entry.status = 'pending';
 			downloads.push(entry);
 		}
 
-		// ── Compare with local files ──
 		updateScanMessage('对比本地文件...');
 		manifestCache = await readManifest();
 		const manifestKeys = new Set(Object.keys(manifestCache));
 
-		// Scan disk: build a set of existing files per directory
-		const diskFileSet = new Map(); // dirName → Set<filename>
+		const diskFileSet = new Map();
 		const dirNames = new Set(downloads.map(d => d.dir));
 		for (const dirName of dirNames) {
 			const fileSet = new Set();
@@ -1616,9 +1529,7 @@
 				for await (const [name, handle] of dh) {
 					if (handle.kind === 'file') fileSet.add(name);
 				}
-			} catch {
-				/* dir doesn't exist yet */
-			}
+			} catch {}
 			diskFileSet.set(dirName, fileSet);
 		}
 
@@ -1633,19 +1544,15 @@
 				task.status = 'done';
 				alreadyDownloaded++;
 				if (!inManifest) {
-					// Rebuild manifest entry from disk
 					try {
 						const dh = await rootHandle.getDirectoryHandle(task.dir);
 						const fh = await dh.getFileHandle(task.filename);
 						const file = await fh.getFile();
 						manifestCache[mKey] = { dir: task.dir, filename: task.filename, size: file.size, time: Date.now() };
 						manifestRebuilt = true;
-					} catch {
-						/* skip */
-					}
+					} catch {}
 				}
 			} else if (inManifest) {
-				// In manifest but not on disk — needs re-download
 				delete manifestCache[mKey];
 				manifestRebuilt = true;
 			}
@@ -1655,13 +1562,11 @@
 		const diskTotal = [...diskFileSet.values()].reduce((s, set) => s + set.size, 0);
 		console.log(`[QQMailDL] 本地对比: ${diskTotal} 磁盘文件, ${alreadyDownloaded} 匹配, ${downloads.length - alreadyDownloaded} 待下载`);
 
-		// Pipeline stats
 		const mailCount = mailTotal;
 		const pipelineStats = {
 			recalledCount: recalled.length,
 			emptyCount: emptyMails.length,
 			inlineCount: inlineEntries.length,
-			skippedInlineCount: skippedInlineMails.length,
 			totalScanned: totalMailNum,
 			aiEnhancedCount,
 			alreadyDownloaded,
@@ -1674,26 +1579,16 @@
 		}).length;
 		const pending = downloads.filter(t => t.status === 'pending');
 
-		// Save to IndexedDB
 		updateScanMessage('保存下载列表...');
 		await dbDeleteByFolder(folderId);
 		await dbPutBatch('tasks', downloads);
 
-		// ── Stats line ──
 		const dlStatLine = [
 			`${totalMailNum} 封邮件`,
 			`${downloads.length} 个附件`,
 			alreadyDownloaded > 0 ? `已下载 ${alreadyDownloaded}` : '',
 			pending.length > 0 ? `待下载 ${pending.length}` : '',
-			`${DIR_IMAGE} ${stats[DIR_IMAGE] || 0}`,
-			stats[DIR_DOC] ? `${DIR_DOC} ${stats[DIR_DOC]}` : '',
-			stats[DIR_PROJECT] ? `${DIR_PROJECT} ${stats[DIR_PROJECT]}` : '',
-			stats[DIR_AUDIO] ? `${DIR_AUDIO} ${stats[DIR_AUDIO]}` : '',
-			stats[DIR_VIDEO] ? `${DIR_VIDEO} ${stats[DIR_VIDEO]}` : '',
-			stats[DIR_ARCHIVE] ? `${DIR_ARCHIVE} ${stats[DIR_ARCHIVE]}` : '',
-			stats[DIR_DUP] ? `${DIR_DUP} ${stats[DIR_DUP]}` : '',
-			stats[DIR_OTHER] ? `${DIR_OTHER} ${stats[DIR_OTHER]}` : '',
-			stats[DIR_MANUAL] ? `${DIR_MANUAL} ${stats[DIR_MANUAL]}` : '',
+			...formatDirStats(stats),
 			recalled.length > 0 ? `已撤回 ${recalled.length}` : '',
 			emptyMails.length > 0 ? `空邮件 ${emptyMails.length}` : '',
 			inlineEntries.length > 0 ? `内嵌图 ${inlineEntries.length}` : '',
@@ -1720,7 +1615,6 @@
 		const tracker = createProgressTracker(pending.length);
 		await startEngine(pending, task => tracker.onTask(task));
 
-		// Tag downloaded mails
 		updateScanMessage('标记已下载...');
 		const doneMails = [...new Set(downloads.filter(t => t.status === 'done').map(t => t.mailid))];
 		await batchParallel(doneMails, 10, mid => addTag(mid, TAG_DOWNLOADED).catch(() => {}));
@@ -1728,7 +1622,6 @@
 		await onDownloadComplete(downloads, mailCount, pipelineStats);
 	}
 
-	/** Mark mails as read when all their attachments are downloaded */
 	async function syncReadStatus(tasks) {
 		const mailAttachCount = new Map();
 		for (const task of tasks) {
@@ -1754,7 +1647,6 @@
 		showScanningUI('生成审计报告...');
 		const reportStats = await generateReport(tasks, pipelineStats);
 
-		// Show completion UI
 		const panel = getOrCreatePanel();
 		const done = tasks.filter(t => t.status === 'done').length;
 		const failed = tasks.filter(t => t.status === 'failed').length;
@@ -1764,15 +1656,7 @@
 		const summaryParts = [
 			`${done}/${total} 成功`,
 			failed > 0 ? `${failed} 失败` : '',
-			`${DIR_IMAGE} ${stats[DIR_IMAGE] || 0}`,
-			stats[DIR_DOC] ? `${DIR_DOC} ${stats[DIR_DOC]}` : '',
-			stats[DIR_PROJECT] ? `${DIR_PROJECT} ${stats[DIR_PROJECT]}` : '',
-			stats[DIR_AUDIO] ? `${DIR_AUDIO} ${stats[DIR_AUDIO]}` : '',
-			stats[DIR_VIDEO] ? `${DIR_VIDEO} ${stats[DIR_VIDEO]}` : '',
-			stats[DIR_ARCHIVE] ? `${DIR_ARCHIVE} ${stats[DIR_ARCHIVE]}` : '',
-			stats[DIR_DUP] ? `${DIR_DUP} ${stats[DIR_DUP]}` : '',
-			stats[DIR_OTHER] ? `${DIR_OTHER} ${stats[DIR_OTHER]}` : '',
-			stats[DIR_MANUAL] ? `${DIR_MANUAL} ${stats[DIR_MANUAL]}` : '',
+			...formatDirStats(stats),
 		]
 			.filter(Boolean)
 			.join(' · ');
@@ -1798,10 +1682,8 @@
 		const allStored = await dbGetAll('tasks');
 		const allTasks = allStored.filter(t => t.folderId === folderId);
 		const pending = allTasks.filter(t => t.status === 'pending' || t.status === 'failed');
-		const doneCount = allTasks.filter(t => t.status === 'done').length;
 		const total = allTasks.length;
 
-		// Update sid in URLs
 		const currentSid = getSidFromUrl();
 		if (currentSid) {
 			for (const t of pending) {
@@ -1813,7 +1695,6 @@
 			sid = currentSid;
 		}
 
-		// Rebuild mail map if needed
 		let mc = 0;
 		if (Object.keys(mailMap).length === 0) {
 			folderId = getFolderIdFromUrl();
@@ -1831,13 +1712,10 @@
 							mc = allMails.filter(hasAttachments).length;
 						}
 					}
-				} catch (e) {
-					// Continue without mail map
-				}
+				} catch (e) {}
 			}
 		}
 
-		// Read manifest to reconcile
 		showScanningUI('读取本地已有文件...');
 		manifestCache = await readManifest();
 		const manifestKeys = new Set(Object.keys(manifestCache));
@@ -1874,16 +1752,14 @@
 	}
 
 	async function retryFailed(failedTasks) {
-		// Need directory handle
 		if (!rootHandle) {
 			try {
 				rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
 			} catch (e) {
-				return; // User cancelled
+				return;
 			}
 		}
 
-		// Update sid
 		const currentSid = getSidFromUrl();
 		for (const t of failedTasks) {
 			t.url = replaceSid(t.url, currentSid);
@@ -1892,7 +1768,6 @@
 		}
 		await dbPutBatch('tasks', failedTasks);
 
-		// Refresh full UI with correct totals
 		const allTasks = await dbGetAll('tasks');
 		const doneCount = allTasks.filter(t => t.status === 'done').length;
 		const total = allTasks.length;
@@ -1911,7 +1786,6 @@
 
 		await startEngine(failedTasks, task => tracker.onTask(task));
 
-		// Clear fail section on completion
 		const section = document.getElementById('__dl_fail_section');
 		if (section) {
 			const remaining = failedTasks.filter(t => t.status === 'failed');
@@ -1935,7 +1809,6 @@
 		db = await openDB();
 		setupAutoSidRecovery();
 
-		// Check for existing tasks for THIS folder
 		const existing = await dbGetAll('tasks');
 		const folderTasks = existing.filter(t => t.folderId === folderId);
 		if (folderTasks.length > 0) {
