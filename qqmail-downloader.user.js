@@ -568,7 +568,8 @@
 				for (let pi = 0; pi < picList.length; pi++) {
 					const pic = picList[pi];
 					let ext = 'jpg';
-					const nameMatch = (pic.name || '').match(/\.([a-zA-Z0-9]{2,5})(?:\.[a-zA-Z0-9]{2,5})?$/);
+					// Match only the last extension so "photo.jpg.png" → "png", not "jpg".
+					const nameMatch = (pic.name || '').match(/\.([a-zA-Z0-9]{2,5})$/);
 					if (nameMatch) ext = nameMatch[1].toLowerCase();
 
 					const identity = getIdentity(senderEmail);
@@ -678,10 +679,22 @@
 			}
 		}
 
+		// Trust the filename's last extension only when it's a known format.
+		// - "photo.jpg.png" (a.type='jpg'): last ext 'png' is known → avoids double-ext "photo.jpg.png.jpg"
+		// - "photo.2024.01.01" (a.type='jpg'): last ext '01' is unknown → fall back to a.type so the
+		//   date-ish name doesn't get misclassified.
 		function resolveStemExt(a) {
+			const name = a.name || '';
+			const lastDot = name.lastIndexOf('.');
+			if (lastDot > 0 && lastDot < name.length - 1) {
+				const nameExt = name.slice(lastDot + 1).toLowerCase();
+				if (classifyExt(nameExt) !== DIR_OTHER) {
+					return { stem: name.slice(0, lastDot), ext: nameExt };
+				}
+			}
 			let ext = (a.type || '').toLowerCase();
-			if (!ext && a.name?.includes('.')) ext = a.name.split('.').pop().toLowerCase();
-			let stem = a.name || '';
+			if (!ext && lastDot > 0) ext = name.slice(lastDot + 1).toLowerCase();
+			let stem = name;
 			if (ext && stem.toLowerCase().endsWith('.' + ext)) stem = stem.slice(0, -ext.length - 1);
 			return { stem, ext };
 		}
