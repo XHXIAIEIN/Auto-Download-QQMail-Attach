@@ -1,2899 +1,1966 @@
 // ==UserScript==
-// @name         QQ邮箱附件批量下载器
-// @namespace    http://tampermonkey.net/
-// @version      2.0.0
-// @description  批量下载QQ邮箱附件，支持筛选、排序和批量操作
+// @name         QQ Mail 附件批量下载
+// @namespace    https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
+// @version      3.0.0
+// @description  批量下载QQ邮箱附件，提取全部附件，智能分类命名
 // @author       XHXIAIEIN
-// @homepage     https://github.com/XHXIAIEIN/Auto-Download-QQMail-Attach/
 // @match        https://wx.mail.qq.com/*
-// @grant        GM_xmlhttpRequest
-// @grant        GM_download
-// @grant        GM_notification
-// @connect      mail.qq.com
-// @connect      wx.mail.qq.com
-// @license      MIT
-// @connect      gzc-dfsdown.mail.ftn.qq.com
-// @downloadURL   https://update.greasyfork.org/scripts/535160/qqmail-downloader.user.js
-// @updateURL     https://update.greasyfork.org/scripts/535160/qqmail-downloader.meta.js
+// @grant        none
+// @run-at       document-idle
 // ==/UserScript==
-(function() {
-	//#region \0vite/all-css
-	try {
-		if (typeof document != "undefined") {
-			var elementStyle = document.createElement("style");
-			elementStyle.appendChild(document.createTextNode("/* ========================================\n   AM Design System — Design Tokens\n   Matched to QQ Mail (wx.mail.qq.com) native styles\n   ======================================== */\n:root {\n    --am-bg: #ffffff;\n    --am-bg-subtle: #f5f6f7;\n    --am-bg-muted: #f0f1f2;\n    --am-bg-elevated: #ffffff;\n    --am-overlay: rgba(0, 0, 0, 0.4);\n    --am-overlay-blur: 4px;\n\n    --am-text: rgba(19, 24, 29, 1);\n    --am-text-secondary: rgba(22, 30, 38, 0.8);\n    --am-text-tertiary: rgba(25, 38, 54, 0.3);\n    --am-text-inverse: #ffffff;\n\n    --am-border: rgba(22, 46, 74, 0.1);\n    --am-border-strong: rgba(22, 46, 74, 0.15);\n\n    --am-accent: #0F7AF5;\n    --am-accent-hover: #0E6FD9;\n    --am-accent-subtle: rgba(15, 122, 245, 0.08);\n    --am-accent-text: #ffffff;\n\n    --am-success: #18a058;\n    --am-success-subtle: rgba(24, 160, 88, 0.08);\n    --am-warning: #f0a020;\n    --am-warning-subtle: rgba(240, 160, 32, 0.08);\n    --am-error: #d03050;\n    --am-error-subtle: rgba(208, 48, 80, 0.08);\n\n    --am-font: -apple-system, BlinkMacSystemFont, system-ui, \"PingFang SC\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", sans-serif;\n    --am-font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;\n\n    --am-space-1: 4px;\n    --am-space-2: 8px;\n    --am-space-3: 12px;\n    --am-space-4: 16px;\n    --am-space-5: 20px;\n    --am-space-6: 24px;\n    --am-space-8: 32px;\n    --am-space-10: 40px;\n    --am-space-12: 48px;\n\n    --am-radius-sm: 4px;\n    --am-radius-md: 4px;\n    --am-radius-lg: 8px;\n    --am-radius-xl: 12px;\n    --am-radius-2xl: 16px;\n    --am-radius-full: 9999px;\n\n    --am-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);\n    --am-shadow-md: 0 4px 12px rgba(0,0,0,0.08);\n    --am-shadow-lg: 0 8px 24px rgba(0,0,0,0.12);\n    --am-shadow-xl: 0 20px 60px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.1);\n\n    --am-ease: cubic-bezier(0.4, 0, 0.2, 1);\n    --am-duration: 0.2s;\n    --am-duration-slow: 0.3s;\n}\n\n/* ========================================\n   Animations\n   ======================================== */\n@keyframes am-spin { to { transform: rotate(360deg); } }\n@keyframes am-slide-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }\n@keyframes am-fade-in { from { opacity: 0; } to { opacity: 1; } }\n@keyframes am-scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }\n\n/* ========================================\n   Overlay & Window\n   ======================================== */\n.am-overlay {\n    position: fixed;\n    top: 0; left: 0; width: 100%; height: 100%;\n    background: var(--am-overlay);\n    backdrop-filter: blur(var(--am-overlay-blur));\n    z-index: 9999;\n    opacity: 0;\n    transition: opacity var(--am-duration-slow) var(--am-ease);\n    pointer-events: none;\n}\n.am-overlay.show {\n    opacity: 1;\n    pointer-events: auto;\n}\n\n.am-window {\n    position: fixed;\n    top: 50%; left: 50%;\n    transform: translate(-50%, -50%) scale(0.9);\n    width: 75%; max-width: 900px;\n    height: 95%; max-height: 95vh;\n    min-width: 600px; min-height: 700px;\n    background: var(--am-bg-elevated);\n    border-radius: var(--am-radius-xl);\n    box-shadow: var(--am-shadow-xl);\n    z-index: 10000;\n    display: flex; flex-direction: column;\n    font-family: var(--am-font);\n    overflow: hidden;\n    resize: both;\n    opacity: 0;\n    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);\n}\n.am-window.show {\n    opacity: 1;\n    transform: translate(-50%, -50%) scale(1);\n}\n.am-window.maximized {\n    top: 0 !important; left: 0 !important;\n    transform: none !important;\n    width: 100% !important; height: 100% !important;\n    border-radius: 0 !important;\n    max-width: none !important; max-height: none !important;\n}\n.am-window.minimized {\n    height: 60px !important;\n    overflow: hidden;\n}\n.am-window.minimized .am-window-content {\n    display: none;\n}\n\n.am-window-header {\n    display: flex; align-items: center; justify-content: space-between;\n    padding: var(--am-space-4) var(--am-space-5);\n    background: var(--am-bg);\n    border-bottom: 1px solid var(--am-border);\n    cursor: move; user-select: none; flex-shrink: 0;\n}\n\n.am-window-content {\n    flex: 1; overflow: hidden;\n    display: flex; flex-direction: column;\n    background: var(--am-bg-subtle);\n}\n\n.am-window-dot {\n    width: 12px; height: 12px;\n    border-radius: var(--am-radius-full);\n    cursor: pointer;\n    transition: all var(--am-duration) var(--am-ease);\n    border: none;\n    display: inline-block;\n}\n.am-window-dot:hover { transform: scale(1.15); }\n.am-window-dot--close { background: #ff5f57; border: 1px solid #e0443e; }\n.am-window-dot--close:hover { background: #e0443e; }\n.am-window-dot--minimize { background: #ffbd2e; border: 1px solid #dea123; }\n.am-window-dot--minimize:hover { background: #dea123; }\n.am-window-dot--maximize { background: #28ca42; border: 1px solid #1aab29; }\n.am-window-dot--maximize:hover { background: #1aab29; }\n\n/* ========================================\n   Buttons\n   ======================================== */\n.am-btn {\n    height: 32px;\n    padding: 0 7px;\n    border-radius: var(--am-radius-sm);\n    font-family: var(--am-font);\n    font-size: 14px; font-weight: 400;\n    cursor: pointer;\n    display: inline-flex; align-items: center; justify-content: center; gap: var(--am-space-1);\n    transition: all var(--am-duration) var(--am-ease);\n    border: 0.667px solid var(--am-border);\n    background: var(--am-bg);\n    color: var(--am-text);\n    line-height: 1.4;\n    text-decoration: none;\n    white-space: nowrap;\n    box-sizing: border-box;\n}\n.am-btn:hover { background: var(--am-bg-muted); border-color: var(--am-border-strong); }\n.am-btn:active { transform: scale(0.98); }\n.am-btn:focus-visible { outline: 2px solid var(--am-accent); outline-offset: 2px; }\n\n.am-btn--primary {\n    background: var(--am-accent);\n    color: var(--am-accent-text);\n    border-color: var(--am-accent-hover);\n}\n.am-btn--primary:hover { background: var(--am-accent-hover); }\n\n.am-btn--ghost {\n    background: transparent;\n    border: 1px solid var(--am-border);\n}\n.am-btn--ghost:hover { background: var(--am-bg-muted); }\n\n.am-btn--icon {\n    width: 32px; height: 32px;\n    padding: 0;\n    background: transparent;\n    border: 1px solid var(--am-border);\n}\n.am-btn--icon:hover { background: var(--am-bg-muted); border-color: var(--am-border-strong); }\n\n.am-btn--sm {\n    padding: var(--am-space-1) var(--am-space-2);\n    font-size: 12px;\n}\n\n.am-btn--danger {\n    background: var(--am-error);\n    color: var(--am-text-inverse);\n    border-color: var(--am-error);\n}\n.am-btn--danger:hover { background: #b82848; }\n\n/* ========================================\n   Cards\n   ======================================== */\n.am-card {\n    background: var(--am-bg);\n    border: 1px solid var(--am-border);\n    border-radius: var(--am-radius-lg);\n    padding: var(--am-space-6);\n    transition: all var(--am-duration) var(--am-ease);\n    position: relative; overflow: hidden;\n}\n\n.am-card--stat {\n    min-height: 120px;\n    display: flex; flex-direction: column;\n}\n\n.am-card--attachment {\n    aspect-ratio: 1;\n    cursor: pointer;\n    padding: 0;\n    box-shadow: none;\n}\n\n.am-card--hover:hover {\n    transform: translateY(-2px);\n    box-shadow: var(--am-shadow-md);\n    border-color: var(--am-border-strong);\n}\n\n.am-card-preview {\n    width: 100%; height: 100%;\n    display: flex; align-items: center; justify-content: center;\n    background: var(--am-bg-muted);\n    overflow: hidden;\n}\n\n.am-card-title {\n    font-weight: 600; font-size: 14px;\n    color: var(--am-text);\n    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n\n.am-card-meta {\n    font-size: 12px;\n    color: var(--am-text-tertiary);\n    display: flex; align-items: center; gap: var(--am-space-3);\n}\n\n/* ========================================\n   Grid\n   ======================================== */\n.am-grid {\n    display: grid;\n    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n    gap: var(--am-space-4);\n}\n\n.am-grid--stats {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));\n    gap: var(--am-space-5);\n}\n\n/* ========================================\n   Form Elements\n   ======================================== */\n.am-input {\n    width: 100%;\n    height: 32px;\n    padding: 0 var(--am-space-3);\n    border: 0.667px solid var(--am-border);\n    border-radius: var(--am-radius-sm);\n    font-family: var(--am-font);\n    font-size: 14px;\n    color: var(--am-text);\n    background: var(--am-bg);\n    transition: all var(--am-duration) var(--am-ease);\n    box-sizing: border-box;\n    outline: none;\n}\n.am-input:focus {\n    border-color: var(--am-accent);\n    box-shadow: 0 0 0 3px var(--am-accent-subtle);\n}\n.am-input::placeholder { color: var(--am-text-tertiary); }\n\n.am-select {\n    width: 100%;\n    height: 32px;\n    padding: 0 var(--am-space-3);\n    border: 0.667px solid var(--am-border);\n    border-radius: var(--am-radius-sm);\n    font-family: var(--am-font);\n    font-size: 14px;\n    color: var(--am-text);\n    background: var(--am-bg);\n    transition: all var(--am-duration) var(--am-ease);\n    box-sizing: border-box;\n    outline: none;\n    cursor: pointer;\n}\n.am-select:focus {\n    border-color: var(--am-accent);\n    box-shadow: 0 0 0 3px var(--am-accent-subtle);\n}\n\n.am-checkbox {\n    width: 20px; height: 20px;\n    accent-color: var(--am-accent);\n    cursor: pointer;\n    border-radius: var(--am-radius-sm);\n}\n\n.am-switch {\n    position: relative;\n    width: 36px; height: 20px;\n    background: var(--am-bg-muted);\n    border-radius: var(--am-radius-full);\n    border: 1px solid var(--am-border-strong);\n    cursor: pointer;\n    transition: all var(--am-duration) var(--am-ease);\n}\n.am-switch::after {\n    content: '';\n    position: absolute;\n    top: 2px; left: 2px;\n    width: 14px; height: 14px;\n    background: var(--am-bg);\n    border-radius: var(--am-radius-full);\n    box-shadow: var(--am-shadow-sm);\n    transition: transform var(--am-duration) var(--am-ease);\n}\n.am-switch.active {\n    background: var(--am-accent);\n    border-color: var(--am-accent);\n}\n.am-switch.active::after {\n    transform: translateX(16px);\n}\n\n/* ========================================\n   Feedback — Toast\n   ======================================== */\n.am-toast {\n    position: fixed;\n    top: var(--am-space-5); right: var(--am-space-5);\n    padding: var(--am-space-3) var(--am-space-4);\n    border-radius: var(--am-radius-md);\n    color: var(--am-text-inverse);\n    font-family: var(--am-font);\n    font-size: 13px;\n    z-index: 10002;\n    box-shadow: var(--am-shadow-md);\n    display: flex; align-items: center; gap: var(--am-space-2);\n    max-width: 320px;\n    word-wrap: break-word;\n    opacity: 0;\n    transform: translateX(100%);\n    transition: all var(--am-duration-slow) ease;\n}\n.am-toast.show {\n    opacity: 1;\n    transform: translateX(0);\n}\n.am-toast--info { background: var(--am-accent); }\n.am-toast--success { background: var(--am-success); }\n.am-toast--warning { background: var(--am-warning); }\n.am-toast--error { background: var(--am-error); }\n\n/* ========================================\n   Feedback — Progress\n   ======================================== */\n.am-progress {\n    width: 100%;\n    height: 4px;\n    background: var(--am-bg-muted);\n    border-radius: var(--am-radius-full);\n    overflow: hidden;\n}\n.am-progress-bar {\n    height: 100%;\n    background: var(--am-accent);\n    border-radius: var(--am-radius-full);\n    transition: width var(--am-duration-slow) var(--am-ease);\n}\n\n/* ========================================\n   Feedback — State\n   ======================================== */\n.am-state {\n    display: flex; flex-direction: column;\n    align-items: center; justify-content: center;\n    padding: var(--am-space-10) var(--am-space-5);\n    text-align: center;\n    color: var(--am-text-secondary);\n    font-size: 14px;\n}\n.am-state--loading::before {\n    content: '';\n    width: 32px; height: 32px;\n    border: 2px solid var(--am-border);\n    border-top-color: var(--am-accent);\n    border-radius: 50%;\n    animation: am-spin 1s linear infinite;\n    margin-bottom: var(--am-space-3);\n}\n.am-state--empty { color: var(--am-text-tertiary); }\n.am-state--error { color: var(--am-error); }\n\n/* ========================================\n   Menu\n   ======================================== */\n.am-menu {\n    position: fixed;\n    background: var(--am-bg-elevated);\n    border: 1px solid var(--am-border);\n    border-radius: var(--am-radius-lg);\n    box-shadow: var(--am-shadow-md);\n    padding: var(--am-space-2) 0;\n    min-width: 160px;\n    z-index: 1001;\n    animation: am-scale-in var(--am-duration) var(--am-ease);\n}\n.am-menu-item {\n    padding: var(--am-space-2) var(--am-space-4);\n    cursor: pointer;\n    display: flex; align-items: center; gap: var(--am-space-2);\n    font-size: 13px;\n    color: var(--am-text);\n    transition: background var(--am-duration) var(--am-ease);\n}\n.am-menu-item:hover {\n    background: var(--am-bg-muted);\n}\n.am-menu-divider {\n    height: 1px;\n    background: var(--am-border);\n    margin: var(--am-space-1) 0;\n}\n\n/* ========================================\n   Dialog\n   ======================================== */\n.am-dialog-overlay {\n    position: fixed;\n    top: 0; left: 0; width: 100%; height: 100%;\n    background: var(--am-overlay);\n    backdrop-filter: blur(var(--am-overlay-blur));\n    z-index: 10000;\n    display: flex; align-items: center; justify-content: center;\n    animation: am-fade-in var(--am-duration-slow) var(--am-ease);\n}\n.am-dialog {\n    background: var(--am-bg-elevated);\n    border-radius: var(--am-radius-2xl);\n    box-shadow: var(--am-shadow-xl);\n    max-width: 800px; width: 90%;\n    max-height: 80vh;\n    overflow: hidden;\n    display: flex; flex-direction: column;\n    animation: am-scale-in var(--am-duration-slow) var(--am-ease);\n}\n.am-dialog-header {\n    padding: var(--am-space-6) var(--am-space-8);\n    border-bottom: 1px solid var(--am-border);\n    font-size: 18px; font-weight: 600;\n    color: var(--am-text);\n}\n.am-dialog-body {\n    padding: var(--am-space-8);\n    overflow-y: auto;\n    flex: 1;\n}\n.am-dialog-footer {\n    padding: var(--am-space-4) var(--am-space-8);\n    border-top: 1px solid var(--am-border);\n    display: flex; gap: var(--am-space-3);\n    justify-content: flex-end;\n}\n\n/* ========================================\n   Tabs\n   ======================================== */\n.am-tabs {\n    display: flex;\n    border-bottom: 1px solid var(--am-border);\n    gap: 0;\n}\n.am-tab {\n    padding: var(--am-space-3) var(--am-space-4);\n    font-size: 13px; font-weight: 500;\n    color: var(--am-text-secondary);\n    cursor: pointer;\n    border-bottom: 2px solid transparent;\n    transition: all var(--am-duration) var(--am-ease);\n    background: none; border-top: none; border-left: none; border-right: none;\n}\n.am-tab:hover { color: var(--am-text); }\n.am-tab.active {\n    color: var(--am-accent);\n    border-bottom-color: var(--am-accent);\n}\n\n/* ========================================\n   Toolbar\n   ======================================== */\n.am-toolbar {\n    display: flex; align-items: center; justify-content: space-between;\n    padding: var(--am-space-3) var(--am-space-5);\n    background: var(--am-bg);\n    border-bottom: 1px solid var(--am-border);\n    gap: var(--am-space-3);\n    flex-shrink: 0;\n    flex-wrap: wrap;\n}\n.am-toolbar__filters {\n    border-bottom: none;\n    flex-shrink: 0;\n}\n.am-toolbar__actions {\n    display: flex; align-items: center; gap: var(--am-space-2);\n    flex-shrink: 0;\n}\n.am-toolbar__search {\n    width: 200px;\n    padding: var(--am-space-1) var(--am-space-3);\n    font-size: 12px;\n}\n\n/* ========================================\n   Bento Grid Layout\n   ======================================== */\n.am-bento {\n    display: flex; flex-direction: column;\n    gap: var(--am-space-6);\n    padding: var(--am-space-8);\n    max-width: 800px; margin: 0 auto;\n    min-height: 100%;\n    background: var(--am-bg-subtle);\n}\n\n.am-bento-header {\n    background: var(--am-bg);\n    border: 1px solid var(--am-border);\n    border-radius: var(--am-radius-xl);\n    padding: var(--am-space-5);\n    display: flex; justify-content: space-between; align-items: center;\n    min-height: 80px;\n}\n\n.am-bento-row {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: var(--am-space-5);\n    width: 100%;\n}\n\n.am-bento-card {\n    background: var(--am-bg);\n    border: 1px solid var(--am-border);\n    border-radius: var(--am-radius-xl);\n    padding: var(--am-space-6);\n    transition: all var(--am-duration) var(--am-ease);\n    position: relative; overflow: hidden;\n    min-height: 120px;\n    display: flex; flex-direction: column;\n}\n.am-bento-card--primary {\n    background: var(--am-accent-subtle);\n    color: var(--am-accent);\n    border: 2px solid var(--am-accent);\n    cursor: pointer;\n    box-shadow: 0 2px 8px rgba(15, 122, 245, 0.08);\n    min-height: 160px;\n}\n.am-bento-card--primary:hover {\n    transform: translateY(-2px);\n    box-shadow: 0 4px 16px rgba(15, 122, 245, 0.15);\n    background: rgba(15, 122, 245, 0.08);\n}\n.am-bento-card--hover:hover {\n    transform: translateY(-2px);\n    box-shadow: var(--am-shadow-md);\n    border-color: var(--am-border-strong);\n}\n\n.am-bento-title {\n    font-size: 16px; font-weight: 600;\n    color: var(--am-text);\n    margin: 0 0 var(--am-space-3) 0;\n    line-height: 1.3;\n}\n\n.am-stat-grid {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));\n    gap: var(--am-space-5);\n    width: 100%;\n}\n\n.am-stat-item {\n    text-align: center;\n    padding: var(--am-space-3);\n}\n\n.am-stat-number {\n    font-size: 32px; font-weight: 700;\n    color: var(--am-text);\n    margin: 0; line-height: 1.1;\n    font-family: var(--am-font);\n    letter-spacing: -0.02em;\n}\n.am-stat-number--lg {\n    font-size: 42px; font-weight: 800;\n    color: inherit;\n}\n\n.am-stat-label {\n    font-size: 14px; font-weight: 600;\n    color: var(--am-text);\n    margin: 6px 0 0 0;\n    line-height: 1.3;\n}\n\n.am-stat-desc {\n    font-size: 12px;\n    color: var(--am-text-secondary);\n    line-height: 1.4;\n    margin: var(--am-space-1) 0 0 0;\n}\n\n.am-overview-row {\n    display: flex; justify-content: space-between; align-items: center;\n    padding: var(--am-space-3) 0;\n    border-bottom: 1px solid var(--am-border);\n}\n.am-overview-row:last-child { border-bottom: none; }\n.am-overview-row-label {\n    font-size: 14px;\n    color: var(--am-text-secondary);\n}\n.am-overview-row-value {\n    font-size: 16px; font-weight: 600;\n    color: var(--am-text);\n}\n\n/* ========================================\n   List Components\n   ======================================== */\n.am-list-card {\n    background: var(--am-bg);\n    border: 1px solid var(--am-border);\n    border-radius: var(--am-radius-xl);\n    padding: var(--am-space-6);\n    display: none;\n}\n.am-list-card.visible { display: block; }\n\n.am-list-item {\n    padding: var(--am-space-3);\n    background: var(--am-bg-subtle);\n    border-radius: var(--am-radius-md);\n    border: 1px solid var(--am-border);\n    cursor: pointer;\n    transition: background var(--am-duration) var(--am-ease);\n}\n.am-list-item:hover {\n    background: var(--am-bg-muted);\n}\n\n.am-list-more {\n    padding: var(--am-space-3);\n    text-align: center;\n    border-top: 1px solid var(--am-border);\n    margin-top: var(--am-space-2);\n    font-size: 12px;\n    color: var(--am-text-secondary);\n}\n\n.am-group-card {\n    padding: var(--am-space-3);\n    background: var(--am-bg-subtle);\n    border-radius: var(--am-radius-md);\n    border: 1px solid var(--am-border);\n}\n\n.am-tag {\n    display: inline-block;\n    padding: 1px var(--am-space-1);\n    border-radius: var(--am-radius-sm);\n    font-size: 11px; font-weight: 500;\n    line-height: 1.4;\n}\n.am-tag--warning {\n    background: var(--am-warning-subtle);\n    color: var(--am-warning);\n}\n.am-tag--error {\n    background: var(--am-error-subtle);\n    color: var(--am-error);\n}\n.am-tag--success {\n    background: var(--am-success-subtle);\n    color: var(--am-success);\n}\n\n/* ========================================\n   Form Settings\n   ======================================== */\n.am-form-section {\n    margin-bottom: var(--am-space-8);\n    padding-bottom: var(--am-space-6);\n    border-bottom: 1px solid var(--am-border);\n}\n.am-form-section:last-child { border-bottom: none; margin-bottom: 0; }\n\n.am-form-section-title {\n    font-size: 18px; font-weight: 600;\n    color: var(--am-text);\n    margin-bottom: var(--am-space-4);\n}\n\n.am-form-item {\n    margin-bottom: var(--am-space-5);\n}\n\n.am-form-label {\n    font-size: 14px; font-weight: 600;\n    color: var(--am-text);\n    margin-bottom: var(--am-space-2);\n    display: block;\n}\n\n.am-form-desc {\n    font-size: 13px;\n    color: var(--am-text-secondary);\n    margin-top: var(--am-space-1);\n    line-height: 1.4;\n}\n\n.am-form-row {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: var(--am-space-5);\n    margin-bottom: var(--am-space-5);\n}\n\n.am-form-checkbox {\n    display: flex; align-items: center;\n    margin-bottom: var(--am-space-3);\n}\n.am-form-checkbox input[type=\"checkbox\"] {\n    margin-right: var(--am-space-2);\n    transform: scale(1.2);\n}\n\n.am-form-panel {\n    background: var(--am-bg-subtle);\n    padding: var(--am-space-4);\n    border-radius: var(--am-radius-lg);\n    margin-top: var(--am-space-3);\n}\n\n.am-form-actions {\n    display: flex; gap: var(--am-space-3);\n    justify-content: flex-end;\n    margin-top: var(--am-space-8);\n    padding-top: var(--am-space-6);\n    border-top: 1px solid var(--am-border);\n}\n\n/* ========================================\n   Utility\n   ======================================== */\n.am-divider {\n    height: 1px;\n    background: var(--am-border);\n    border: none;\n    margin: var(--am-space-4) 0;\n}\n\n.am-badge {\n    display: inline-flex; align-items: center; justify-content: center;\n    padding: 2px var(--am-space-2);\n    font-size: 11px; font-weight: 600;\n    border-radius: var(--am-radius-full);\n    background: var(--am-accent-subtle);\n    color: var(--am-accent);\n    line-height: 1.4;\n}\n\n.am-text-truncate {\n    overflow: hidden;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n}\n\n.am-scroll {\n    overflow-y: auto;\n    scrollbar-width: thin;\n    scrollbar-color: var(--am-border-strong) transparent;\n}\n.am-scroll::-webkit-scrollbar { width: 6px; }\n.am-scroll::-webkit-scrollbar-track { background: transparent; }\n.am-scroll::-webkit-scrollbar-thumb {\n    background: var(--am-border-strong);\n    border-radius: var(--am-radius-full);\n}\n.am-scroll::-webkit-scrollbar-thumb:hover { background: var(--am-text-tertiary); }\n\n/* ========================================\n   Responsive Breakpoints\n   ======================================== */\n@media (max-width: 1024px) {\n    .am-window {\n        width: 85% !important; height: 95% !important; min-width: 500px !important;\n    }\n}\n@media (max-width: 768px) {\n    .am-window {\n        width: 100% !important; height: 100% !important;\n        min-width: 320px !important; border-radius: 0 !important;\n        top: 0 !important; left: 0 !important; transform: none !important;\n    }\n    .am-bento-row { grid-template-columns: 1fr !important; gap: var(--am-space-4) !important; }\n    .am-stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: var(--am-space-3) !important; }\n    .am-bento { padding: var(--am-space-4) !important; }\n    .am-form-row { grid-template-columns: 1fr !important; }\n}\n@media (max-width: 480px) {\n    .am-stat-grid { grid-template-columns: 1fr !important; }\n}\n/*$vite$:1*/"));
-			document.head.appendChild(elementStyle);
-		}
-	} catch (e) {
-		console.error("vite-plugin-css-injected-by-js", e);
+
+(function () {
+	'use strict';
+
+	// ============================================================
+	//  Constants
+	// ============================================================
+
+	// File type sets
+	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'bmp', 'tiff', 'tif', 'raw', 'cr2', 'cr3', 'nef', 'arw', 'dng', 'orf', 'rw2', 'raf']);
+	const PROJECT_EXTS = new Set(['psd', 'ai', 'sketch', 'fig', 'xd', 'indd', 'cdr', 'eps', 'afdesign', 'afphoto', 'blend', 'c4d', 'max', 'ma', 'mb']);
+	const DOC_EXTS = new Set(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'csv', 'md', 'epub']);
+	const AUDIO_EXTS = new Set(['mp3', 'wav', 'aac', 'flac', 'ogg', 'wma', 'm4a', 'ape', 'alac']);
+	const VIDEO_EXTS = new Set(['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'mpg', 'mpeg', 'm4v', 'gif']);
+	const ARCHIVE_EXTS = new Set(['zip', 'rar', '7z', 'gz', 'tar', 'bz2', 'xz', 'zst']);
+
+	const PHONE_RE = /1[3-9]\d{9}/g;
+	const QQ_RE = /(?<!\d)[1-9]\d{4,10}(?!\d)/g;
+	const DATE_RE = /^202[0-9](0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/;
+	const DB_NAME = 'mail_downloader_db';
+	const DB_VERSION = 30000;
+	const CONCURRENCY = 10;
+
+	// Directory classification names
+	const DIR_IMAGE = '图片';
+	const DIR_DOC = '文档';
+	const DIR_AUDIO = '音频';
+	const DIR_VIDEO = '视频';
+	const DIR_ARCHIVE = '压缩文件';
+	const DIR_PROJECT = '项目文件';
+	const DIR_DUP = '重复';
+	const DIR_OTHER = '其他';
+	const DIR_MANUAL = '转人工';
+
+	// Tag IDs
+	const TAG_NO_ATTACH = 4001;
+	const TAG_READ = 4004;
+	const TAG_DOWNLOADED = 4008;
+
+	// ============================================================
+	//  State
+	// ============================================================
+
+	let db = null;
+	let rootHandle = null;
+	let engineRunning = false;
+	let sid = null;
+	let folderId = null;
+	let folderName = '';
+	let identityMap = new Map();
+	let mailMap = {};
+
+	// ============================================================
+	//  Utilities
+	// ============================================================
+
+	function getSidFromUrl() {
+		const m = location.href.match(/sid=([^&#]+)/);
+		return m ? m[1] : null;
 	}
-	//#endregion
-})();
-(function() {
-	//#region src/constants.js
-	var MAIL_CONSTANTS = {
-		BASE_URL: "https://wx.mail.qq.com",
-		API_ENDPOINTS: {
-			MAIL_LIST: "/list/maillist",
-			ATTACH_DOWNLOAD: "/attach/download",
-			ATTACH_THUMBNAIL: "/attach/thumbnail",
-			ATTACH_PREVIEW: "/attach/preview"
-		}
-	};
-	var DEFAULT_HEADERS = Object.freeze({
-		"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-		"accept-language": "en,zh-CN;q=0.9,zh;q=0.8",
-		"sec-ch-ua-mobile": "?0",
-		"sec-fetch-dest": "iframe",
-		"sec-fetch-mode": "navigate",
-		"sec-fetch-site": "same-origin",
-		"sec-fetch-user": "?1",
-		"upgrade-insecure-requests": "1"
-	});
-	var FILE_TYPES = {
-		"图片": [
-			"jpg",
-			"jpeg",
-			"png",
-			"gif",
-			"bmp",
-			"webp",
-			"svg",
-			"ico",
-			"tiff"
-		],
-		"文档": [
-			"doc",
-			"docx",
-			"pdf",
-			"txt",
-			"rtf",
-			"odt",
-			"pages",
-			"md"
-		],
-		"表格": [
-			"xls",
-			"xlsx",
-			"csv",
-			"ods",
-			"numbers"
-		],
-		"演示": [
-			"ppt",
-			"pptx",
-			"key",
-			"odp"
-		],
-		"压缩包": [
-			"zip",
-			"rar",
-			"7z",
-			"tar",
-			"gz",
-			"bz2",
-			"xz"
-		],
-		"音频": [
-			"mp3",
-			"wav",
-			"flac",
-			"aac",
-			"ogg",
-			"wma",
-			"m4a"
-		],
-		"视频": [
-			"mp4",
-			"avi",
-			"mkv",
-			"mov",
-			"wmv",
-			"flv",
-			"webm"
-		]
-	};
-	var FILE_ICONS = {
-		jpg: "🖼️",
-		jpeg: "🖼️",
-		png: "🖼️",
-		gif: "🖼️",
-		bmp: "🖼️",
-		webp: "🖼️",
-		svg: "🖼️",
-		doc: "📄",
-		docx: "📄",
-		pdf: "📄",
-		txt: "📄",
-		rtf: "📄",
-		md: "📄",
-		xls: "📊",
-		xlsx: "📊",
-		csv: "📊",
-		ppt: "📑",
-		pptx: "📑",
-		zip: "🗜️",
-		rar: "🗜️",
-		"7z": "🗜️",
-		tar: "🗜️",
-		gz: "🗜️",
-		mp3: "🎵",
-		wav: "🎵",
-		flac: "🎵",
-		mp4: "🎬",
-		avi: "🎬",
-		mkv: "🎬",
-		mov: "🎬"
-	};
-	var TOAST_ICONS = {
-		success: "✅",
-		error: "❌",
-		warning: "⚠️",
-		info: "ℹ️"
-	};
-	var ATTACH_SOURCE = {
-		NORMAL: "normal",
-		CLOUD: "cloud"
-	};
-	var STALL_TIMEOUT = 3e4;
-	//#endregion
-	//#region src/utils/sanitize.js
-	var ILLEGAL_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
-	var RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
-	var MAX_FILENAME_LENGTH = 200;
-	function sanitizeFileName(fileName, replacementChar = "_") {
-		if (!fileName) return "untitled";
-		let result = fileName.replace(ILLEGAL_CHARS, replacementChar).replace(/\s+/g, " ").trim();
-		const dotIndex = result.lastIndexOf(".");
-		const name = dotIndex > 0 ? result.substring(0, dotIndex) : result;
-		const ext = dotIndex > 0 ? result.substring(dotIndex) : "";
-		if (RESERVED_NAMES.test(name)) result = `_${name}${ext}`;
-		if (result.length > MAX_FILENAME_LENGTH) {
-			const extLen = ext.length;
-			result = result.substring(0, MAX_FILENAME_LENGTH - extLen) + ext;
-		}
-		return result || "untitled";
+
+	function getFolderIdFromUrl() {
+		const m = location.href.match(/#\/list\/(\d+)/);
+		return m ? parseInt(m[1]) : null;
 	}
-	function getExtension(fileName) {
-		if (!fileName) return "";
-		const dotIndex = fileName.lastIndexOf(".");
-		return dotIndex > 0 ? fileName.substring(dotIndex + 1).toLowerCase() : "";
-	}
-	function getBaseName(fileName) {
-		if (!fileName) return "";
-		const dotIndex = fileName.lastIndexOf(".");
-		return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
-	}
-	//#endregion
-	//#region src/api/downloader.js
-	var QQMailDownloader = class {
-		constructor() {
-			this.sid = null;
-		}
-		init() {
-			this.sid = this._getSid();
-			return !!this.sid;
-		}
-		_getSid() {
-			const fromQuery = new URLSearchParams(window.location.search).get("sid");
-			if (fromQuery) return fromQuery;
-			const hashMatch = window.location.hash.match(/sid=([^&]+)/);
-			return hashMatch ? hashMatch[1] : "";
-		}
-		getCurrentFolderId() {
-			const match = window.location.hash.match(/\/list\/(\d+)/);
-			return match ? match[1] : "1";
-		}
-		/**
-		* Fetch all mails from a folder with pagination fault tolerance.
-		* Uses Promise.allSettled + batch concurrency + retry for failed pages.
-		*/
-		async fetchAllMails(folderId) {
-			const first = await this._fetchMailListPage(folderId, 0);
-			const total = first.total;
-			const allMails = [...first.mails];
-			if (total <= 50) return {
-				mails: this._dedup(allMails),
-				total,
-				failedPages: []
-			};
-			const totalPages = Math.ceil(total / 50);
-			const remainingPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 1);
-			const failedPages = [];
-			for (let i = 0; i < remainingPages.length; i += 3) {
-				const batch = remainingPages.slice(i, i + 3);
-				const results = await Promise.allSettled(batch.map((page) => this._fetchMailListPage(folderId, page)));
-				for (let j = 0; j < results.length; j++) if (results[j].status === "fulfilled" && results[j].value.mails?.length) allMails.push(...results[j].value.mails);
-				else failedPages.push(batch[j]);
-				if (i + 3 < remainingPages.length) await this._delay(200);
-			}
-			const retryFailed = [];
-			for (const page of failedPages) {
-				let success = false;
-				for (let retry = 0; retry < 2; retry++) try {
-					await this._delay(500 * (retry + 1));
-					const result = await this._fetchMailListPage(folderId, page);
-					allMails.push(...result.mails);
-					success = true;
-					break;
-				} catch {}
-				if (!success) retryFailed.push(page);
-			}
-			return {
-				mails: this._dedup(allMails),
-				total,
-				failedPages: retryFailed
-			};
-		}
-		async _fetchMailListPage(folderId, page) {
-			const params = new URLSearchParams({
-				sid: this.sid,
-				r: Date.now(),
-				dir: folderId,
-				dirid: folderId,
-				func: 1,
-				sort_type: 1,
-				sort_direction: 1,
-				page_now: page,
-				page_size: 50,
-				enable_topmail: true
-			});
-			const url = `${MAIL_CONSTANTS.BASE_URL}${MAIL_CONSTANTS.API_ENDPOINTS.MAIL_LIST}?${params}`;
-			const response = await this._gmRequest(url, "", 15e3);
-			const data = JSON.parse(response.responseText);
-			if (!data?.head) throw new Error("响应格式错误");
-			if (data.head.ret !== 0) throw new Error(`API错误: ${data.head.msg || data.head.ret}`);
-			return {
-				mails: data.body?.list || [],
-				total: data.body?.total_num || 0
-			};
-		}
-		_dedup(mails) {
-			const map = /* @__PURE__ */ new Map();
-			mails.forEach((m) => map.set(m.emailid, m));
-			return [...map.values()];
-		}
-		/**
-		* Extract attachments from mail list.
-		* Merges normal_attach + cloud_attach, logs skipped items.
-		* @returns {{ valid: Object[], skipped: Object[] }}
-		*/
-		extractAttachments(mails) {
-			const valid = [];
-			const skipped = [];
-			for (const mail of mails) {
-				const sources = [{
-					key: "normal_attach",
-					type: ATTACH_SOURCE.NORMAL
-				}, {
-					key: "cloud_attach",
-					type: ATTACH_SOURCE.CLOUD
-				}];
-				for (const { key, type } of sources) {
-					if (!Array.isArray(mail[key]) || mail[key].length === 0) continue;
-					for (const attach of mail[key]) {
-						if (!attach?.name) {
-							skipped.push({
-								...attach,
-								mailSubject: mail.subject,
-								skipReason: "附件名为空"
-							});
-							continue;
-						}
-						if (!attach.download_url && type === ATTACH_SOURCE.NORMAL) {
-							skipped.push({
-								...attach,
-								mailSubject: mail.subject,
-								skipReason: "下载链接缺失"
-							});
-							continue;
-						}
-						valid.push(this._normalizeAttachment(attach, mail, type));
-					}
+
+	function waitForSelector(selector, timeout = 5000) {
+		return new Promise(resolve => {
+			const el = document.querySelector(selector);
+			if (el) return resolve(el);
+			const iv = setInterval(() => {
+				const el = document.querySelector(selector);
+				if (el) {
+					clearInterval(iv);
+					resolve(el);
 				}
-			}
-			valid.forEach((att, i) => {
-				att.fileIndex = i + 1;
-			});
-			return {
-				valid,
-				skipped
-			};
-		}
-		_normalizeAttachment(attach, mail, type) {
-			let downloadUrl = attach.download_url || "";
-			if (downloadUrl && !downloadUrl.startsWith("http")) downloadUrl = MAIL_CONSTANTS.BASE_URL + downloadUrl;
-			if (downloadUrl && !downloadUrl.includes("sid=")) downloadUrl += `${downloadUrl.includes("?") ? "&" : "?"}sid=${this.sid}`;
-			return {
-				...attach,
-				_attachType: type,
-				mailId: mail.emailid,
-				mailSubject: mail.subject,
-				totime: mail.totime,
-				date: mail.totime,
-				sender: mail.senders?.item?.[0]?.email,
-				senderName: mail.senders?.item?.[0]?.nick,
-				nameWithoutExt: getBaseName(attach.name),
-				ext: getExtension(attach.name),
-				type: getExtension(attach.name),
-				download_url: downloadUrl
-			};
-		}
-		/**
-		* 返回附件的下载 URL。
-		* QQ 邮箱的 /attach/download 是 302 重定向，
-		* GM_xmlhttpRequest 会自动跟随，不需要手动解析。
-		*/
-		resolveDownloadUrl(attachment) {
-			const sid = new URLSearchParams(window.location.search).get("sid") || this.sid;
-			return this._ensureSid(attachment.download_url, sid);
-		}
-		_gmRequest(url, responseType = "", timeout = 0) {
-			return new Promise((resolve, reject) => {
-				GM_xmlhttpRequest({
-					method: "GET",
-					url,
-					headers: {
-						...DEFAULT_HEADERS,
-						"Referer": MAIL_CONSTANTS.BASE_URL + "/"
-					},
-					responseType,
-					timeout,
-					onload(res) {
-						res.status === 200 ? resolve(res) : reject(/* @__PURE__ */ new Error(`HTTP ${res.status} ${res.statusText}`));
-					},
-					onerror(err) {
-						reject(err);
-					},
-					ontimeout() {
-						reject(/* @__PURE__ */ new Error("请求超时"));
-					}
-				});
-			});
-		}
-		_ensureSid(url, sid) {
-			if (!url.startsWith("http")) url = MAIL_CONSTANTS.BASE_URL + url;
-			if (!url.includes("sid=")) url += `${url.includes("?") ? "&" : "?"}sid=${sid}`;
-			return url;
-		}
-		_delay(ms) {
-			return new Promise((r) => setTimeout(r, ms));
-		}
-	};
-	//#endregion
-	//#region src/core/settings.js
-	var STORAGE_KEY = "qqmail_downloader_settings";
-	var DEFAULTS = {
-		fileNaming: {
-			prefix: "",
-			suffix: "",
-			includeMailId: false,
-			includeAttachmentId: false,
-			includeMailSubject: false,
-			includeFileType: false,
-			separator: "_",
-			useCustomPattern: false,
-			customPattern: "{date}_{subject}_{fileName}",
-			validation: {
-				enabled: true,
-				pattern: "\\d{6,}",
-				fallbackPattern: "auto",
-				fallbackTemplate: "{subject}_{fileName}",
-				replacementChar: "_",
-				removeInvalidChars: true
-			}
-		},
-		folderStructure: "flat",
-		dateFormat: "YYYY-MM-DD",
-		createDateSubfolders: false,
-		folderNaming: { customTemplate: "{date}/{senderName}" },
-		conflictResolution: "rename",
-		downloadBehavior: {
-			showProgress: true,
-			retryOnFail: true,
-			verifyDownloads: true,
-			notifyOnComplete: true,
-			concurrentDownloads: "auto",
-			autoCompareAfterDownload: true
-		},
-		smartGrouping: {
-			enabled: false,
-			maxGroupSize: 5,
-			groupByType: true,
-			groupByDate: true
-		},
-		contentReplacement: {
-			enabled: false,
-			rules: []
-		},
-		customVariables: []
-	};
-	var Settings = class {
-		constructor() {
-			this.data = this.load();
-		}
-		load() {
-			try {
-				const stored = localStorage.getItem(STORAGE_KEY);
-				if (!stored) return structuredClone(DEFAULTS);
-				return this._merge(DEFAULTS, JSON.parse(stored));
-			} catch {
-				return structuredClone(DEFAULTS);
-			}
-		}
-		save() {
-			try {
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
-			} catch (e) {
-				console.warn("[Settings] save failed:", e);
-			}
-		}
-		reset() {
-			this.data = structuredClone(DEFAULTS);
-			this.save();
-		}
-		get(path) {
-			return path.split(".").reduce((obj, key) => obj?.[key], this.data);
-		}
-		set(path, value) {
-			const keys = path.split(".");
-			const last = keys.pop();
-			const target = keys.reduce((obj, key) => {
-				if (!obj[key]) obj[key] = {};
-				return obj[key];
-			}, this.data);
-			target[last] = value;
-			this.save();
-		}
-		_merge(defaults, stored) {
-			const result = structuredClone(defaults);
-			for (const [key, val] of Object.entries(stored)) if (key in result) if (val && typeof val === "object" && !Array.isArray(val) && typeof result[key] === "object" && !Array.isArray(result[key])) result[key] = this._merge(result[key], val);
-			else result[key] = val;
-			return result;
-		}
-	};
-	//#endregion
-	//#region src/utils/format.js
-	function formatFileSize(bytes) {
-		if (!bytes || bytes <= 0) return "0 B";
-		const units = [
-			"B",
-			"KB",
-			"MB",
-			"GB",
-			"TB"
-		];
-		const i = Math.floor(Math.log(bytes) / Math.log(1024));
-		return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-	}
-	function formatDate(dateOrTimestamp, format) {
-		const date = normalizeDate(dateOrTimestamp);
-		if (!date) return "";
-		if (!format) return date.toLocaleDateString("zh-CN") + " " + date.toLocaleTimeString("zh-CN", {
-			hour: "2-digit",
-			minute: "2-digit"
+			}, 250);
+			setTimeout(() => {
+				clearInterval(iv);
+				resolve(null);
+			}, timeout);
 		});
-		const pad = (n) => String(n).padStart(2, "0");
-		const y = date.getFullYear();
-		const M = pad(date.getMonth() + 1);
-		const d = pad(date.getDate());
-		const H = pad(date.getHours());
-		const h = pad(date.getHours() % 12 || 12);
-		const m = pad(date.getMinutes());
-		const s = pad(date.getSeconds());
-		return format.replace("YYYY", y).replace("MM", M).replace("DD", d).replace("HH", H).replace("hh", h).replace("mm", m).replace("ss", s);
 	}
-	function normalizeDate(data) {
-		if (!data) return null;
-		if (data instanceof Date) return isNaN(data.getTime()) ? null : data;
-		const ts = typeof data === "number" && data < 1e10 ? data * 1e3 : data;
-		const date = new Date(ts);
-		return isNaN(date.getTime()) ? null : date;
+
+	function sanitizeFilename(name) {
+		return name.replace(/[<>:"|?*]/g, '_').replace(/\//g, '_');
 	}
-	function formatTime(seconds) {
-		if (!seconds || seconds <= 0) return "计算中...";
-		if (seconds < 60) return `${Math.round(seconds)}秒`;
-		if (seconds < 3600) return `${Math.round(seconds / 60)}分钟`;
-		return `${Math.round(seconds / 3600)}小时`;
+
+	// A "convention-compliant" filename contains 6+ consecutive digits (QQ/phone) with
+	// clean boundaries — both sides must be separator / CJK / edge / QQ-prefix marker.
+	// Rejects digit runs embedded in hex/hash strings (e.g. "6992751ddbd0...").
+	const CONV_BOUNDARY_RE = /[-_\s+·()（）【】\[\]、，\u4e00-\u9fa5QqＱ]/;
+	const CONV_TRAIL_SEP_RE = /[-_\s+·]/;
+
+	function isConventionBoundary(ch) {
+		return ch === '' || CONV_BOUNDARY_RE.test(ch);
 	}
-	//#endregion
-	//#region src/core/naming-engine.js
-	/**
-	* NamingEngine — 文件命名引擎
-	* 负责模板变量替换、文件名验证、智能命名策略分析、备用名生成
-	*/
-	var NamingEngine = class {
-		constructor(settings) {
-			this.settings = settings;
-		}
-		/** 设置快捷访问 */
-		get _fileNaming() {
-			return this.settings.data.fileNaming;
-		}
-		get _validation() {
-			return this._fileNaming.validation;
-		}
-		calculatePaddingDigits(total) {
-			return Math.max(2, total.toString().length);
-		}
-		formatIndex(index, total) {
-			const digits = this.calculatePaddingDigits(total);
-			return String(index || 1).padStart(digits, "0");
-		}
-		/**
-		* 构建模板变量上下文
-		* @param {object} attachment - 附件对象
-		* @param {object} [context] - 额外上下文 { totalMails, totalAttachments, folderName }
-		*/
-		buildVariableData(attachment, context = {}) {
-			const now = /* @__PURE__ */ new Date();
-			const rawDate = attachment.date || attachment.totime;
-			const mailDate = rawDate ? normalizeDate(rawDate) || now : now;
-			const totalMails = context.totalMails || 1;
-			const totalAttachments = context.totalAttachments || 1;
-			const folderName = context.folderName || "未知文件夹";
-			return {
-				subject: sanitizeFileName(attachment.mailSubject || attachment.subject || "未知主题"),
-				sender: sanitizeFileName(attachment.sender || "未知发件人"),
-				senderEmail: attachment.senderEmail || "",
-				senderName: sanitizeFileName(attachment.senderName || attachment.sender || "未知发件人"),
-				mailIndex: this.formatIndex(attachment.mailIndex, totalMails),
-				folderID: attachment.folderId || "",
-				folderName: sanitizeFileName(folderName),
-				mailId: attachment.mailId || "",
-				fileName: attachment.name || "未知文件",
-				fileNameNoExt: getBaseName(attachment.name || "未知文件"),
-				fileType: getExtension(attachment.name || ""),
-				fileId: attachment.fileid || "",
-				fileIndex: this.formatIndex(attachment.fileIndex, totalAttachments),
-				attachIndex: this.formatIndex(attachment.attachIndex, totalAttachments),
-				size: attachment.size || 0,
-				date: mailDate,
-				time: formatDate(mailDate, "HH-mm-ss"),
-				datetime: formatDate(mailDate, "YYYY-MM-DD_HH-mm-ss"),
-				timestamp: Math.floor(mailDate.getTime() / 1e3),
-				year: formatDate(mailDate, "YYYY"),
-				month: formatDate(mailDate, "MM"),
-				day: formatDate(mailDate, "DD"),
-				hour: formatDate(mailDate, "HH"),
-				hour12: formatDate(mailDate, "hh"),
-				minute: formatDate(mailDate, "mm"),
-				second: formatDate(mailDate, "ss")
-			};
-		}
-		/**
-		* 通用变量替换（支持 {date:YYYY-MM} 格式化语法）
-		*/
-		replaceVariables(template, variableData) {
-			if (!template || !variableData) return template;
-			let result = template;
-			result = result.replace(/\{(\w+):([^}]+)\}/g, (match, varName, format) => {
-				if (varName === "date" && variableData.date) {
-					const mailDate = normalizeDate(variableData.date);
-					if (mailDate) return formatDate(mailDate, format);
-				}
-				return match;
-			});
-			result = result.replace(/\{(\w+)\}/g, (match, varName) => {
-				const value = variableData[varName];
-				return value !== void 0 && value !== null ? String(value) : match;
-			});
-			return result;
-		}
-		/**
-		* 自定义变量处理
-		*/
-		processCustomVariables(variables, attachment) {
-			if (!variables?.length) return {};
-			const result = {};
-			const entries = Object.entries(attachment);
-			for (const variable of variables) if (variable.name && variable.value) {
-				let value = variable.value;
-				for (const [key, val] of entries) if (value.includes(`{${key}}`)) value = value.replaceAll(`{${key}}`, val ?? "");
-				result[variable.name] = value;
-			}
-			return result;
-		}
-		/**
-		* 简易命名模式解析（用于 prefix / fallback 等场景）
-		*/
-		parseNamingPattern(pattern, attachment) {
-			if (!pattern || !attachment) return "";
-			const replacements = {
-				name: attachment.name,
-				fileName: attachment.name,
-				mailSubject: sanitizeFileName(attachment.mailSubject || ""),
-				subject: sanitizeFileName(attachment.mailSubject || ""),
-				sender: sanitizeFileName(attachment.senderName || attachment.sender || ""),
-				senderEmail: attachment.sender || "",
-				mailId: attachment.mailId,
-				attachmentId: attachment.fid,
-				date: attachment.totime ? formatDate(normalizeDate(attachment.totime), "YYYYMMDD") : "",
-				toTime: attachment.totime ? formatDate(normalizeDate(attachment.totime), "YYYYMMDDHHmmss") : "",
-				fileType: getExtension(attachment.name),
-				size: attachment.size ? formatFileSize(attachment.size) : ""
-			};
-			return pattern.replace(/\{(\w+)\}/g, (match, key) => replacements[key] ?? match);
-		}
-		/**
-		* 验证文件名是否符合正则模式
-		*/
-		validateFileName(fileName) {
-			const v = this._validation;
-			if (!v?.enabled || !v.pattern) return true;
-			try {
-				return new RegExp(v.pattern).test(getBaseName(fileName));
-			} catch {
-				return true;
+
+	/** Find all digit runs matching `re` that have clean boundaries on both sides. */
+	function findBoundedDigitRuns(s, re) {
+		const runs = [];
+		re.lastIndex = 0;
+		let m;
+		while ((m = re.exec(s)) !== null) {
+			const start = m.index;
+			const end = start + m[0].length;
+			const before = start > 0 ? s[start - 1] : '';
+			const after = end < s.length ? s[end] : '';
+			if (isConventionBoundary(before) && isConventionBoundary(after)) {
+				runs.push({ start, end, text: m[0] });
 			}
 		}
-		/**
-		* 应用内容替换规则
-		*/
-		applyContentReplacement(fileName, attachment = null) {
-			const cr = this._validation?.contentReplacement;
-			if (!cr?.enabled || !cr.search) return fileName;
-			try {
-				let result = fileName;
-				const searchPattern = cr.search;
-				let replaceContent = cr.replace ?? "";
-				if (attachment && replaceContent.includes("{")) replaceContent = this.parseNamingPattern(replaceContent, attachment);
-				if (cr.mode === "regex") {
-					const flags = (cr.global ? "g" : "") + (cr.caseSensitive ? "" : "i");
-					result = result.replace(new RegExp(searchPattern, flags), replaceContent);
-				} else if (cr.global) if (cr.caseSensitive) while (result.includes(searchPattern)) result = result.replace(searchPattern, replaceContent);
-				else {
-					const escaped = searchPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-					result = result.replace(new RegExp(escaped, "gi"), replaceContent);
-				}
-				else {
-					const idx = cr.caseSensitive ? result.indexOf(searchPattern) : result.toLowerCase().indexOf(searchPattern.toLowerCase());
-					if (idx !== -1) result = result.substring(0, idx) + replaceContent + result.substring(idx + searchPattern.length);
-				}
-				return result;
-			} catch {
-				return fileName;
-			}
-		}
-		/**
-		* 清理文件名（结合验证规则）
-		*/
-		sanitize(fileName, attachment = null) {
-			const v = this._validation;
-			if (!v?.enabled) return sanitizeFileName(fileName);
-			let cleanName = this.applyContentReplacement(fileName, attachment);
-			const replacementChar = v.replacementChar || "_";
-			if (v.removeInvalidChars !== false) cleanName = cleanName.replace(/[<>:"/\\|?*\x00-\x1f]/g, replacementChar);
-			cleanName = cleanName.replace(/\s+/g, " ").trim();
-			if (replacementChar && replacementChar !== " ") {
-				const escaped = replacementChar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-				cleanName = cleanName.replace(new RegExp(`${escaped}{2,}`, "g"), replacementChar);
-			}
-			cleanName = cleanName.replace(/^[._\-\s]+|[._\-\s]+$/g, "");
-			return cleanName || "unnamed_file";
-		}
-		generateFallbackPrefix(fallbackPattern, attachment) {
-			if (!fallbackPattern || !attachment) return "";
-			switch (fallbackPattern) {
-				case "mailSubject": return sanitizeFileName(attachment.mailSubject || "");
-				case "senderEmail": return sanitizeFileName(attachment.sender || "");
-				case "toTime": return attachment.totime ? formatDate(normalizeDate(attachment.totime), "YYYYMMDDHHmmss") : "";
-				default: return "";
-			}
-		}
-		generateFallbackFileName(originalFileName, attachment) {
-			const v = this._validation;
-			const fallbackPattern = v?.fallbackPattern || "auto";
-			const ext = getExtension(originalFileName);
-			let newName;
-			switch (fallbackPattern) {
-				case "mailSubject":
-					newName = attachment.mailSubject || attachment.subject || "untitled";
-					break;
-				case "senderEmail":
-					newName = attachment.sender || "unknown_sender";
-					break;
-				case "toTime":
-					newName = attachment.totime ? formatDate(normalizeDate(attachment.totime), "YYYYMMDDHHmmss") : Date.now().toString();
-					break;
-				case "customTemplate": {
-					const template = v?.fallbackTemplate || "{subject}_{fileName}";
-					newName = this.parseNamingPattern(template, attachment);
-					break;
-				}
-				default: {
-					const nameNoExt = getBaseName(originalFileName);
-					const numbers = nameNoExt.match(/\d+/g);
-					const letters = nameNoExt.match(/[a-zA-Z\u4e00-\u9fff]+/g);
-					if (numbers?.length) newName = numbers.join("_");
-					else if (letters?.length) newName = letters.slice(0, 3).join("_");
-					else newName = attachment.mailSubject || attachment.subject || `file_${Date.now()}`;
-					break;
-				}
-			}
-			newName = this.sanitize(newName, attachment);
-			return ext ? `${newName}.${ext}` : newName;
-		}
-		findCommonPrefix(fileNames) {
-			if (!fileNames?.length || fileNames.length < 2) return "";
-			const separators = new Set([
-				"+",
-				"-",
-				"_",
-				" ",
-				".",
-				"(",
-				")",
-				"[",
-				"]"
-			]);
-			let prefix = fileNames[0];
-			for (let i = 1; i < fileNames.length && prefix.length > 0; i++) {
-				const current = fileNames[i];
-				const minLen = Math.min(prefix.length, current.length);
-				let j = 0;
-				while (j < minLen && prefix[j] === current[j]) j++;
-				prefix = prefix.substring(0, j);
-			}
-			const lastSepIndex = [...prefix].findLastIndex((ch) => separators.has(ch));
-			return lastSepIndex > 0 ? prefix.substring(0, lastSepIndex + 1) : prefix;
-		}
-		extractNamingPattern(fileName) {
-			const patterns = [
-				/^(.+?[+\-_\s])(\d+)([+\-_\s])(\d+)([+\-_\s]).*/,
-				/^(.+?[+\-_\s])(\d+)([+\-_\s]).*/,
-				/^(.+?)(\d{6,}).*/
-			];
-			for (const pattern of patterns) {
-				const match = fileName.match(pattern);
-				if (!match) continue;
-				if (pattern === patterns[0]) return match[1] + match[2] + match[3] + match[4] + match[5];
-				if (pattern === patterns[1]) return match[1] + match[2] + match[3];
-				const beforeNumber = match[1];
-				const number = match[2];
-				const separators = [
-					"+",
-					"-",
-					"_",
-					" "
-				];
-				for (let i = beforeNumber.length - 1; i >= 0; i--) if (separators.includes(beforeNumber[i])) return beforeNumber.substring(0, i + 1) + number;
-				return beforeNumber + number;
-			}
-			return "";
-		}
-		/**
-		* 分析附件命名模式，返回策略
-		*/
-		analyzeNaming(attachments, validationPattern) {
-			if (!attachments?.length) return {
-				strategy: "default",
-				prefix: ""
-			};
-			let regex;
-			try {
-				regex = new RegExp(validationPattern);
-			} catch {
-				return {
-					strategy: "default",
-					prefix: ""
-				};
-			}
-			const validAttachments = [];
-			for (const att of attachments) if (regex.test(att.name)) validAttachments.push(att);
-			const validCount = validAttachments.length;
-			if (attachments.length === 1 || validCount === 0) return {
-				strategy: "mailSubject",
-				prefix: ""
-			};
-			if (attachments.length >= 2 && validCount > 1) {
-				const commonPrefix = this.findCommonPrefix(validAttachments.map((a) => a.name));
-				if (commonPrefix?.length > 0) return {
-					strategy: "commonPrefix",
-					prefix: commonPrefix
-				};
-			}
-			if (validCount === 1) {
-				const extracted = this.extractNamingPattern(validAttachments[0].name);
-				if (extracted) return {
-					strategy: "extractedPattern",
-					prefix: extracted
-				};
-			}
-			return {
-				strategy: "mailSubject",
-				prefix: ""
-			};
-		}
-		/**
-		* 生成文件名（支持智能 auto 模式）
-		* @param {object} attachment - 附件对象
-		* @param {object[]} [allAttachments] - 所有附件（用于 auto 分析）
-		* @param {object} [namingStrategy] - 预计算的命名策略
-		*/
-		generateFileName(attachment, allAttachments = null, namingStrategy = null) {
-			const cfg = this._fileNaming;
-			if (!cfg) return this.sanitize(attachment.name, attachment);
-			let needsFallback = false;
-			if (cfg.validation?.enabled && cfg.validation.pattern) try {
-				needsFallback = !new RegExp(cfg.validation.pattern).test(attachment.name);
-			} catch {
-				needsFallback = false;
-			}
-			const parts = [];
-			const ext = getExtension(attachment.name);
-			let baseFileName = getBaseName(attachment.name);
-			if (cfg.useCustomPattern && cfg.customPattern) baseFileName = this.parseNamingPattern(cfg.customPattern, attachment);
-			else if (needsFallback && cfg.validation.fallbackPattern) {
-				if (cfg.validation.fallbackPattern === "auto") return this._generateAutoFileName(attachment, cfg, allAttachments, namingStrategy);
-				if (cfg.validation.fallbackPattern === "customTemplate" && cfg.validation.fallbackTemplate) baseFileName = this.parseNamingPattern(cfg.validation.fallbackTemplate, attachment);
-				else {
-					const prefix = this.generateFallbackPrefix(cfg.validation.fallbackPattern, attachment);
-					if (prefix) baseFileName = prefix + "_" + baseFileName;
-				}
-			}
-			if (needsFallback && cfg.validation.fallbackPattern && cfg.validation.fallbackPattern !== "auto" && cfg.validation.fallbackPattern !== "customTemplate") {
-				const fallbackPrefix = this.generateFallbackPrefix(cfg.validation.fallbackPattern, attachment);
-				if (fallbackPrefix && !baseFileName.startsWith(fallbackPrefix)) parts.push(fallbackPrefix);
-			}
-			if (cfg.prefix) parts.push(cfg.prefix);
-			if (baseFileName) parts.push(baseFileName);
-			if (cfg.suffix) parts.push(cfg.suffix);
-			if (parts.length > 0) {
-				const sep = cfg.separator || "_";
-				const finalBase = parts.join(sep);
-				return this.sanitize(ext ? `${finalBase}.${ext}` : finalBase, attachment);
-			}
-			return this.sanitize(attachment.name, attachment);
-		}
-		/**
-		* 智能 auto 模式文件名生成（内部方法）
-		*/
-		_generateAutoFileName(attachment, cfg, allAttachments, namingStrategy) {
-			if (!namingStrategy) {
-				if (!allAttachments) {
-					const parts = [];
-					const ext = getExtension(attachment.name);
-					if (attachment.mailSubject) parts.push(attachment.mailSubject);
-					if (cfg.prefix) parts.push(cfg.prefix);
-					const base = getBaseName(attachment.name);
-					if (base) parts.push(base);
-					if (cfg.suffix) parts.push(cfg.suffix);
-					const sep = cfg.separator || "_";
-					const finalBase = parts.join(sep);
-					return this.sanitize(ext ? `${finalBase}.${ext}` : finalBase, attachment);
-				}
-				namingStrategy = this.analyzeNaming(allAttachments, cfg.validation.pattern);
-			}
-			const nameWithoutExt = attachment.nameWithoutExt || getBaseName(attachment.name);
-			const ext = attachment.ext || getExtension(attachment.name);
-			const parts = [];
-			let baseFileName = "";
-			switch (namingStrategy.strategy) {
-				case "mailSubject":
-					baseFileName = `${attachment.mailSubject}_${nameWithoutExt}`;
-					break;
-				case "commonPrefix": {
-					const remaining = attachment.name.startsWith(namingStrategy.prefix) ? attachment.name.substring(namingStrategy.prefix.length) : attachment.name;
-					baseFileName = `${namingStrategy.prefix}${getBaseName(remaining)}`;
-					break;
-				}
-				case "extractedPattern":
-					if (nameWithoutExt.startsWith(namingStrategy.prefix)) {
-						const suffix = nameWithoutExt.substring(namingStrategy.prefix.length);
-						baseFileName = `${namingStrategy.prefix}${suffix}`;
-					} else baseFileName = `${namingStrategy.prefix}${nameWithoutExt}`;
-					break;
-				default:
-					baseFileName = `${attachment.mailSubject}_${nameWithoutExt}`;
-					break;
-			}
-			if (cfg.prefix) parts.push(cfg.prefix);
-			if (baseFileName) parts.push(baseFileName);
-			if (cfg.suffix) parts.push(cfg.suffix);
-			const sep = cfg.separator || "_";
-			const finalBase = parts.length > 0 ? parts.join(sep) : baseFileName;
-			const finalName = ext ? `${finalBase}.${ext}` : finalBase;
-			const sanitized = this.sanitize(finalName, attachment);
-			if (!this.validateFileName(sanitized)) return this.generateFallbackFileName(sanitized, attachment);
-			return sanitized;
-		}
-	};
-	//#endregion
-	//#region src/core/download-engine.js
-	var DownloadEngine = class {
-		constructor(downloader, namingEngine) {
-			this.downloader = downloader;
-			this.namingEngine = namingEngine;
-			this.mainChannel = {
-				maxConcurrent: 3,
-				active: /* @__PURE__ */ new Set(),
-				queue: []
-			};
-			this.largeChannel = {
-				maxConcurrent: 1,
-				active: /* @__PURE__ */ new Set(),
-				queue: []
-			};
-			this.stats = {
-				totalBytes: 0,
-				completedBytes: 0,
-				activeFileBytes: 0,
-				completedCount: 0,
-				totalCount: 0,
-				speed: 0,
-				startTime: 0
-			};
-			this.retryCount = 3;
-			this.cancelled = false;
-			this.onProgress = null;
-			this.onComplete = null;
-			this._successCount = 0;
-			this._failCount = 0;
-			this._lastAdjust = 0;
-		}
-		async downloadAll(attachments, dirHandle, settings) {
-			this.cancelled = false;
-			this.mainChannel.queue = [];
-			this.mainChannel.active = /* @__PURE__ */ new Set();
-			this.largeChannel.queue = [];
-			this.largeChannel.active = /* @__PURE__ */ new Set();
-			this._successCount = 0;
-			this._failCount = 0;
-			this.stats = {
-				totalBytes: attachments.reduce((s, a) => s + (parseInt(a.size) || 0), 0),
-				completedBytes: 0,
-				activeFileBytes: 0,
-				completedCount: 0,
-				totalCount: attachments.length,
-				speed: 0,
-				startTime: Date.now()
-			};
-			let namingStrategy = null;
-			const validation = settings.data.fileNaming?.validation;
-			if (validation?.enabled && validation.fallbackPattern === "auto") namingStrategy = this.namingEngine.analyzeNaming(attachments, validation.pattern);
-			for (const att of attachments) ((parseInt(att.size) || 0) > 52428800 ? this.largeChannel : this.mainChannel).queue.push({
-				attachment: att,
-				retries: 0,
-				status: "pending",
-				namingStrategy
-			});
-			const results = [];
-			await Promise.all([this._runChannel(this.mainChannel, dirHandle, settings, results), this._runChannel(this.largeChannel, dirHandle, settings, results)]);
-			this.onComplete?.(results);
-			return results;
-		}
-		cancel() {
-			this.cancelled = true;
-		}
-		async _runChannel(channel, dirHandle, settings, results) {
-			const fillSlots = () => {
-				while (!this.cancelled && channel.active.size < channel.maxConcurrent) {
-					const task = channel.queue.find((t) => t.status === "pending");
-					if (!task) break;
-					task.status = "processing";
-					const promise = this._processTask(task, dirHandle, settings, results, channel).finally(() => {
-						channel.active.delete(promise);
-						fillSlots();
-					});
-					channel.active.add(promise);
-				}
-			};
-			fillSlots();
-			while (channel.active.size > 0) await Promise.race(channel.active);
-		}
-		async _processTask(task, dirHandle, settings, results, channel) {
-			try {
-				const { attachment, namingStrategy } = task;
-				const url = await this.downloader.resolveDownloadUrl(attachment);
-				const fileName = this.namingEngine.generateFileName(attachment, null, namingStrategy);
-				const targetDir = await this._getTargetFolder(dirHandle, attachment, settings);
-				const finalName = await this._resolveConflict(targetDir, fileName, settings.data.conflictResolution);
-				if (finalName === null) {
-					task.status = "completed";
-					results.push({
-						attachment,
-						error: null,
-						skipped: true
-					});
-					this.stats.completedCount++;
-					this._emitProgress();
-					return;
-				}
-				const fileHandle = await targetDir.getFileHandle(finalName, { create: true });
-				const size = parseInt(attachment.size) || 0;
-				if (size > 52428800) await this._downloadLarge(url, fileHandle, attachment);
-				else await this._downloadSmall(url, fileHandle, size);
-				if (settings.data.downloadBehavior?.verifyDownloads) {
-					const file = await fileHandle.getFile();
-					if (size > 0 && file.size !== size) console.warn(`[Download] Size mismatch for ${finalName}: expected ${size}, got ${file.size}`);
-				}
-				task.status = "completed";
-				results.push({
-					attachment,
-					error: null
-				});
-				this.stats.completedCount++;
-				this.stats.completedBytes += size;
-				this._successCount++;
-				this._adjustConcurrency(channel);
-				this._emitProgress();
-			} catch (error) {
-				if (task.retries < this.retryCount) {
-					task.retries++;
-					task.status = "pending";
-					console.warn(`[Download] Retry ${task.retries}/${this.retryCount} for ${task.attachment.name}:`, error.message);
-				} else {
-					task.status = "failed";
-					results.push({
-						attachment: task.attachment,
-						error
-					});
-					this.stats.completedCount++;
-					this._failCount++;
-					this._adjustConcurrency(channel);
-					this._emitProgress();
-				}
-			}
-		}
-		async _downloadSmall(url, fileHandle, size) {
-			const timeout = Math.max(3e4, Math.ceil(size / 1024) * 1e3);
-			const response = await this.downloader._gmRequest(url, "blob", timeout);
-			const writable = await fileHandle.createWritable();
-			try {
-				await writable.write(response.response);
-				await writable.close();
-			} catch (e) {
-				await writable.abort();
-				throw e;
-			}
-		}
-		async _downloadLarge(url, fileHandle, attachment) {
-			const writable = await fileHandle.createWritable();
-			let stallTimer = null;
-			return new Promise((resolve, reject) => {
-				const resetStall = () => {
-					clearTimeout(stallTimer);
-					stallTimer = setTimeout(() => {
-						writable.abort();
-						reject(/* @__PURE__ */ new Error("下载停滞超过30秒"));
-					}, STALL_TIMEOUT);
-				};
-				resetStall();
-				GM_xmlhttpRequest({
-					method: "GET",
-					url,
-					responseType: "blob",
-					timeout: 0,
-					onprogress: (event) => {
-						resetStall();
-						this.stats.activeFileBytes = event.loaded;
-						this._emitProgress();
-					},
-					onload: async (res) => {
-						clearTimeout(stallTimer);
-						this.stats.activeFileBytes = 0;
-						if (res.status !== 200) {
-							await writable.abort();
-							return reject(/* @__PURE__ */ new Error(`HTTP ${res.status}`));
-						}
-						try {
-							await writable.write(res.response);
-							await writable.close();
-							resolve({ size: res.response.size });
-						} catch (e) {
-							await writable.abort();
-							reject(e);
-						}
-					},
-					onerror: (err) => {
-						clearTimeout(stallTimer);
-						this.stats.activeFileBytes = 0;
-						writable.abort();
-						reject(err);
-					}
-				});
-			});
-		}
-		_adjustConcurrency(channel) {
-			if (channel === this.largeChannel) return;
-			const now = Date.now();
-			if (now - this._lastAdjust < 1e4) return;
-			this._lastAdjust = now;
-			const total = this._successCount + this._failCount;
-			if (total < 5) return;
-			const failRate = this._failCount / total;
-			if (failRate > .3 && channel.maxConcurrent > 2) channel.maxConcurrent--;
-			else if (failRate < .1 && channel.maxConcurrent < 5) channel.maxConcurrent++;
-		}
-		_emitProgress() {
-			if (!this.onProgress) return;
-			const elapsed = (Date.now() - this.stats.startTime) / 1e3;
-			const effective = this.stats.completedBytes + this.stats.activeFileBytes;
-			this.stats.speed = elapsed > 0 ? effective / elapsed : 0;
-			this.onProgress({ ...this.stats });
-		}
-		async _getTargetFolder(baseDirHandle, attachment, settings) {
-			const structure = settings.data.folderStructure;
-			if (structure === "flat") return baseDirHandle;
-			let folderName;
-			switch (structure) {
-				case "subject":
-					folderName = attachment.mailSubject || "untitled";
-					break;
-				case "sender":
-					folderName = attachment.senderName || attachment.sender || "unknown";
-					break;
-				case "date": {
-					const d = normalizeDate(attachment.date || attachment.totime);
-					folderName = d ? formatDate(d, settings.data.dateFormat) : "unknown-date";
-					break;
-				}
-				case "custom": {
-					const template = settings.data.folderNaming?.customTemplate || "{date}/{senderName}";
-					const vars = this.namingEngine.buildVariableData(attachment);
-					folderName = this.namingEngine.replaceVariables(template, vars);
-					break;
-				}
-				default: return baseDirHandle;
-			}
-			const parts = folderName.split("/").filter(Boolean);
-			let handle = baseDirHandle;
-			for (const part of parts) {
-				const safePart = sanitizeFileName(part);
-				handle = await handle.getDirectoryHandle(safePart, { create: true });
-			}
-			return handle;
-		}
-		async _resolveConflict(dirHandle, fileName, resolution) {
-			if (resolution === "overwrite") return fileName;
-			try {
-				await dirHandle.getFileHandle(fileName);
-				if (resolution === "skip") return null;
-				return this._generateUniqueName(dirHandle, fileName);
-			} catch {
-				return fileName;
-			}
-		}
-		async _generateUniqueName(dirHandle, fileName) {
-			const dotIndex = fileName.lastIndexOf(".");
-			const base = dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
-			const ext = dotIndex > 0 ? fileName.substring(dotIndex) : "";
-			for (let i = 1; i <= 999; i++) {
-				const candidate = `${base} (${i})${ext}`;
-				try {
-					await dirHandle.getFileHandle(candidate);
-				} catch {
-					return candidate;
-				}
-			}
-			return `${base}_${Date.now()}${ext}`;
-		}
-	};
-	//#endregion
-	//#region src/core/file-comparer.js
-	/**
-	* FileComparer — 文件对比引擎
-	* 纯逻辑类，负责本地文件扫描、附件匹配、重复检测
-	*/
-	var FileComparer = class {
-		/**
-		* 递归获取目录下所有文件
-		* @param {FileSystemDirectoryHandle} dirHandle
-		* @param {Function|null} onProgress  回调 (stage, detail, current, total)
-		* @param {string} path  当前路径前缀
-		*/
-		async getLocalFiles(dirHandle, onProgress = null, path = "") {
-			if (onProgress) return this._getLocalFilesWithProgress(dirHandle, onProgress, path);
-			return this._getLocalFilesSimple(dirHandle, path);
-		}
-		/** 简单递归，无进度回调 */
-		async _getLocalFilesSimple(dirHandle, path = "") {
-			const files = [];
-			for await (const [name, handle] of dirHandle.entries()) {
-				const fullPath = path ? `${path}/${name}` : name;
-				if (handle.kind === "file") try {
-					const file = await handle.getFile();
-					files.push({
-						name,
-						path: fullPath,
-						size: file.size,
-						type: getExtension(name),
-						lastModified: file.lastModified,
-						handle
-					});
-				} catch (_) {}
-				else if (handle.kind === "directory") {
-					const subFiles = await this._getLocalFilesSimple(handle, fullPath);
-					files.push(...subFiles);
-				}
-			}
-			return files;
-		}
-		/** 带进度、超时、深度保护的递归扫描 */
-		async _getLocalFilesWithProgress(dirHandle, updateProgress, path = "") {
-			const files = [];
-			let processedCount = 0;
-			const visitedPaths = /* @__PURE__ */ new Set();
-			const MAX_DEPTH = 10;
-			const MAX_FILES = 1e4;
-			const MAX_DIR_ENTRIES = 1e3;
-			const startTime = Date.now();
-			const MAX_TIME = 3e4;
-			const _checkTimeout = () => {
-				if (Date.now() - startTime > MAX_TIME) throw new Error("文件扫描超时，请选择文件数量较少的文件夹");
-			};
-			const countFiles = async (handle, currentPath = "", depth = 0) => {
-				_checkTimeout();
-				if (depth > MAX_DEPTH) return 0;
-				const normalizedPath = currentPath.toLowerCase();
-				if (visitedPaths.has(normalizedPath)) return 0;
-				visitedPaths.add(normalizedPath);
-				let count = 0;
-				try {
-					const entries = [];
-					for await (const [name, subHandle] of handle.entries()) {
-						entries.push([name, subHandle]);
-						if (entries.length > MAX_DIR_ENTRIES) break;
-					}
-					for (const [name, subHandle] of entries) {
-						if (count > MAX_FILES) break;
-						if (subHandle.kind === "file") count++;
-						else if (subHandle.kind === "directory") try {
-							count += await countFiles(subHandle, currentPath ? `${currentPath}/${name}` : name, depth + 1);
-						} catch (_) {}
-					}
-				} catch (_) {}
-				visitedPaths.delete(normalizedPath);
-				return count;
-			};
-			updateProgress("正在扫描本地文件", "统计文件数量...", 0, 1);
-			const totalCount = await countFiles(dirHandle);
-			if (totalCount === 0) {
-				updateProgress("扫描完成", "未找到任何文件", 1, 1);
-				return files;
-			}
-			if (totalCount > MAX_FILES) throw new Error(`文件数量过多(${totalCount})，请选择包含文件较少的文件夹(建议少于${MAX_FILES}个)`);
-			updateProgress("正在扫描本地文件", `发现 ${totalCount} 个文件，开始处理...`, 0, totalCount);
-			visitedPaths.clear();
-			const processFiles = async (handle, currentPath = "", depth = 0) => {
-				_checkTimeout();
-				if (depth > MAX_DEPTH) return;
-				const normalizedPath = currentPath.toLowerCase();
-				if (visitedPaths.has(normalizedPath)) return;
-				visitedPaths.add(normalizedPath);
-				try {
-					const entries = [];
-					for await (const [name, subHandle] of handle.entries()) {
-						entries.push([name, subHandle]);
-						if (entries.length > MAX_DIR_ENTRIES) break;
-					}
-					for (const [name, subHandle] of entries) {
-						if (files.length >= MAX_FILES) break;
-						const fullPath = currentPath ? `${currentPath}/${name}` : name;
-						if (subHandle.kind === "file") try {
-							const file = await subHandle.getFile();
-							files.push({
-								name,
-								path: fullPath,
-								size: file.size,
-								type: getExtension(name),
-								lastModified: file.lastModified,
-								handle: subHandle
-							});
-							processedCount++;
-							if (processedCount % 50 === 0 || processedCount === totalCount) {
-								updateProgress("正在扫描本地文件", `已处理 ${processedCount}/${totalCount} 个文件`, processedCount, totalCount);
-								await new Promise((r) => setTimeout(r, 10));
-							}
-						} catch (_) {
-							processedCount++;
-						}
-						else if (subHandle.kind === "directory") try {
-							await processFiles(subHandle, fullPath, depth + 1);
-						} catch (_) {}
-					}
-				} catch (_) {}
-				visitedPaths.delete(normalizedPath);
-			};
-			await processFiles(dirHandle, path);
-			updateProgress("扫描完成", `成功处理 ${files.length} 个文件`, files.length, totalCount);
-			return files;
-		}
-		/** 标准化文件名，移除常见重命名后缀 */
-		normalizeFileName(fileName) {
-			return getBaseName(fileName).replace(/\s*\(\d+\)$/, "").replace(/\s*_\d+$/, "").replace(/\s*-\d+$/, "").replace(/\s*副本$/, "").replace(/\s*[Cc]opy$/, "").replace(/\s*复制$/, "").trim().toLowerCase();
-		}
-		/** 计算两个文件名的相似度 (0-1) */
-		calculateSimilarity(name1, name2) {
-			const norm1 = this.normalizeFileName(name1);
-			const norm2 = this.normalizeFileName(name2);
-			if (norm1 === norm2) return .95;
-			const distance = this.levenshteinDistance(norm1, norm2);
-			const maxLength = Math.max(norm1.length, norm2.length);
-			return maxLength === 0 ? 1 : 1 - distance / maxLength;
-		}
-		/** Levenshtein 编辑距离（滚动数组优化） */
-		levenshteinDistance(str1, str2) {
-			if (str1 === str2) return 0;
-			if (!str1.length) return str2.length;
-			if (!str2.length) return str1.length;
-			let prev = Array.from({ length: str2.length + 1 }, (_, i) => i);
-			let curr = new Array(str2.length + 1);
-			for (let i = 1; i <= str1.length; i++) {
-				curr[0] = i;
-				for (let j = 1; j <= str2.length; j++) curr[j] = str1[i - 1] === str2[j - 1] ? prev[j - 1] : Math.min(prev[j - 1], prev[j], curr[j - 1]) + 1;
-				[prev, curr] = [curr, prev];
-			}
-			return prev[str2.length];
-		}
-		/** 对比本地文件与邮件附件 */
-		compareFiles(localFiles, emailAttachments) {
-			const result = {
-				missing: [],
-				duplicates: [],
-				matched: [],
-				localOnly: [],
-				summary: {
-					totalEmail: emailAttachments.length,
-					totalLocal: localFiles.length,
-					missingCount: 0,
-					duplicateCount: 0,
-					matchedCount: 0,
-					emailTotalSize: 0,
-					localTotalSize: 0,
-					matchedTotalSize: 0,
-					missingTotalSize: 0
-				}
-			};
-			const localFileMap = /* @__PURE__ */ new Map();
-			const usedLocalFiles = /* @__PURE__ */ new Set();
-			for (const file of localFiles) {
-				const normalizedKey = this.normalizeFileName(file.name);
-				const sizeTypeKey = `${file.size}_${file.type}`;
-				if (!localFileMap.has(normalizedKey)) localFileMap.set(normalizedKey, []);
-				if (!localFileMap.has(sizeTypeKey)) localFileMap.set(sizeTypeKey, []);
-				localFileMap.get(normalizedKey).push({
-					file,
-					type: "exact"
-				});
-				localFileMap.get(sizeTypeKey).push({
-					file,
-					type: "fuzzy"
-				});
-			}
-			for (const attachment of emailAttachments) {
-				const normalizedName = this.normalizeFileName(attachment.name);
-				const sizeTypeKey = `${attachment.size}_${attachment.type}`;
-				let bestMatch = null;
-				const exactCandidates = localFileMap.get(normalizedName) ?? [];
-				for (const { file } of exactCandidates.filter((c) => c.type === "exact")) if (!usedLocalFiles.has(file) && file.size === attachment.size && file.type === attachment.type) {
-					bestMatch = {
-						file,
-						type: "exact",
-						similarity: 1
-					};
-					break;
-				}
-				if (!bestMatch) {
-					const fuzzyCandidates = localFileMap.get(sizeTypeKey) ?? [];
-					let bestSimilarity = 0;
-					for (const { file } of fuzzyCandidates.filter((c) => c.type === "fuzzy")) {
-						if (usedLocalFiles.has(file)) continue;
-						const similarity = this.calculateSimilarity(attachment.name, file.name);
-						if (similarity > .6 && similarity > bestSimilarity) {
-							bestMatch = {
-								file,
-								type: "renamed",
-								similarity
-							};
-							bestSimilarity = similarity;
-						}
-					}
-				}
-				if (bestMatch) {
-					result.matched.push({
-						email: attachment,
-						local: bestMatch.file,
-						matchType: bestMatch.type,
-						similarity: bestMatch.similarity
-					});
-					usedLocalFiles.add(bestMatch.file);
-				} else result.missing.push(attachment);
-			}
-			const localFileUsage = /* @__PURE__ */ new Map();
-			for (const match of result.matched) {
-				const key = `${match.local.path}_${match.local.size}`;
-				if (!localFileUsage.has(key)) localFileUsage.set(key, []);
-				localFileUsage.get(key).push(match);
-			}
-			for (const matches of localFileUsage.values()) if (matches.length > 1) result.duplicates.push({
-				localFile: matches[0].local,
-				emailAttachments: matches.map((m) => m.email)
-			});
-			result.localOnly = localFiles.filter((f) => !usedLocalFiles.has(f));
-			result.summary.emailTotalSize = emailAttachments.reduce((s, a) => s + a.size, 0);
-			result.summary.localTotalSize = localFiles.reduce((s, f) => s + f.size, 0);
-			result.summary.matchedTotalSize = result.matched.reduce((s, m) => s + m.email.size, 0);
-			result.summary.missingTotalSize = result.missing.reduce((s, a) => s + a.size, 0);
-			Object.assign(result.summary, {
-				matchedCount: result.matched.length,
-				missingCount: result.missing.length,
-				duplicateCount: result.duplicates.length
-			});
-			return result;
-		}
-		/** 全面重复检测 */
-		detectDuplicates(matchedFiles, localFiles, emailAttachments) {
-			const duplicates = [];
-			const localToEmails = /* @__PURE__ */ new Map();
-			for (const match of matchedFiles) {
-				const key = this._generateFileKey(match.local);
-				if (!localToEmails.has(key)) localToEmails.set(key, []);
-				localToEmails.get(key).push(match);
-			}
-			for (const [, matches] of localToEmails) if (matches.length > 1) duplicates.push({
-				type: "oneToMany",
-				localFile: matches[0].local,
-				emailAttachments: matches.map((m) => m.email),
-				reason: "一个本地文件匹配多个邮件附件",
-				severity: "high"
-			});
-			const emailToLocals = /* @__PURE__ */ new Map();
-			for (const match of matchedFiles) {
-				const key = this._generateEmailKey(match.email);
-				if (!emailToLocals.has(key)) emailToLocals.set(key, []);
-				emailToLocals.get(key).push(match);
-			}
-			for (const [, matches] of emailToLocals) if (matches.length > 1) duplicates.push({
-				type: "manyToOne",
-				emailAttachment: matches[0].email,
-				localFiles: matches.map((m) => m.local),
-				reason: "多个本地文件匹配同一个邮件附件",
-				severity: "medium"
-			});
-			for (const dup of this.findLocalDuplicates(localFiles)) duplicates.push({
-				type: "localDuplicate",
-				localFiles: dup.files,
-				reason: dup.reason,
-				severity: "low"
-			});
-			for (const dup of this.findEmailDuplicates(emailAttachments)) duplicates.push({
-				type: "emailDuplicate",
-				emailAttachments: dup.files,
-				reason: dup.reason,
-				severity: "info"
-			});
-			return duplicates;
-		}
-		/** 查找本地文件中的重复 */
-		findLocalDuplicates(localFiles) {
-			const duplicates = [];
-			const sizeGroups = /* @__PURE__ */ new Map();
-			for (const file of localFiles) {
-				if (!sizeGroups.has(file.size)) sizeGroups.set(file.size, []);
-				sizeGroups.get(file.size).push(file);
-			}
-			for (const [size, files] of sizeGroups) {
-				if (files.length <= 1) continue;
-				const nameGroups = /* @__PURE__ */ new Map();
-				for (const file of files) {
-					const norm = this.normalizeFileName(file.name);
-					if (!nameGroups.has(norm)) nameGroups.set(norm, []);
-					nameGroups.get(norm).push(file);
-				}
-				for (const [, sameNameFiles] of nameGroups) if (sameNameFiles.length > 1) duplicates.push({
-					files: sameNameFiles,
-					reason: `相同大小(${formatFileSize(size)})和相似文件名的文件`
-				});
-				if (nameGroups.size > 1 && size > 1024) {
-					const allFiles = Array.from(nameGroups.values()).flat();
-					const similarFiles = [];
-					for (let i = 0; i < allFiles.length; i++) for (let j = i + 1; j < allFiles.length; j++) if (this.calculateSimilarity(allFiles[i].name, allFiles[j].name) > .7) {
-						if (!similarFiles.includes(allFiles[i])) similarFiles.push(allFiles[i]);
-						if (!similarFiles.includes(allFiles[j])) similarFiles.push(allFiles[j]);
-					}
-					if (similarFiles.length > 1) duplicates.push({
-						files: similarFiles,
-						reason: `相同大小(${formatFileSize(size)})和相似文件名的可疑重复文件`
-					});
-				}
-			}
-			return duplicates;
-		}
-		/** 查找邮件附件中的重复 */
-		findEmailDuplicates(emailAttachments) {
-			const duplicates = [];
-			const groups = /* @__PURE__ */ new Map();
-			for (const att of emailAttachments) {
-				const key = `${this.normalizeFileName(att.name)}_${att.size}`;
-				if (!groups.has(key)) groups.set(key, []);
-				groups.get(key).push(att);
-			}
-			for (const [, attachments] of groups) if (attachments.length > 1) {
-				const uniqueEmails = new Set(attachments.map((a) => a.mailSubject || a.mailId));
-				if (uniqueEmails.size > 1) duplicates.push({
-					files: attachments,
-					reason: `相同文件在${uniqueEmails.size}封不同邮件中出现`
-				});
-			}
-			return duplicates;
-		}
-		_generateFileKey(file) {
-			return `${this.normalizeFileName(file.name)}_${file.size}_${file.lastModified ?? 0}`;
-		}
-		_generateEmailKey(attachment) {
-			return `${this.normalizeFileName(attachment.name)}_${attachment.size}`;
-		}
-	};
-	//#endregion
-	//#region src/utils/dom.js
-	function el(tag, opts = {}, ...children) {
-		const elem = document.createElement(tag);
-		if (opts.className) elem.className = opts.className;
-		if (opts.id) elem.id = opts.id;
-		if (opts.attrs) for (const [k, v] of Object.entries(opts.attrs)) elem.setAttribute(k, v);
-		if (opts.events) for (const [k, v] of Object.entries(opts.events)) elem.addEventListener(k, v);
-		const allChildren = [...opts.children || [], ...children];
-		for (const child of allChildren) if (typeof child === "string") elem.appendChild(document.createTextNode(child));
-		else if (child instanceof HTMLElement) elem.appendChild(child);
-		return elem;
+		return runs;
 	}
-	function qs(selector, parent = document) {
-		return parent.querySelector(selector);
+
+	function hasConventionDigits(s) {
+		return findBoundedDigitRuns(s, /\d{6,}/g).length > 0;
 	}
-	function qsa(selector, parent = document) {
-		return [...parent.querySelectorAll(selector)];
+
+	/** Prefix = everything up to the end of the last valid digit run (+ trailing separator). */
+	function extractConventionPrefix(s) {
+		const runs = findBoundedDigitRuns(s, /\d{6,}/g);
+		if (runs.length === 0) return null;
+		// exec yields matches in order; the last run has the largest end.
+		let end = runs[runs.length - 1].end;
+		if (end < s.length && CONV_TRAIL_SEP_RE.test(s[end])) end++;
+		return s.slice(0, end);
 	}
-	function remove(selectorOrElement) {
-		if (typeof selectorOrElement === "string") qsa(selectorOrElement).forEach((el) => el.remove());
-		else if (selectorOrElement?.remove) selectorOrElement.remove();
+
+	function getAttachments(mail) {
+		return [...(mail.normal_attach || []), ...(mail.cloud_attach || [])];
 	}
-	//#endregion
-	//#region src/ui/panel.js
-	var Panel = class {
-		constructor(manager) {
-			this.manager = manager;
-			this.overlay = null;
-			this.window = null;
-			this.isMinimized = false;
-			this.isMaximized = false;
-			this.dragState = {
-				isDragging: false,
-				startX: 0,
-				startY: 0,
-				startLeft: 0,
-				startTop: 0
-			};
-			this._keyHandler = null;
-			this._moveHandler = null;
-			this._upHandler = null;
+
+	function hasAttachments(mail) {
+		return (mail.normal_attach?.length || 0) + (mail.cloud_attach?.length || 0) > 0;
+	}
+
+	function getSenderEmail(mail) {
+		return mail.senders?.item?.[0]?.email || '';
+	}
+
+	function getSenderNick(mail) {
+		return mail.senders?.item?.[0]?.nick || '';
+	}
+
+	function buildIdentitySegs(identity) {
+		const s = [];
+		if (identity.name) s.push(identity.name);
+		if (identity.qq) s.push(identity.qq);
+		if (identity.phone) s.push(identity.phone);
+		return s;
+	}
+
+	function countByDir(tasks) {
+		const s = {};
+		for (const t of tasks) s[t.dir] = (s[t.dir] || 0) + 1;
+		return s;
+	}
+
+	/** Run async fn on items in parallel batches */
+	async function batchParallel(items, concurrency, fn) {
+		for (let i = 0; i < items.length; i += concurrency) {
+			await Promise.all(items.slice(i, i + concurrency).map(fn));
 		}
-		create() {
-			this.overlay = el("div", {
-				className: "am-overlay",
-				id: "attachment-manager-overlay",
-				events: { click: () => this.manager.close() }
-			});
-			this.window = el("div", {
-				className: "am-window",
-				id: "am-window"
-			});
-			this.window.innerHTML = this._buildWindowHTML();
-			document.body.appendChild(this.overlay);
-			document.body.appendChild(this.window);
-			requestAnimationFrame(() => {
-				this.overlay.classList.add("show");
-				this.window.classList.add("show");
-			});
-			this._setupDrag();
-			this._setupControls();
-			this._setupKeyboard();
-			return {
-				contentArea: qs("#attachment-content-area", this.window),
-				progressArea: qs("#attachment-progress-area", this.window)
+	}
+
+	function ensureAbsoluteUrl(url) {
+		if (url.startsWith('/')) url = 'https://wx.mail.qq.com' + url;
+		if (!url.includes('sid=')) url += (url.includes('?') ? '&' : '?') + 'sid=' + sid;
+		return url;
+	}
+
+	function replaceSid(url, newSid) {
+		return url.replace(/sid=[^&]+/, 'sid=' + newSid);
+	}
+
+	function cleanQQs(qqs) {
+		return qqs.filter(q => {
+			if (DATE_RE.test(q)) return false;
+			if (q.length < 5) return false;
+			if (/^[0-2]\d[0-5]\d\d\d$/.test(q) && q.length === 6) return false;
+			return true;
+		});
+	}
+
+	// ============================================================
+	//  IndexedDB
+	// ============================================================
+
+	function openDB() {
+		return new Promise((resolve, reject) => {
+			const req = indexedDB.open(DB_NAME, DB_VERSION);
+			req.onupgradeneeded = e => {
+				const d = e.target.result;
+				if (!d.objectStoreNames.contains('tasks')) d.createObjectStore('tasks', { keyPath: 'id' });
+				if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
 			};
+			req.onsuccess = () => resolve(req.result);
+			req.onerror = () => reject(req.error);
+		});
+	}
+
+	function dbPut(store, data) {
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(store, 'readwrite');
+			tx.objectStore(store).put(data);
+			tx.oncomplete = () => resolve();
+			tx.onerror = () => reject(tx.error);
+		});
+	}
+
+	function dbGet(store, key) {
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(store, 'readonly');
+			const req = tx.objectStore(store).get(key);
+			req.onsuccess = () => resolve(req.result);
+			tx.onerror = () => reject(tx.error);
+		});
+	}
+
+	function dbGetAll(store) {
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(store, 'readonly');
+			const req = tx.objectStore(store).getAll();
+			req.onsuccess = () => resolve(req.result);
+			tx.onerror = () => reject(tx.error);
+		});
+	}
+
+	function dbPutBatch(store, items) {
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(store, 'readwrite');
+			const s = tx.objectStore(store);
+			for (const item of items) s.put(item);
+			tx.oncomplete = () => resolve();
+			tx.onerror = () => reject(tx.error);
+		});
+	}
+
+	/** Delete tasks matching a folderId (or all if not specified) */
+	async function dbDeleteByFolder(targetFolderId) {
+		const all = await dbGetAll('tasks');
+		const toDelete = all.filter(t => t.folderId === targetFolderId);
+		if (toDelete.length === 0) return;
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction('tasks', 'readwrite');
+			const store = tx.objectStore('tasks');
+			for (const t of toDelete) store.delete(t.id);
+			tx.oncomplete = () => resolve();
+			tx.onerror = () => reject(tx.error);
+		});
+	}
+
+	function dbClear(store) {
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(store, 'readwrite');
+			tx.objectStore(store).clear();
+			tx.oncomplete = () => resolve();
+			tx.onerror = () => reject(tx.error);
+		});
+	}
+
+	// ============================================================
+	//  QQ Mail API
+	// ============================================================
+
+	function rnd() {
+		return Math.random().toString().slice(2) + Date.now();
+	}
+
+	function apiGet(path) {
+		const sep = path.includes('?') ? '&' : '?';
+		return fetch(path + sep + 'r=' + rnd(), { credentials: 'include' }).then(r => r.json());
+	}
+
+	function apiPost(path, params) {
+		params.r = rnd();
+		params.sid = sid;
+		return fetch(path, {
+			method: 'POST',
+			credentials: 'include',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: new URLSearchParams(params).toString(),
+		}).then(r => r.json());
+	}
+
+	async function verifySession() {
+		const data = await apiGet(`/list/folderlist?sid=${sid}`);
+		return data.head.ret === 0 ? data : null;
+	}
+
+	async function fetchMailList(page) {
+		const url = `/list/maillist?sid=${sid}&dir=${folderId}&dirid=${folderId}&func=1&sort_type=1&sort_direction=1&page_now=${page}&page_size=50`;
+		const data = await apiGet(url);
+		if (data.head.ret !== 0) throw new Error(`API ret=${data.head.ret}: ${data.head.msg || data.head.stack || ''}`);
+		return data.body;
+	}
+
+	async function fetchReadMail(mailId) {
+		const data = await apiGet(`/read/readmail?sid=${sid}&mailid=${mailId}&func=1`);
+		return data;
+	}
+
+	// Mark single mail as read
+	async function markMailRead(mailId) {
+		return apiPost('/mgr/mailmgr', { func: 4, mailid: mailId, folderid: folderId, choose_type: 1 });
+	}
+
+	// Add tag to a mail
+	async function addTag(mailId, tagId) {
+		return apiPost('/mgr/mailmgr', { func: 12, mailid: mailId, tagid: tagId, folderid: folderId, choose_type: 1 });
+	}
+
+	async function addTags(mailId, tagIds) {
+		await Promise.all(tagIds.map(t => addTag(mailId, t)));
+	}
+
+	// Poll async task until complete
+	async function pollAsyncTask(taskId) {
+		for (let i = 0; i < 60; i++) {
+			const r = await apiPost('/mgr/mailmgr', { func: 26, async_task_func: 1, async_taskid: taskId });
+			if (r.head.ret !== 0) return false;
+			if (!r.body?.is_async) return true;
+			await new Promise(resolve => setTimeout(resolve, 500));
 		}
-		destroy() {
-			if (this._keyHandler) {
-				document.removeEventListener("keydown", this._keyHandler);
-				this._keyHandler = null;
+		return false;
+	}
+
+	// Mark all mails in folder as unread (batch + async poll)
+	async function markAllUnread() {
+		const r = await apiPost('/mgr/mailmgr', { func: 5, folderid: folderId, choose_type: 2 });
+		if (r.head.ret !== 0) return false;
+		if (r.body?.is_async && r.body?.async_taskid) {
+			return pollAsyncTask(r.body.async_taskid);
+		}
+		return true;
+	}
+
+	// ============================================================
+	//  Phase 2: Scan mails
+	// ============================================================
+
+	async function scanAllMails(totalNum, onProgress) {
+		const totalPages = Math.ceil(totalNum / 50);
+		const allMails = [];
+
+		for (let i = 0; i < totalPages; i += 3) {
+			const batch = [];
+			for (let j = i; j < Math.min(i + 3, totalPages); j++) {
+				batch.push(fetchMailList(j));
 			}
-			if (this._moveHandler) {
-				document.removeEventListener("mousemove", this._moveHandler);
-				this._moveHandler = null;
+			const results = await Promise.all(batch);
+			for (const body of results) {
+				if (body.list) allMails.push(...body.list);
 			}
-			if (this._upHandler) {
-				document.removeEventListener("mouseup", this._upHandler);
-				this._upHandler = null;
+			onProgress?.(allMails.length, totalNum);
+		}
+
+		return allMails;
+	}
+
+	// ============================================================
+	//  Phase 3: Build identity map
+	// ============================================================
+
+	/** Build identity map from attach_list entries (or legacy mail objects) */
+	function buildIdentityMap(items) {
+		identityMap = new Map();
+
+		// Require clean boundaries on matches so hex/hash strings like
+		// "6992751ddbd06697d3528577" don't pollute the identity map.
+		function extractPhoneQQ(text, id) {
+			for (const r of findBoundedDigitRuns(text, /1[3-9]\d{9}/g)) id.phones.add(r.text);
+			for (const r of findBoundedDigitRuns(text, /(?<!\d)[1-9]\d{4,10}(?!\d)/g)) {
+				if (!/^1[3-9]\d{9}$/.test(r.text)) id.qqs.add(r.text);
 			}
-			this.overlay?.remove();
-			this.window?.remove();
-			this.overlay = null;
-			this.window = null;
-			this.isMinimized = false;
-			this.isMaximized = false;
 		}
-		_buildWindowHTML() {
-			return `
-      <div class="am-window-header" id="am-window-header">
-        <div style="display:flex;align-items:center;gap:var(--am-space-2)">
-          <div class="am-window-dot am-window-dot--close" id="am-btn-close" title="关闭"></div>
-          <div class="am-window-dot am-window-dot--minimize" id="am-btn-minimize" title="最小化"></div>
-          <div class="am-window-dot am-window-dot--maximize" id="am-btn-maximize" title="最大化"></div>
-        </div>
-        <div style="font-size:14px;font-weight:600;color:var(--am-text)">${qs(".toolbar-folder-name")?.textContent?.trim() || "附件管理器"}</div>
-        <div id="attachment-count-info" style="font-size:12px;color:var(--am-text-tertiary)">加载中...</div>
-      </div>
-      <div class="am-window-content" style="position:relative">
-        <div id="attachment-content-area" class="am-scroll" style="flex:1;overflow-y:auto"></div>
-        <div id="attachment-progress-area" style="display:none"></div>
-      </div>
-    `;
+
+		function ensure(email) {
+			if (!identityMap.has(email)) {
+				identityMap.set(email, { names: new Set(), qqs: new Set(), phones: new Set(), nicks: new Set() });
+			}
+			return identityMap.get(email);
 		}
-		_setupDrag() {
-			const header = qs("#am-window-header", this.window);
-			if (!header) return;
-			header.addEventListener("mousedown", (e) => {
-				if (e.target.closest(".am-window-dot")) return;
-				if (this.isMaximized) return;
-				this.dragState.isDragging = true;
-				this.dragState.startX = e.clientX;
-				this.dragState.startY = e.clientY;
-				const rect = this.window.getBoundingClientRect();
-				this.dragState.startLeft = rect.left;
-				this.dragState.startTop = rect.top;
-			});
-			this._moveHandler = (e) => {
-				if (!this.dragState.isDragging) return;
-				const dx = e.clientX - this.dragState.startX;
-				const dy = e.clientY - this.dragState.startY;
-				this.window.style.left = `${this.dragState.startLeft + dx}px`;
-				this.window.style.top = `${this.dragState.startTop + dy}px`;
-				this.window.style.transform = "none";
-			};
-			document.addEventListener("mousemove", this._moveHandler);
-			this._upHandler = () => {
-				this.dragState.isDragging = false;
-			};
-			document.addEventListener("mouseup", this._upHandler);
+
+		for (const item of items) {
+			// Support both attach_list format and legacy mail format
+			const email = item.sender?.addr || getSenderEmail(item);
+			const nick = item.sender?.name || getSenderNick(item);
+			if (!email) continue;
+
+			const id = ensure(email);
+			if (nick) id.nicks.add(nick);
+
+			const parts = (item.subject || '').split(/[+＋]/);
+			if (parts.length >= 4) id.names.add(parts[2].trim());
+			for (const p of parts) extractPhoneQQ(p, id);
+
+			const eqq = email.match(/^(\d{5,11})@qq\.com$/);
+			if (eqq) id.qqs.add(eqq[1]);
+
+			// attach_list entry: extract from filename
+			if (item.name) extractPhoneQQ(item.name, id);
+			// legacy mail: extract from attachment names
+			if (item.normal_attach || item.cloud_attach) {
+				for (const a of getAttachments(item)) {
+					if (a.name) extractPhoneQQ(a.name, id);
+				}
+			}
 		}
-		_setupControls() {
-			qs("#am-btn-close", this.window)?.addEventListener("click", () => this.manager.close());
-			qs("#am-btn-minimize", this.window)?.addEventListener("click", () => {
-				this.isMinimized = !this.isMinimized;
-				this.window.classList.toggle("minimized", this.isMinimized);
-			});
-			qs("#am-btn-maximize", this.window)?.addEventListener("click", () => {
-				this.isMaximized = !this.isMaximized;
-				this.window.classList.toggle("maximized", this.isMaximized);
-			});
-		}
-		_setupKeyboard() {
-			this._keyHandler = (e) => {
-				if (e.key === "Escape") this.manager.close();
-			};
-			document.addEventListener("keydown", this._keyHandler);
-		}
-	};
-	//#endregion
-	//#region src/html.js
-	/**
-	* Tagged template literal，自动对插值做 HTML 转义。
-	* 用法: container.innerHTML = html`<div>${unsafeString}</div>`;
-	*/
-	var ESC_MAP = {
-		"&": "&amp;",
-		"<": "&lt;",
-		">": "&gt;",
-		"\"": "&quot;",
-		"'": "&#39;"
-	};
-	var ESC_RE = /[&<>"']/g;
-	function escapeHtml(str) {
-		return str.replace(ESC_RE, (ch) => ESC_MAP[ch]);
 	}
-	/**
-	* Tagged template literal that auto-escapes interpolated values.
-	* Values wrapped in trusted() bypass escaping.
-	*/
-	function html(strings, ...values) {
-		return strings.reduce((out, str, i) => {
-			if (i >= values.length) return out + str;
-			const val = values[i];
-			const escaped = val && val.__trusted ? val.toString() : escapeHtml(String(val ?? ""));
-			return out + str + escaped;
-		}, "");
-	}
-	/**
-	* 标记一段 HTML 为"已信任"，跳过转义。
-	* 仅用于代码中定义的常量（如 SVG 图标），绝不用于用户数据。
-	*/
-	function trusted(rawHtml) {
+
+	function getIdentity(email) {
+		const id = identityMap.get(email);
+		if (!id) return { name: '', qq: '', phone: '' };
+		const qqs = cleanQQs([...id.qqs]);
+		// Reject pure-digit entries in both names (from subject parts[2]) and nicks
+		const pickNonDigit = set => [...set].find(n => n && !/^\d+$/.test(n)) || '';
 		return {
-			__trusted: true,
-			toString: () => rawHtml
+			name: pickNonDigit(id.names) || pickNonDigit(id.nicks) || '',
+			qq: qqs[0] || '',
+			phone: [...id.phones][0] || '',
 		};
 	}
-	//#endregion
-	//#region src/ui/bento.js
-	var BentoLayout = class {
-		constructor(manager) {
-			this.manager = manager;
-		}
-		/**
-		* Render the full bento layout.
-		* @param {HTMLElement} container - #attachment-content-area
-		* @param {Object[]} attachments - all attachments
-		* @param {{ mailCount: number, attachmentCount: number, totalSize: number, skippedCount: number }} stats
-		*/
-		render(container, attachments, stats) {
-			container.innerHTML = "";
-			const bento = el("div", { className: "am-bento am-scroll" });
-			bento.appendChild(this._createHeaderCard(stats));
-			bento.appendChild(this._createStatsRow(stats, attachments));
-			const toolbarContainer = el("div");
-			this.manager.toolbar.render(toolbarContainer);
-			bento.appendChild(toolbarContainer);
-			const gridContainer = el("div", { id: "attachment-grid-area" });
-			const filtered = this.manager.toolbar.getFilteredAttachments(attachments);
-			this.manager.grid.render(gridContainer, filtered);
-			bento.appendChild(gridContainer);
-			container.appendChild(bento);
-		}
-		_createHeaderCard(stats) {
-			const card = el("div", { className: "am-bento-header" });
-			card.innerHTML = html`
-      <div style="display:flex;align-items:center;gap:var(--am-space-4)">
-        <button class="am-btn am-btn--icon" id="am-back-btn" title="关闭">
-          ${trusted(`<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-          </svg>`)}
-        </button>
-        <div>
-          <div class="am-bento-title" style="font-size:20px">${String(stats.mailCount)} 封邮件的附件</div>
-          <div style="font-size:13px;color:var(--am-text-secondary)">
-            ${String(stats.attachmentCount)} 个附件 · ${formatFileSize(stats.totalSize)}${trusted(stats.skippedCount > 0 ? ` · <span style="color:var(--am-warning)">${stats.skippedCount} 个已跳过</span>` : "")}
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:var(--am-space-3)">
-        <button class="am-btn am-btn--ghost" id="am-btn-settings" title="设置">
-          ${trusted(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>`)}
-        </button>
-        <button class="am-btn am-btn--ghost" id="am-btn-compare" title="对比本地">
-          ${trusted(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
-          </svg>`)}
-        </button>
-        <button class="am-btn am-btn--primary" id="am-btn-download-all">
-          ${trusted(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-          </svg>`)}
-          全部下载
-        </button>
-      </div>
-    `;
-			qs("#am-back-btn", card)?.addEventListener("click", () => this.manager.close());
-			qs("#am-btn-settings", card)?.addEventListener("click", () => this.manager.showSettings());
-			qs("#am-btn-compare", card)?.addEventListener("click", () => this.manager.showCompare());
-			qs("#am-btn-download-all", card)?.addEventListener("click", () => this.manager.downloadAll());
-			return card;
-		}
-		_createStatsRow(stats, attachments) {
-			const typeCounts = {};
-			for (const att of attachments) {
-				const ext = getExtension(att.name);
-				let typeName = "其他";
-				for (const [name, exts] of Object.entries(FILE_TYPES)) if (exts.includes(ext)) {
-					typeName = name;
-					break;
-				}
-				typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
-			}
-			const row = el("div", { className: "am-stat-grid" });
-			const items = [
-				{
-					label: "邮件数",
-					value: String(stats.mailCount)
-				},
-				{
-					label: "附件数",
-					value: String(stats.attachmentCount)
-				},
-				{
-					label: "总大小",
-					value: formatFileSize(stats.totalSize)
-				}
-			];
-			for (const [name, count] of Object.entries(typeCounts)) items.push({
-				label: name,
-				value: String(count)
+
+	// ============================================================
+	//  Phase 3a: Chrome Built-in AI enhancement
+	// ============================================================
+
+	let aiSession = null;
+	let aiAvailable = false;
+
+	async function initBuiltinAI() {
+		try {
+			if (!window.LanguageModel) return false;
+			const caps = await window.LanguageModel.availability();
+			if (caps === 'unavailable') return false;
+			aiSession = await window.LanguageModel.create({
+				systemPrompt: '你是一个邮件主题解析器。从投稿邮件的主题中提取信息。只输出 JSON，不要其他文字。',
 			});
-			for (const item of items) {
-				const stat = el("div", { className: "am-stat-item" });
-				stat.innerHTML = html`
-        <div class="am-stat-number">${item.value}</div>
-        <div class="am-stat-label">${item.label}</div>
-      `;
-				row.appendChild(stat);
-			}
-			return row;
+			aiAvailable = true;
+			return true;
+		} catch (e) {
+			return false;
 		}
-		updateStats(stats) {
-			const info = qs("#attachment-count-info");
-			if (info) info.textContent = `${stats.mailCount} 封邮件 · ${stats.attachmentCount} 个附件`;
-		}
-	};
-	//#endregion
-	//#region src/ui/attachment-grid.js
-	var AttachmentGrid = class {
-		constructor(manager) {
-			this.manager = manager;
-			this.container = null;
-		}
-		/** Render attachments into container */
-		render(container, attachments) {
-			this.container = container;
-			if (attachments.length === 0) {
-				this.showEmpty(container);
-				return;
-			}
-			container.innerHTML = "";
-			const grid = document.createElement("div");
-			grid.className = "am-grid";
-			for (const att of attachments) grid.appendChild(this._createCard(att));
-			container.appendChild(grid);
-		}
-		showLoading(container, message = "加载中...") {
-			container.innerHTML = html`<div class="am-state am-state--loading">${message}</div>`;
-		}
-		showEmpty(container) {
-			container.innerHTML = "<div class=\"am-state am-state--empty\">暂无附件</div>";
-		}
-		showError(container, message) {
-			container.innerHTML = html`<div class="am-state am-state--error">${message}</div>`;
-		}
-		/** Create a single attachment card element */
-		_createCard(attachment) {
-			const card = document.createElement("div");
-			card.className = "am-card am-card--attachment am-card--hover";
-			const icon = this._getFileIcon(attachment.name);
-			const thumbUrl = this._getThumbnailUrl(attachment);
-			const size = formatFileSize(parseInt(attachment.size) || 0);
-			const date = normalizeDate(attachment.date || attachment.totime);
-			const dateStr = date ? formatDate(date, "MM-DD") : "";
-			card.innerHTML = html`
-      <input type="checkbox" class="am-checkbox"
-        style="position:absolute;top:var(--am-space-2);left:var(--am-space-2);z-index:10"
-        ${trusted(this.manager.selectedAttachments.has(attachment.fileid || attachment.name) ? "checked" : "")}
-        data-attachment-id="${attachment.fileid || attachment.name}">
-      <div class="am-card-preview">
-        ${trusted(thumbUrl ? `<img class="am-thumb" src="${thumbUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
-             <span class="am-thumb-fallback" style="font-size:24px;display:flex;width:100%;height:100%;align-items:center;justify-content:center">${icon}</span>` : `<span style="font-size:24px">${icon}</span>`)}
-      </div>
-      <div style="padding:var(--am-space-2);display:flex;flex-direction:column;gap:2px">
-        <div class="am-card-title" title="${attachment.name}">${attachment.name}</div>
-        <div class="am-card-meta">${size}${trusted(dateStr ? ` · ${dateStr}` : "")}</div>
-      </div>
-    `;
-			const img = qs(".am-thumb", card);
-			if (img) {
-				const fallback = qs(".am-thumb-fallback", card);
-				img.addEventListener("load", () => {
-					img.style.display = "";
-					if (fallback) fallback.style.display = "none";
-				});
-				img.addEventListener("error", () => {
-					img.style.display = "none";
-					if (fallback) fallback.style.display = "flex";
-				});
-			}
-			const checkbox = qs("input[type=\"checkbox\"]", card);
-			checkbox?.addEventListener("change", (e) => {
-				e.stopPropagation();
-				const id = attachment.fileid || attachment.name;
-				if (e.target.checked) this.manager.selectedAttachments.add(id);
-				else this.manager.selectedAttachments.delete(id);
-			});
-			card.addEventListener("click", (e) => {
-				if (e.target === checkbox) return;
-				checkbox.checked = !checkbox.checked;
-				checkbox.dispatchEvent(new Event("change"));
-			});
-			return card;
-		}
-		_getFileIcon(filename) {
-			return FILE_ICONS[getExtension(filename)] || "📎";
-		}
-		_getThumbnailUrl(attachment) {
-			if (!attachment?.fileid || !attachment?.mailId) return null;
-			const ext = getExtension(attachment.name);
-			if (![
-				"jpg",
-				"jpeg",
-				"png",
-				"gif",
-				"bmp",
-				"webp",
-				"pdf",
-				"doc",
-				"docx",
-				"ppt",
-				"pptx",
-				"xls",
-				"xlsx"
-			].includes(ext)) return null;
-			const sid = this.manager.downloader?.sid || "";
-			if (!sid) return null;
-			return `${MAIL_CONSTANTS.BASE_URL}${MAIL_CONSTANTS.API_ENDPOINTS.ATTACH_THUMBNAIL}?mailid=${attachment.mailId}&fileid=${attachment.fileid}&name=${encodeURIComponent(attachment.name)}&sid=${sid}`;
-		}
-	};
-	//#endregion
-	//#region src/ui/toolbar.js
-	/**
-	* Filter / Sort / Search / Batch-action toolbar.
-	* Rendered inside the panel's content area, above the attachment grid.
-	*/
-	var Toolbar = class {
-		constructor(manager) {
-			this.manager = manager;
-			this.currentFilter = "all";
-			this.currentSort = "date";
-			this.searchKeyword = "";
-			this._sortMenu = null;
-			this._closeSortMenu = null;
-		}
-		/** Build toolbar DOM and append to `container`. */
-		render(container) {
-			const wrapper = el("div", { className: "am-toolbar" });
-			wrapper.innerHTML = this._buildHTML();
-			container.appendChild(wrapper);
-			this._setupEvents(wrapper);
-		}
-		/**
-		* Apply current filter + search + sort to an attachments array.
-		* Returns a **new** array — never mutates the input.
-		*/
-		getFilteredAttachments(attachments) {
-			if (!Array.isArray(attachments)) return [];
-			const keyword = this.searchKeyword.toLowerCase();
-			let result = attachments.filter((att) => {
-				if (!att) return false;
-				if (this.currentFilter !== "all") {
-					const type = this._getFileType(att.name);
-					switch (this.currentFilter) {
-						case "images":
-							if (type !== "图片") return false;
-							break;
-						case "documents":
-							if (![
-								"文档",
-								"表格",
-								"演示"
-							].includes(type)) return false;
-							break;
-						case "archives":
-							if (type !== "压缩包") return false;
-							break;
-						case "media":
-							if (!["音频", "视频"].includes(type)) return false;
-							break;
-						case "others":
-							if ([
-								"图片",
-								"文档",
-								"表格",
-								"演示",
-								"压缩包",
-								"音频",
-								"视频"
-							].includes(type)) return false;
-							break;
-					}
-				}
-				if (keyword) {
-					const name = (att.name || "").toLowerCase();
-					const subject = (att.mailSubject || "").toLowerCase();
-					const sender = (att.senderName || "").toLowerCase();
-					if (!name.includes(keyword) && !subject.includes(keyword) && !sender.includes(keyword)) return false;
-				}
-				return true;
-			});
-			result = this._sort(result);
-			return result;
-		}
-		/** Destroy any floating menus this toolbar owns. */
-		destroy() {
-			this._removeSortMenu();
-		}
-		_buildHTML() {
-			return `
-      <div class="am-toolbar__filters am-tabs">
-        ${[
-				{
-					key: "all",
-					label: "全部"
-				},
-				{
-					key: "images",
-					label: "图片"
-				},
-				{
-					key: "documents",
-					label: "文档"
-				},
-				{
-					key: "archives",
-					label: "压缩包"
-				},
-				{
-					key: "media",
-					label: "音视频"
-				},
-				{
-					key: "others",
-					label: "其他"
-				}
-			].map((f) => {
-				return `<button class="${f.key === this.currentFilter ? " am-tab active" : " am-tab"}" data-filter="${f.key}">${f.label}</button>`;
-			}).join("")}
-      </div>
-      <div class="am-toolbar__actions">
-        <input class="am-input am-toolbar__search" type="text"
-               placeholder="搜索文件名、邮件主题、发件人…"
-               data-role="search" />
-        <button class="am-btn am-btn--ghost am-btn--sm" data-role="sort">${html`${{
-				date: "按日期",
-				size: "按大小",
-				name: "按名称"
-			}[this.currentSort] || "排序"}`} ▾</button>
-        <button class="am-btn am-btn--sm" data-role="download-selected">下载选中</button>
-        <button class="am-btn am-btn--primary am-btn--sm" data-role="download-all">全部下载</button>
-      </div>
-    `;
-		}
-		_setupEvents(wrapper) {
-			qsa("[data-filter]", wrapper).forEach((btn) => {
-				btn.addEventListener("click", () => {
-					this.currentFilter = btn.dataset.filter;
-					qsa("[data-filter]", wrapper).forEach((b) => b.classList.remove("active"));
-					btn.classList.add("active");
-					this._notify();
-				});
-			});
-			const searchInput = qs("[data-role=\"search\"]", wrapper);
-			if (searchInput) {
-				let timer = null;
-				searchInput.addEventListener("input", () => {
-					clearTimeout(timer);
-					timer = setTimeout(() => {
-						this.searchKeyword = searchInput.value.trim();
-						this._notify();
-					}, 200);
-				});
-			}
-			const sortBtn = qs("[data-role=\"sort\"]", wrapper);
-			if (sortBtn) sortBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				this._showSortMenu(sortBtn, wrapper);
-			});
-			const dlSelected = qs("[data-role=\"download-selected\"]", wrapper);
-			if (dlSelected) dlSelected.addEventListener("click", () => this.manager.downloadSelected?.());
-			const dlAll = qs("[data-role=\"download-all\"]", wrapper);
-			if (dlAll) dlAll.addEventListener("click", () => this.manager.downloadAll?.());
-		}
-		_notify() {
-			this.manager.onFilterChange?.();
-		}
-		_showSortMenu(button, wrapper) {
-			this._removeSortMenu();
-			const rect = button.getBoundingClientRect();
-			const menu = el("div", { className: "am-menu" });
-			menu.style.top = rect.bottom + 4 + "px";
-			menu.style.left = rect.left + "px";
-			[
-				{
-					value: "date",
-					label: "按日期"
-				},
-				{
-					value: "size",
-					label: "按大小"
-				},
-				{
-					value: "name",
-					label: "按名称"
-				}
-			].forEach((opt) => {
-				const item = el("div", {
-					className: "am-menu-item",
-					events: { click: () => {
-						this.currentSort = opt.value;
-						button.textContent = opt.label + " ▾";
-						this._removeSortMenu();
-						this._notify();
-					} }
-				}, opt.label);
-				if (this.currentSort === opt.value) {
-					item.style.background = "var(--am-bg-muted)";
-					item.style.fontWeight = "600";
-				}
-				menu.appendChild(item);
-			});
-			document.body.appendChild(menu);
-			this._sortMenu = menu;
-			this._closeSortMenu = (e) => {
-				if (!menu.contains(e.target) && e.target !== button) this._removeSortMenu();
-			};
-			setTimeout(() => document.addEventListener("click", this._closeSortMenu), 0);
-		}
-		_removeSortMenu() {
-			if (this._sortMenu) {
-				this._sortMenu.remove();
-				this._sortMenu = null;
-			}
-			if (this._closeSortMenu) {
-				document.removeEventListener("click", this._closeSortMenu);
-				this._closeSortMenu = null;
-			}
-		}
-		/** Classify a filename into a Chinese type label via FILE_TYPES. */
-		_getFileType(filename) {
-			const ext = getExtension(filename);
-			for (const [type, extensions] of Object.entries(FILE_TYPES)) if (extensions.includes(ext)) return type;
-			return "其他";
-		}
-		/** Sort an array of attachments in-place and return it. */
-		_sort(attachments) {
-			return [...attachments].sort((a, b) => {
-				switch (this.currentSort) {
-					case "name": return (a.name || "").localeCompare(b.name || "");
-					case "size": return (b.size || 0) - (a.size || 0);
-					default: {
-						const da = a.date || a.totime || 0;
-						return (b.date || b.totime || 0) - da;
-					}
-				}
-			});
-		}
-	};
-	//#endregion
-	//#region src/ui/toast.js
-	function showToast(message, type = "info", duration = 3e3) {
-		const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
-		const toast = document.createElement("div");
-		toast.className = `am-toast am-toast--${type}`;
-		toast.innerHTML = html`${trusted(icon)} ${message}`;
-		document.body.appendChild(toast);
-		requestAnimationFrame(() => toast.classList.add("show"));
-		setTimeout(() => {
-			toast.classList.remove("show");
-			setTimeout(() => toast.remove(), 300);
-		}, duration);
 	}
-	//#endregion
-	//#region src/ui/dialogs.js
-	var Dialogs = class {
-		constructor(manager) {
-			this.manager = manager;
-		}
-		async showSettings() {
-			const overlay = this._createOverlay();
-			const dialog = el("div", { className: "am-dialog" });
-			dialog.innerHTML = `
-      <div class="am-dialog-header" style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:18px;font-weight:600">下载设置</span>
-        <button class="am-btn am-btn--icon" id="settings-close">\u00d7</button>
-      </div>
-      <div class="am-tabs" id="settings-tabs">
-        <div class="am-tab active" data-tab="basic">基础设置</div>
-        <div class="am-tab" data-tab="naming">文件命名</div>
-        <div class="am-tab" data-tab="advanced">高级设置</div>
-      </div>
-      <div class="am-dialog-body am-scroll" id="settings-body"></div>
-      <div class="am-dialog-footer">
-        <button class="am-btn am-btn--ghost" id="settings-reset">恢复默认</button>
-        <button class="am-btn am-btn--primary" id="settings-save">保存设置</button>
-      </div>
-    `;
-			overlay.appendChild(dialog);
-			document.body.appendChild(overlay);
-			this._setupTabs(dialog);
-			this._renderSettingsTab(dialog, "basic");
-			qs("#settings-close", dialog).addEventListener("click", () => overlay.remove());
-			qs("#settings-save", dialog).addEventListener("click", () => {
-				this._saveSettings(dialog);
-				showToast("设置已保存", "success");
-				overlay.remove();
-			});
-			qs("#settings-reset", dialog).addEventListener("click", () => {
-				this.manager.settings.reset();
-				this._renderSettingsTab(dialog, "basic");
-				showToast("已恢复默认设置", "info");
-			});
-			overlay.addEventListener("click", (e) => {
-				if (e.target === overlay) overlay.remove();
-			});
-		}
-		_setupTabs(dialog) {
-			qsa(".am-tab", dialog).forEach((tab) => {
-				tab.addEventListener("click", () => {
-					qsa(".am-tab", dialog).forEach((t) => t.classList.remove("active"));
-					tab.classList.add("active");
-					this._renderSettingsTab(dialog, tab.dataset.tab);
-				});
-			});
-		}
-		_renderSettingsTab(dialog, tabName) {
-			const body = qs("#settings-body", dialog);
-			const s = this.manager.settings.data;
-			switch (tabName) {
-				case "basic":
-					body.innerHTML = `
-          <div class="am-form-section">
-            <div class="am-form-section-title">文件夹结构</div>
-            <div class="am-form-item">
-              <select class="am-select" id="opt-folder-structure">
-                <option value="flat" ${s.folderStructure === "flat" ? "selected" : ""}>平铺（所有文件放在同一目录）</option>
-                <option value="subject" ${s.folderStructure === "subject" ? "selected" : ""}>按邮件主题分文件夹</option>
-                <option value="sender" ${s.folderStructure === "sender" ? "selected" : ""}>按发件人分文件夹</option>
-                <option value="date" ${s.folderStructure === "date" ? "selected" : ""}>按日期分文件夹</option>
-                <option value="custom" ${s.folderStructure === "custom" ? "selected" : ""}>自定义模板</option>
-              </select>
-            </div>
-            <div class="am-form-item" id="custom-folder-group" style="display:${s.folderStructure === "custom" ? "block" : "none"}">
-              <label class="am-form-label">自定义文件夹模板</label>
-              <input class="am-input" id="opt-folder-template" value="${html`${s.folderNaming?.customTemplate || ""}`}">
-              <div class="am-form-desc">可用变量: {date}, {senderName}, {subject}</div>
-            </div>
-          </div>
-          <div class="am-form-section">
-            <div class="am-form-section-title">冲突处理</div>
-            <div class="am-form-item">
-              <select class="am-select" id="opt-conflict">
-                <option value="rename" ${s.conflictResolution === "rename" ? "selected" : ""}>自动重命名</option>
-                <option value="skip" ${s.conflictResolution === "skip" ? "selected" : ""}>跳过</option>
-                <option value="overwrite" ${s.conflictResolution === "overwrite" ? "selected" : ""}>覆盖</option>
-              </select>
-            </div>
-          </div>
-          <div class="am-form-section">
-            <div class="am-form-section-title">下载行为</div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-verify" ${s.downloadBehavior?.verifyDownloads ? "checked" : ""}> <label>下载后验证文件完整性</label></div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-notify" ${s.downloadBehavior?.notifyOnComplete ? "checked" : ""}> <label>下载完成后通知</label></div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-auto-compare" ${s.downloadBehavior?.autoCompareAfterDownload ? "checked" : ""}> <label>下载后自动对比本地文件</label></div>
-            <div class="am-form-item">
-              <label class="am-form-label">并发下载数</label>
-              <select class="am-select" id="opt-concurrent">
-                <option value="auto" ${s.downloadBehavior?.concurrentDownloads === "auto" ? "selected" : ""}>自动</option>
-                <option value="1" ${s.downloadBehavior?.concurrentDownloads === "1" ? "selected" : ""}>1</option>
-                <option value="2" ${s.downloadBehavior?.concurrentDownloads === "2" ? "selected" : ""}>2</option>
-                <option value="3" ${s.downloadBehavior?.concurrentDownloads === "3" ? "selected" : ""}>3</option>
-                <option value="5" ${s.downloadBehavior?.concurrentDownloads === "5" ? "selected" : ""}>5</option>
-              </select>
-            </div>
-          </div>
-        `;
-					qs("#opt-folder-structure", body)?.addEventListener("change", (e) => {
-						const group = qs("#custom-folder-group", body);
-						if (group) group.style.display = e.target.value === "custom" ? "block" : "none";
-					});
-					break;
-				case "naming":
-					body.innerHTML = `
-          <div class="am-form-section">
-            <div class="am-form-section-title">命名模式</div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-custom-pattern" ${s.fileNaming?.useCustomPattern ? "checked" : ""}> <label>使用自定义命名模板</label></div>
-            <div class="am-form-item" id="pattern-group" style="display:${s.fileNaming?.useCustomPattern ? "block" : "none"}">
-              <input class="am-input" id="opt-pattern" value="${html`${s.fileNaming?.customPattern || ""}`}" placeholder="{date}_{subject}_{fileName}">
-              <div class="am-form-desc">可用变量: {date}, {subject}, {fileName}, {senderName}, {senderEmail}, {mailId}, {fileIndex}</div>
-            </div>
-            <div class="am-form-row">
-              <div class="am-form-item">
-                <label class="am-form-label">前缀</label>
-                <input class="am-input" id="opt-prefix" value="${html`${s.fileNaming?.prefix || ""}`}">
-              </div>
-              <div class="am-form-item">
-                <label class="am-form-label">后缀</label>
-                <input class="am-input" id="opt-suffix" value="${html`${s.fileNaming?.suffix || ""}`}">
-              </div>
-            </div>
-            <div class="am-form-item">
-              <label class="am-form-label">分隔符</label>
-              <input class="am-input" id="opt-separator" value="${html`${s.fileNaming?.separator || "_"}`}" style="width:80px">
-            </div>
-          </div>
-          <div class="am-form-section">
-            <div class="am-form-section-title">文件名验证</div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-validation" ${s.fileNaming?.validation?.enabled ? "checked" : ""}> <label>启用文件名正则验证</label></div>
-            <div class="am-form-item">
-              <label class="am-form-label">验证正则</label>
-              <input class="am-input" id="opt-validation-pattern" value="${html`${s.fileNaming?.validation?.pattern || ""}`}">
-            </div>
-            <div class="am-form-item">
-              <label class="am-form-label">验证失败回退策略</label>
-              <select class="am-select" id="opt-fallback">
-                <option value="auto" ${s.fileNaming?.validation?.fallbackPattern === "auto" ? "selected" : ""}>自动分析</option>
-                <option value="mailSubject" ${s.fileNaming?.validation?.fallbackPattern === "mailSubject" ? "selected" : ""}>使用邮件主题</option>
-                <option value="senderEmail" ${s.fileNaming?.validation?.fallbackPattern === "senderEmail" ? "selected" : ""}>使用发件人</option>
-                <option value="customTemplate" ${s.fileNaming?.validation?.fallbackPattern === "customTemplate" ? "selected" : ""}>自定义模板</option>
-              </select>
-            </div>
-          </div>
-        `;
-					qs("#opt-custom-pattern", body)?.addEventListener("change", (e) => {
-						const group = qs("#pattern-group", body);
-						if (group) group.style.display = e.target.checked ? "block" : "none";
-					});
-					break;
-				case "advanced":
-					body.innerHTML = `
-          <div class="am-form-section">
-            <div class="am-form-section-title">内容替换</div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-replacement" ${s.contentReplacement?.enabled ? "checked" : ""}> <label>启用文件名内容替换</label></div>
-            <div class="am-form-desc">对文件名中的特定内容进行替换</div>
-          </div>
-          <div class="am-form-section">
-            <div class="am-form-section-title">智能分组</div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-smart-group" ${s.smartGrouping?.enabled ? "checked" : ""}> <label>启用智能分组</label></div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-group-type" ${s.smartGrouping?.groupByType ? "checked" : ""}> <label>按文件类型分组</label></div>
-            <div class="am-form-checkbox"><input type="checkbox" id="opt-group-date" ${s.smartGrouping?.groupByDate ? "checked" : ""}> <label>按日期分组</label></div>
-          </div>
-        `;
-					break;
-			}
-		}
-		_saveSettings(dialog) {
-			const s = this.manager.settings.data;
-			const folderStructure = qs("#opt-folder-structure", dialog)?.value;
-			if (folderStructure) s.folderStructure = folderStructure;
-			const folderTemplate = qs("#opt-folder-template", dialog)?.value;
-			if (folderTemplate !== void 0) s.folderNaming.customTemplate = folderTemplate;
-			const conflict = qs("#opt-conflict", dialog)?.value;
-			if (conflict) s.conflictResolution = conflict;
-			const verify = qs("#opt-verify", dialog);
-			if (verify) s.downloadBehavior.verifyDownloads = verify.checked;
-			const notify = qs("#opt-notify", dialog);
-			if (notify) s.downloadBehavior.notifyOnComplete = notify.checked;
-			const autoCompare = qs("#opt-auto-compare", dialog);
-			if (autoCompare) s.downloadBehavior.autoCompareAfterDownload = autoCompare.checked;
-			const concurrent = qs("#opt-concurrent", dialog)?.value;
-			if (concurrent) s.downloadBehavior.concurrentDownloads = concurrent;
-			const customPattern = qs("#opt-custom-pattern", dialog);
-			if (customPattern) s.fileNaming.useCustomPattern = customPattern.checked;
-			const pattern = qs("#opt-pattern", dialog)?.value;
-			if (pattern !== void 0) s.fileNaming.customPattern = pattern;
-			const prefix = qs("#opt-prefix", dialog)?.value;
-			if (prefix !== void 0) s.fileNaming.prefix = prefix;
-			const suffix = qs("#opt-suffix", dialog)?.value;
-			if (suffix !== void 0) s.fileNaming.suffix = suffix;
-			const separator = qs("#opt-separator", dialog)?.value;
-			if (separator !== void 0) s.fileNaming.separator = separator;
-			const validation = qs("#opt-validation", dialog);
-			if (validation) s.fileNaming.validation.enabled = validation.checked;
-			const valPattern = qs("#opt-validation-pattern", dialog)?.value;
-			if (valPattern !== void 0) s.fileNaming.validation.pattern = valPattern;
-			const fallback = qs("#opt-fallback", dialog)?.value;
-			if (fallback) s.fileNaming.validation.fallbackPattern = fallback;
-			const replacement = qs("#opt-replacement", dialog);
-			if (replacement) s.contentReplacement.enabled = replacement.checked;
-			const smartGroup = qs("#opt-smart-group", dialog);
-			if (smartGroup) s.smartGrouping.enabled = smartGroup.checked;
-			const groupType = qs("#opt-group-type", dialog);
-			if (groupType) s.smartGrouping.groupByType = groupType.checked;
-			const groupDate = qs("#opt-group-date", dialog);
-			if (groupDate) s.smartGrouping.groupByDate = groupDate.checked;
-			this.manager.settings.save();
-		}
-		async showComparisonResults(dirHandle) {
-			const overlay = this._createOverlay();
-			const dialog = el("div", {
-				className: "am-dialog",
-				attrs: { style: "max-width:900px" }
-			});
-			dialog.innerHTML = `
-      <div class="am-dialog-header">文件对比结果</div>
-      <div class="am-dialog-body am-scroll" id="compare-body">
-        <div class="am-state am-state--loading">正在扫描本地文件...</div>
-      </div>
-      <div class="am-dialog-footer">
-        <button class="am-btn am-btn--ghost" id="compare-close">关闭</button>
-      </div>
-    `;
-			overlay.appendChild(dialog);
-			document.body.appendChild(overlay);
-			qs("#compare-close", dialog).addEventListener("click", () => overlay.remove());
-			overlay.addEventListener("click", (e) => {
-				if (e.target === overlay) overlay.remove();
-			});
-			try {
-				const body = qs("#compare-body", dialog);
-				const localFiles = await this.manager.fileComparer.getLocalFiles(dirHandle, (progress) => {
-					body.innerHTML = `<div class="am-state am-state--loading">正在扫描... 已发现 ${progress} 个文件</div>`;
-				});
-				body.innerHTML = "<div class=\"am-state am-state--loading\">正在对比文件...</div>";
-				const result = this.manager.fileComparer.compareFiles(localFiles, this.manager.attachments);
-				this._renderComparisonResults(body, result);
-			} catch (error) {
-				qs("#compare-body", dialog).innerHTML = html`<div class="am-state am-state--error">对比失败: ${error.message}</div>`;
-			}
-		}
-		_renderComparisonResults(body, result) {
-			const { missing, matched, duplicates } = result;
-			body.innerHTML = `
-      <div class="am-stat-grid" style="margin-bottom:var(--am-space-6)">
-        <div class="am-stat-item">
-          <div class="am-stat-number" style="color:var(--am-error)">${missing.length}</div>
-          <div class="am-stat-label">缺失文件</div>
-        </div>
-        <div class="am-stat-item">
-          <div class="am-stat-number" style="color:var(--am-success)">${matched.length}</div>
-          <div class="am-stat-label">已匹配</div>
-        </div>
-        <div class="am-stat-item">
-          <div class="am-stat-number" style="color:var(--am-warning)">${duplicates?.length || 0}</div>
-          <div class="am-stat-label">重复文件</div>
-        </div>
-      </div>
 
-      ${missing.length > 0 ? `
-        <div class="am-form-section">
-          <div class="am-form-section-title" style="color:var(--am-error)">缺失文件 (${missing.length})</div>
-          ${missing.slice(0, 20).map((att) => html`
-            <div class="am-list-item" style="margin-bottom:var(--am-space-2)">
-              <div style="font-weight:500">${att.name}</div>
-              <div style="font-size:12px;color:var(--am-text-secondary)">${formatFileSize(parseInt(att.size) || 0)} \u00b7 ${att.mailSubject || ""}</div>
-            </div>
-          `).join("")}
-          ${missing.length > 20 ? `<div class="am-list-more">还有 ${missing.length - 20} 个...</div>` : ""}
-        </div>
-      ` : ""}
+	async function aiParseSubject(subject) {
+		if (!aiSession || !subject) return null;
+		try {
+			const result = await aiSession.prompt(`从这个邮件主题中提取投稿人信息，返回 JSON：{"name":"姓名","qq":"QQ号","phone":"手机号","work":"作品名"}。提取不到的字段留空字符串。\n\n主题：${subject}`, {
+				responseConstraint: {
+					type: 'object',
+					properties: {
+						name: { type: 'string' },
+						qq: { type: 'string' },
+						phone: { type: 'string' },
+						work: { type: 'string' },
+					},
+					required: ['name', 'qq', 'phone', 'work'],
+				},
+			});
+			return typeof result === 'string' ? JSON.parse(result) : result;
+		} catch (e) {
+			return null;
+		}
+	}
 
-      ${matched.length > 0 ? `
-        <div class="am-form-section">
-          <div class="am-form-section-title" style="color:var(--am-success)">已匹配 (${matched.length})</div>
-          ${matched.slice(0, 10).map((m) => html`
-            <div class="am-list-item" style="margin-bottom:var(--am-space-2)">
-              <div style="font-weight:500">${m.emailAttachment?.name || m.name || ""}</div>
-            </div>
-          `).join("")}
-          ${matched.length > 10 ? `<div class="am-list-more">还有 ${matched.length - 10} 个...</div>` : ""}
-        </div>
-      ` : ""}
-    `;
-		}
-		showDetailList({ title, data, itemRenderer, searchable = true, sortable = false, pageSize = 20 }) {
-			const overlay = this._createOverlay();
-			const dialog = el("div", {
-				className: "am-dialog",
-				attrs: { style: "max-width:800px" }
-			});
-			let currentPage = 0;
-			let filteredData = [...data];
-			let searchTerm = "";
-			const render = () => {
-				const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
-				if (currentPage >= totalPages) currentPage = totalPages - 1;
-				const start = currentPage * pageSize;
-				const pageData = filteredData.slice(start, start + pageSize);
-				dialog.innerHTML = `
-        <div class="am-dialog-header" style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:18px;font-weight:600">${html`${title}`} (${filteredData.length})</span>
-          <button class="am-btn am-btn--icon" id="detail-close">\u00d7</button>
-        </div>
-        <div class="am-dialog-body am-scroll">
-          ${searchable ? `
-            <div class="am-form-item" style="margin-bottom:var(--am-space-4)">
-              <input class="am-input" id="detail-search" placeholder="搜索..." value="${html`${searchTerm}`}">
-            </div>
-          ` : ""}
-          <div id="detail-list">
-            ${pageData.length > 0 ? pageData.map((item, i) => `<div class="am-list-item" style="margin-bottom:var(--am-space-2)">${itemRenderer(item, start + i)}</div>`).join("") : "<div class=\"am-state am-state--empty\">无数据</div>"}
-          </div>
-        </div>
-        <div class="am-dialog-footer" style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:12px;color:var(--am-text-secondary)">第 ${currentPage + 1} / ${totalPages} 页</span>
-          <div>
-            <button class="am-btn am-btn--ghost" id="detail-prev" ${currentPage === 0 ? "disabled" : ""}>上一页</button>
-            <button class="am-btn am-btn--ghost" id="detail-next" ${currentPage >= totalPages - 1 ? "disabled" : ""}>下一页</button>
-          </div>
-        </div>
-      `;
-				qs("#detail-close", dialog).addEventListener("click", () => overlay.remove());
-				qs("#detail-prev", dialog)?.addEventListener("click", () => {
-					currentPage--;
-					render();
-				});
-				qs("#detail-next", dialog)?.addEventListener("click", () => {
-					currentPage++;
-					render();
-				});
-				const searchInput = qs("#detail-search", dialog);
-				if (searchInput) searchInput.addEventListener("input", (e) => {
-					searchTerm = e.target.value.trim().toLowerCase();
-					filteredData = searchTerm ? data.filter((item) => JSON.stringify(item).toLowerCase().includes(searchTerm)) : [...data];
-					currentPage = 0;
-					render();
-					const newInput = qs("#detail-search", dialog);
-					if (newInput) {
-						newInput.focus();
-						newInput.selectionStart = newInput.selectionEnd = newInput.value.length;
-					}
-				});
-			};
-			overlay.appendChild(dialog);
-			document.body.appendChild(overlay);
-			overlay.addEventListener("click", (e) => {
-				if (e.target === overlay) overlay.remove();
-			});
-			render();
-		}
-		showVariableSelector(targetInputId) {
-			remove("#am-variable-selector");
-			const variables = [
-				{
-					name: "date",
-					desc: "邮件日期"
-				},
-				{
-					name: "subject",
-					desc: "邮件主题"
-				},
-				{
-					name: "fileName",
-					desc: "原始文件名"
-				},
-				{
-					name: "senderName",
-					desc: "发件人名称"
-				},
-				{
-					name: "senderEmail",
-					desc: "发件人邮箱"
-				},
-				{
-					name: "mailId",
-					desc: "邮件ID"
-				},
-				{
-					name: "fileIndex",
-					desc: "文件序号"
-				},
-				{
-					name: "ext",
-					desc: "文件扩展名"
-				}
-			];
-			const popup = el("div", {
-				className: "am-menu",
-				id: "am-variable-selector",
-				attrs: { style: "position:fixed;z-index:10003" }
-			});
-			for (const v of variables) {
-				const item = el("div", {
-					className: "am-menu-item",
-					events: { click: () => {
-						const input = qs(`#${targetInputId}`);
-						if (input) {
-							const pos = input.selectionStart || input.value.length;
-							const val = input.value;
-							input.value = val.slice(0, pos) + `{${v.name}}` + val.slice(pos);
-							input.focus();
-						}
-						popup.remove();
-					} }
-				});
-				item.innerHTML = html`<strong>{${v.name}}</strong> \u2014 ${v.desc}`;
-				popup.appendChild(item);
+	/**
+	 * After buildIdentityMap, enhance entries that regex couldn't parse.
+	 * Only runs if Chrome Built-in AI is available.
+	 */
+	async function enhanceIdentityWithAI(allMails, onProgress) {
+		if (!aiAvailable) return 0;
+
+		// Collect mails where regex found no name
+		const needAI = [];
+		for (const mail of allMails) {
+			const email = mail.senders?.item?.[0]?.email;
+			if (!email) continue;
+			const id = identityMap.get(email);
+			if (id && id.names.size === 0 && mail.subject) {
+				needAI.push(mail);
 			}
-			const input = qs(`#${targetInputId}`);
-			if (input) {
-				const rect = input.getBoundingClientRect();
-				popup.style.top = `${rect.bottom + 4}px`;
-				popup.style.left = `${rect.left}px`;
+		}
+
+		if (needAI.length === 0) return 0;
+
+		let enhanced = 0;
+		// Dedupe by email — only parse once per sender
+		const seen = new Set();
+		for (let i = 0; i < needAI.length; i++) {
+			const mail = needAI[i];
+			const email = mail.senders?.item?.[0]?.email;
+			if (seen.has(email)) continue;
+			seen.add(email);
+
+			onProgress?.(`AI 解析 ${i + 1}/${needAI.length}`);
+			const parsed = await aiParseSubject(mail.subject);
+			if (!parsed) continue;
+
+			const id = identityMap.get(email);
+			if (parsed.name) {
+				id.names.add(parsed.name);
+				enhanced++;
 			}
-			document.body.appendChild(popup);
-			const closeHandler = (e) => {
-				if (!popup.contains(e.target)) {
-					popup.remove();
-					document.removeEventListener("click", closeHandler);
-				}
-			};
-			setTimeout(() => document.addEventListener("click", closeHandler), 0);
+			if (parsed.qq && /^\d{5,11}$/.test(parsed.qq)) id.qqs.add(parsed.qq);
+			if (parsed.phone && /^1[3-9]\d{9}$/.test(parsed.phone)) id.phones.add(parsed.phone);
 		}
-		_createOverlay() {
-			const overlay = el("div", { className: "am-dialog-overlay" });
-			const keyHandler = (e) => {
-				if (e.key === "Escape") {
-					overlay.remove();
-					document.removeEventListener("keydown", keyHandler);
-				}
-			};
-			document.addEventListener("keydown", keyHandler);
-			return overlay;
+
+		return enhanced;
+	}
+
+	// ============================================================
+	//  Phase 3b: Recalled mails + innerpiclist + tagging
+	// ============================================================
+
+	/** Separate recalled mails, tag them in batches, return remaining */
+	async function processRecalledMails(allMails, onProgress) {
+		const recalled = [];
+		const remaining = [];
+		for (const m of allMails) {
+			if ((m.subject || '').startsWith('发信方已撤回邮件：')) {
+				recalled.push(m);
+			} else {
+				remaining.push(m);
+			}
 		}
-	};
-	//#endregion
-	//#region src/ui/progress.js
-	var ProgressBar = class {
-		constructor(container) {
-			this.container = container;
-		}
-		show(message = "正在下载附件...") {
-			this.container.style.display = "block";
-			this.container.style.cssText = "display:block;padding:var(--am-space-4) var(--am-space-5);border-top:1px solid var(--am-border);background:var(--am-bg);position:absolute;bottom:0;left:0;right:0;z-index:1001";
-			this.container.innerHTML = `
-      <div style="margin-bottom:var(--am-space-2);font-weight:500;color:var(--am-text)">${message}</div>
-      <div class="am-progress" style="height:6px;margin-bottom:var(--am-space-2)">
-        <div id="am-progress-bar" class="am-progress-bar" style="width:0%"></div>
-      </div>
-      <div id="am-progress-status" style="font-size:12px;color:var(--am-text-tertiary)">准备开始...</div>
-    `;
-		}
-		hide() {
-			this.container.style.display = "none";
-			this.container.innerHTML = "";
-		}
-		update(stats) {
-			const bar = qs("#am-progress-bar");
-			const status = qs("#am-progress-status");
-			if (!bar || !status) return;
-			const effective = stats.completedBytes + (stats.activeFileBytes || 0);
-			const percent = stats.totalBytes > 0 ? effective / stats.totalBytes * 100 : 0;
-			bar.style.width = `${Math.min(percent, 100)}%`;
-			const remaining = stats.speed > 0 ? (stats.totalBytes - effective) / stats.speed : 0;
-			status.textContent = `下载中 ${stats.completedCount}/${stats.totalCount} · ${formatFileSize(effective)} / ${formatFileSize(stats.totalBytes)} · ${formatFileSize(Math.round(stats.speed))}/s · 剩余约 ${formatTime(remaining)}`;
-		}
-	};
-	//#endregion
-	//#region src/core/attachment-manager.js
-	var AttachmentManager = class {
-		constructor(downloader) {
-			this.downloader = downloader;
-			this.settings = new Settings();
-			this.namingEngine = new NamingEngine(this.settings);
-			this.downloadEngine = new DownloadEngine(this.downloader, this.namingEngine);
-			this.fileComparer = new FileComparer();
-			this.panel = new Panel(this);
-			this.bento = new BentoLayout(this);
-			this.grid = new AttachmentGrid(this);
-			this.toolbar = new Toolbar(this);
-			this.dialogs = new Dialogs(this);
-			this.progress = null;
-			this.attachments = [];
-			this.skippedAttachments = [];
-			this.selectedAttachments = /* @__PURE__ */ new Set();
-			this.isLoading = false;
-			this.isActive = false;
-			this.totalMailCount = 0;
-			this.toggleInProgress = false;
-		}
-		toggle() {
-			if (this.toggleInProgress) return;
-			this.toggleInProgress = true;
+		let tagged = 0;
+		await batchParallel(recalled, 5, async m => {
+			await addTags(m.emailid, [TAG_NO_ATTACH, TAG_READ]);
+			onProgress?.(`处理已撤回 ${++tagged}/${recalled.length}`);
+		});
+		return { recalled, remaining };
+	}
+
+	/**
+	 * For mails with no attachments, call readmail to check innerpiclist.
+	 * Returns inline attachment entries to add to the download list.
+	 */
+	async function processInnerPicList(noAttachMails, sendersWithAttach, onProgress) {
+		const inlineEntries = [];
+		const emptyMails = [];
+		const skippedMails = [];
+		let processed = 0;
+
+		async function processOne(mail) {
 			try {
-				this.isActive ? this.close() : this.open();
-			} finally {
-				setTimeout(() => {
-					this.toggleInProgress = false;
-				}, 500);
-			}
-		}
-		async open() {
-			if (this.isActive) return;
-			this.isActive = true;
-			this.isLoading = true;
-			this.attachments = [];
-			this.skippedAttachments = [];
-			this.selectedAttachments.clear();
-			const { contentArea, progressArea } = this.panel.create();
-			this.progress = new ProgressBar(progressArea);
-			try {
-				this.grid.showLoading(contentArea, "正在获取邮件列表...");
-				await this._loadData(contentArea);
-				this._renderContent(contentArea);
-			} catch (error) {
-				this.grid.showError(contentArea, `初始化失败: ${error.message}`);
-				showToast(`初始化失败: ${error.message}`, "error", 5e3);
-			} finally {
-				this.isLoading = false;
-			}
-		}
-		close() {
-			this.isActive = false;
-			this.isLoading = false;
-			this.panel.destroy();
-			this.progress = null;
-		}
-		async _loadData(contentArea) {
-			const folderId = this.downloader.getCurrentFolderId();
-			this.grid.showLoading(contentArea, "正在获取邮件...");
-			const { mails, total, failedPages } = await this.downloader.fetchAllMails(folderId);
-			this.totalMailCount = total;
-			if (failedPages.length > 0) showToast(`${failedPages.length} 页邮件获取失败，已加载其余邮件`, "warning");
-			this.grid.showLoading(contentArea, `正在处理 ${mails.length} 封邮件的附件...`);
-			const { valid, skipped } = this.downloader.extractAttachments(mails);
-			this.attachments = valid;
-			this.skippedAttachments = skipped;
-		}
-		_renderContent(contentArea) {
-			const stats = {
-				mailCount: this.totalMailCount,
-				attachmentCount: this.attachments.length,
-				totalSize: this.attachments.reduce((s, a) => s + (parseInt(a.size) || 0), 0),
-				skippedCount: this.skippedAttachments.length
-			};
-			this.bento.render(contentArea, this.attachments, stats);
-		}
-		async downloadAll() {
-			const attachments = this.toolbar.getFilteredAttachments(this.attachments);
-			await this._performDownload(attachments, "全部");
-		}
-		async downloadSelected() {
-			const selected = this.attachments.filter((a) => this.selectedAttachments.has(a.fileid || a.name));
-			if (selected.length === 0) {
-				showToast("请先选择要下载的附件", "warning");
-				return;
-			}
-			await this._performDownload(selected, "选中");
-		}
-		async _performDownload(attachments, label) {
-			if (attachments.length === 0) {
-				showToast("没有可下载的附件", "warning");
-				return;
-			}
-			try {
-				const dirHandle = await window.showDirectoryPicker({
-					mode: "readwrite",
-					startIn: "downloads"
-				});
-				if (await dirHandle.requestPermission({ mode: "readwrite" }) !== "granted") throw new Error("需要文件夹写入权限");
-				this.progress?.show(`正在下载${label}附件...`);
-				this.downloadEngine.onProgress = (stats) => this.progress?.update(stats);
-				const results = await this.downloadEngine.downloadAll(attachments, dirHandle, this.settings);
-				const success = results.filter((r) => !r.error).length;
-				const fail = results.filter((r) => r.error).length;
-				showToast(`下载完成：${success} 成功，${fail} 失败`, fail > 0 ? "warning" : "success");
-				if (this.settings.data.downloadBehavior.autoCompareAfterDownload) await this.dialogs.showComparisonResults(dirHandle);
-			} catch (error) {
-				if (error.name !== "AbortError") showToast(`下载失败: ${error.message}`, "error");
-			} finally {
-				this.progress?.hide();
-			}
-		}
-		async showCompare() {
-			try {
-				const dirHandle = await window.showDirectoryPicker({
-					mode: "read",
-					startIn: "downloads"
-				});
-				await this.dialogs.showComparisonResults(dirHandle);
-			} catch (error) {
-				if (error.name !== "AbortError") showToast(`对比失败: ${error.message}`, "error");
-			}
-		}
-		showSettings() {
-			this.dialogs.showSettings();
-		}
-	};
-	//#endregion
-	//#region src/index.js
-	(function() {
-		"use strict";
-		let downloader = null;
-		let manager = null;
-		function init() {
-			if (manager) return;
-			downloader = new QQMailDownloader();
-			if (!downloader.init()) {
-				console.warn("[QQMailDownloader] SID not found, skipping init");
-				return;
-			}
-			if (window.location.pathname.includes("/login")) return;
-			try {
-				manager = new AttachmentManager(downloader);
-				window.attachmentManager = manager;
-				console.log("[QQMailDownloader] v2.0.0 initialized");
-			} catch (e) {
-				console.error("[QQMailDownloader] init failed:", e);
-				manager = null;
-			}
-			injectToolbarButton();
-			listenFolderChange();
-		}
-		/** 在邮件列表工具栏（删除/转发那一栏）中注入"附件管理"按钮 */
-		function injectToolbarButton(retries = 0) {
-			document.querySelectorAll("[data-attachment-manager-btn]").forEach((el) => el.remove());
-			const rightWrap = document.querySelector(".mail-list-page-toolbar .right-wrap");
-			if (!rightWrap) {
-				if (retries < 10) {
-					setTimeout(() => injectToolbarButton(retries + 1), 500);
+				const data = await fetchReadMail(mail.emailid);
+				onProgress?.(`检查内嵌图片 ${++processed}/${noAttachMails.length}`);
+				if (data.head?.ret !== 0) return;
+
+				const picList = data.body?.item?.innerpiclist;
+				if (!picList || picList.length === 0) {
+					emptyMails.push(mail);
+					await addTags(mail.emailid, [TAG_NO_ATTACH, TAG_READ]);
 					return;
 				}
-				injectFloatingButton();
+
+				const senderEmail = getSenderEmail(mail);
+				if (sendersWithAttach.has(senderEmail)) {
+					skippedMails.push(mail);
+					await addTags(mail.emailid, [TAG_NO_ATTACH, TAG_READ]);
+					return;
+				}
+
+				// Mark as no-attachment (will get TAG_DOWNLOADED after download completes)
+				await addTag(mail.emailid, TAG_NO_ATTACH);
+
+				for (let pi = 0; pi < picList.length; pi++) {
+					const pic = picList[pi];
+					let ext = 'jpg';
+					const nameMatch = (pic.name || '').match(/\.([a-zA-Z]{3,4})(?:\.[a-zA-Z]{3,4})?$/);
+					if (nameMatch) ext = nameMatch[1].toLowerCase();
+
+					const identity = getIdentity(senderEmail);
+					const segs = buildIdentitySegs(identity);
+					if (picList.length > 1) segs.push(`内嵌${pi + 1}`);
+					const filename = sanitizeFilename((segs.length ? segs.join('_') : 'unnamed') + '.' + ext);
+
+					inlineEntries.push({
+						url: ensureAbsoluteUrl(pic.downloadurl || ''),
+						folderId,
+						dir: DIR_IMAGE,
+						filename,
+						mailid: mail.emailid,
+						fileid: pic.fileid || `inline_${pi}`,
+						size: pic.size || 0,
+						isInline: true,
+						senderEmail,
+					});
+				}
+			} catch (e) {
+				// Skip on error, don't block pipeline
+			}
+		}
+
+		await batchParallel(noAttachMails, 5, processOne);
+		return { inlineEntries, emptyMails, skippedMails };
+	}
+
+	// ============================================================
+	//  Phase 4: Build mail map + classify + generate download list
+	// ============================================================
+
+	/** Build mailMap from attach_list entries */
+	function buildMailMapFromAttach(attachments) {
+		mailMap = {};
+		const byMail = new Map();
+		for (const a of attachments) {
+			if (!byMail.has(a.mailid)) byMail.set(a.mailid, []);
+			byMail.get(a.mailid).push(a);
+		}
+		let mailIdx = 0;
+		for (const [mid, items] of byMail) {
+			mailIdx++;
+			const first = items[0];
+			mailMap[mid] = {
+				subject: first.subject,
+				senderEmail: first.sender?.addr || '',
+				senderNick: first.sender?.name || '',
+				attachCount: items.length,
+				mailIdx,
+				totime: first.ctime,
+			};
+			items.forEach((a, idx) => {
+				mailMap[mid + '|' + a.fileid] = { attachIdx: idx + 1, attachTotal: items.length, origName: a.name };
+			});
+		}
+	}
+
+	/** Build mailMap from legacy maillist entries (used by resume path) */
+	function buildMailMap(allMails) {
+		mailMap = {};
+		let mailIdx = 0;
+		for (const mail of allMails) {
+			const attachAll = getAttachments(mail);
+			const has = attachAll.length > 0;
+			if (has) mailIdx++;
+			mailMap[mail.emailid] = {
+				subject: mail.subject,
+				senderEmail: getSenderEmail(mail),
+				senderNick: getSenderNick(mail),
+				attachCount: attachAll.length,
+				mailIdx: has ? mailIdx : 0,
+				totime: mail.totime,
+			};
+			attachAll.forEach((a, idx) => {
+				mailMap[mail.emailid + '|' + a.fileid] = { attachIdx: idx + 1, attachTotal: attachAll.length, origName: a.name };
+			});
+		}
+	}
+
+	/** Classify extension into directory */
+	function classifyExt(ext) {
+		if (ARCHIVE_EXTS.has(ext)) return DIR_ARCHIVE;
+		if (IMAGE_EXTS.has(ext)) return DIR_IMAGE;
+		if (PROJECT_EXTS.has(ext)) return DIR_PROJECT;
+		if (DOC_EXTS.has(ext)) return DIR_DOC;
+		if (AUDIO_EXTS.has(ext)) return DIR_AUDIO;
+		if (VIDEO_EXTS.has(ext)) return DIR_VIDEO;
+		return DIR_OTHER;
+	}
+
+	/** Build download list from attach_list API entries */
+	function buildDownloadListFromAttach(attachments) {
+		// Duplicate detection: sender_email + file_size
+		const ssMap = new Map();
+		for (const a of attachments) {
+			const k = `${a.sender?.addr || ''}_${a.size}`;
+			if (!ssMap.has(k)) ssMap.set(k, []);
+			ssMap.get(k).push({ t: a.ctime, eid: a.mailid, fid: a.fileid });
+		}
+		const dupKeys = new Set();
+		const dupGroupMap = new Map();
+		const dupKeptMap = new Map(); // groupKey → "mailid_fileid" of kept (newest) item
+		for (const [groupKey, items] of ssMap) {
+			if (items.length > 1) {
+				items.sort((a, b) => b.t - a.t);
+				const kept = items[0];
+				dupKeptMap.set(groupKey, `${kept.eid}_${kept.fid}`);
+				for (const item of items) dupGroupMap.set(`${item.eid}_${item.fid}`, groupKey);
+				for (let i = 1; i < items.length; i++) dupKeys.add(`${items[i].eid}_${items[i].fid}`);
+			}
+		}
+
+		// Resolve file extension (prefers attach.type over filename) and strip it from the name.
+		function resolveStemExt(a) {
+			let ext = (a.type || '').toLowerCase();
+			if (!ext && a.name?.includes('.')) ext = a.name.split('.').pop().toLowerCase();
+			let stem = a.name || '';
+			if (ext && stem.toLowerCase().endsWith('.' + ext)) stem = stem.slice(0, -ext.length - 1);
+			return { stem, ext };
+		}
+
+		// Pass 1: derive each sender's naming-convention prefix from their compliant files.
+		// If multiple prefixes exist, pick the most common one (handles one-off outliers).
+		const senderPrefix = new Map();
+		{
+			const prefixCounts = new Map();
+			for (const a of attachments) {
+				const { stem } = resolveStemExt(a);
+				const p = extractConventionPrefix(stem);
+				if (!p) continue;
+				const email = a.sender?.addr || '';
+				let counts = prefixCounts.get(email);
+				if (!counts) prefixCounts.set(email, counts = new Map());
+				counts.set(p, (counts.get(p) || 0) + 1);
+			}
+			for (const [email, counts] of prefixCounts) {
+				const [best] = [...counts.entries()].sort((x, y) => y[1] - x[1])[0];
+				senderPrefix.set(email, best);
+			}
+		}
+
+		const downloads = [];
+		let id = 0;
+
+		for (const a of attachments) {
+			let { stem: origName, ext } = resolveStemExt(a);
+			if (!ext) ext = 'jpg';
+
+			const dk = `${a.mailid}_${a.fileid}`;
+			const downloadHost = (() => {
+				try {
+					return new URL(a.download_url || '', 'https://wx.mail.qq.com').hostname;
+				} catch {
+					return '';
+				}
+			})();
+			const isThirdParty = downloadHost && !downloadHost.endsWith('mail.qq.com') && !downloadHost.endsWith('qq.com');
+
+			let dir;
+			if (dupKeys.has(dk)) dir = DIR_DUP;
+			else if (isThirdParty) dir = DIR_MANUAL;
+			else dir = classifyExt(ext);
+
+			const sender = a.sender?.addr || '';
+
+			// Naming strategies (in priority order):
+			// 1. File already compliant (has 6+ digit identity token) → keep as-is
+			// 2. Sender has other compliant files → mirror their prefix
+			// 3. Otherwise → fall back to "name_qq_phone_" from identity map
+			let filename;
+			if (hasConventionDigits(origName)) {
+				filename = (origName || 'unnamed') + '.' + ext;
+			} else if (senderPrefix.has(sender)) {
+				filename = senderPrefix.get(sender) + (origName || 'unnamed') + '.' + ext;
+			} else {
+				const segs = buildIdentitySegs(getIdentity(sender));
+				if (origName) segs.push(origName);
+				filename = (segs.length ? segs.join('_') : 'unnamed') + '.' + ext;
+			}
+			filename = sanitizeFilename(filename);
+
+			const url = ensureAbsoluteUrl(a.download_url || '');
+
+			const task = {
+				id: id++,
+				folderId,
+				url,
+				dir,
+				filename,
+				mailid: a.mailid,
+				fileid: a.fileid,
+				status: 'pending',
+			};
+			const gk = dupGroupMap.get(dk);
+			if (gk) {
+				task.dupGroup = gk;
+				if (dupKeys.has(dk)) task.keptBy = dupKeptMap.get(gk);
+			}
+
+			downloads.push(task);
+		}
+
+		// Resolve filename collisions within the same directory
+		const nameCount = new Map();
+		for (const task of downloads) {
+			const key = `${task.dir}/${task.filename}`;
+			const count = (nameCount.get(key) || 0) + 1;
+			nameCount.set(key, count);
+			if (count > 1) {
+				const dot = task.filename.lastIndexOf('.');
+				if (dot > 0) {
+					task.filename = `${task.filename.slice(0, dot)} (${count})${task.filename.slice(dot)}`;
+				} else {
+					task.filename = `${task.filename} (${count})`;
+				}
+			}
+		}
+
+		return downloads;
+	}
+
+	// ============================================================
+	//  Manifest (local file tracking)
+	// ============================================================
+
+	async function readManifest() {
+		try {
+			const fh = await rootHandle.getFileHandle('manifest.json', { create: false });
+			const file = await fh.getFile();
+			const text = await file.text();
+			return JSON.parse(text);
+		} catch (e) {
+			return {};
+		}
+	}
+
+	async function writeManifest(manifest) {
+		const fh = await rootHandle.getFileHandle('manifest.json', { create: true });
+		const w = await fh.createWritable();
+		await w.write(JSON.stringify(manifest, null, 2));
+		await w.close();
+	}
+
+	// Append a single entry and flush — batched via a write queue to avoid conflicts
+	let manifestCache = null;
+	let manifestDirty = false;
+	let manifestFlushTimer = null;
+
+	async function manifestAppend(entry) {
+		if (!manifestCache) manifestCache = await readManifest();
+		const key = `${entry.mailid}_${entry.fileid}`;
+		const val = { dir: entry.dir, filename: entry.filename, size: entry.size, time: Date.now() };
+		if (entry.keptBy) val.keptBy = entry.keptBy;
+		manifestCache[key] = val;
+		manifestDirty = true;
+
+		// Debounce flush: write every 2 seconds max
+		if (!manifestFlushTimer) {
+			manifestFlushTimer = setTimeout(() => {
+				manifestFlushTimer = null;
+				if (manifestDirty) {
+					manifestDirty = false;
+					writeManifest(manifestCache).catch(() => {});
+				}
+			}, 2000);
+		}
+	}
+
+	async function manifestFlush() {
+		if (manifestDirty && manifestCache) {
+			manifestDirty = false;
+			if (manifestFlushTimer) {
+				clearTimeout(manifestFlushTimer);
+				manifestFlushTimer = null;
+			}
+			await writeManifest(manifestCache);
+		}
+	}
+
+	// ============================================================
+	//  Phase 8: Audit report
+	// ============================================================
+
+	async function generateReport(tasks, pipelineStats) {
+		const d = new Date();
+		const now = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+		const done = tasks.filter(t => t.status === 'done');
+		const failed = tasks.filter(t => t.status === 'failed');
+
+		// Group by dir
+		const byDir = {};
+		for (const t of tasks) {
+			byDir[t.dir] = byDir[t.dir] || [];
+			byDir[t.dir].push(t);
+		}
+
+		// Build report
+		const lines = [];
+		lines.push(`# ${folderName} · 投稿收集报告`);
+		lines.push(``);
+		lines.push(`> ${now} · ${done.length} 个文件 · ${failed.length > 0 ? failed.length + ' 失败' : '全部成功'}`);
+		lines.push(``);
+
+		// Overview table
+		lines.push(`## 概览`);
+		lines.push(``);
+		lines.push(`| 分类 | 数量 | 说明 |`);
+		lines.push(`|------|------|------|`);
+		lines.push(`| ${DIR_IMAGE} | ${(byDir[DIR_IMAGE] || []).length} | jpg/png/webp/heic/ 等 |`);
+		lines.push(`| ${DIR_PROJECT} | ${(byDir[DIR_PROJECT] || []).length} | psd/ai/sketch/xd 等 |`);
+		lines.push(`| ${DIR_DOC} | ${(byDir[DIR_DOC] || []).length} | pdf/doc/xls/ppt 等 |`);
+		lines.push(`| ${DIR_AUDIO} | ${(byDir[DIR_AUDIO] || []).length} | mp3/wav/flac 等 |`);
+		lines.push(`| ${DIR_VIDEO} | ${(byDir[DIR_VIDEO] || []).length} | mp4/mov/avi 等 |`);
+		lines.push(`| ${DIR_ARCHIVE} | ${(byDir[DIR_ARCHIVE] || []).length} | zip/rar/7z 等 |`);
+		lines.push(`| ${DIR_DUP} | ${(byDir[DIR_DUP] || []).length} | 已保留最新 |`);
+		lines.push(`| ${DIR_OTHER} | ${(byDir[DIR_OTHER] || []).length} | 未归类格式 |`);
+		lines.push(`| ${DIR_MANUAL} | ${(byDir[DIR_MANUAL] || []).length} | 第三方链接 |`);
+		if (pipelineStats) {
+			lines.push(`| 已撤回 | ${pipelineStats.recalledCount || 0} | 发信方已撤回 |`);
+			lines.push(`| 空邮件 | ${pipelineStats.emptyCount || 0} | 无附件无内嵌图 |`);
+			lines.push(`| 内嵌图 | ${pipelineStats.inlineCount || 0} | 从正文提取 |`);
+		}
+		lines.push(`| **合计** | **${tasks.length}** | 下载成功 ${done.length}，失败 ${failed.length} |`);
+		lines.push(``);
+
+		// Audit
+		const totalMailsInTasks = new Set(tasks.map(t => t.mailid)).size;
+		const totalScanned = pipelineStats?.totalScanned || totalMailsInTasks;
+		const noAttachCount = Math.max(0, totalScanned - totalMailsInTasks - (pipelineStats?.recalledCount || 0));
+		const manifest = manifestCache || (await readManifest());
+		const manifestCount = Object.keys(manifest).length;
+		const diskMatch = manifestCount >= done.length;
+
+		lines.push(`## 审计校验`);
+		lines.push(``);
+		lines.push(`| 校验项 | 结果 |`);
+		lines.push(`|--------|------|`);
+		lines.push(`| 邮件 | 共 ${totalScanned} 封，${totalMailsInTasks} 封有附件，${noAttachCount} 封无附件 |`);
+		lines.push(`| 附件 | 共 ${tasks.length} 个任务，成功 ${done.length}，失败 ${failed.length} |`);
+		lines.push(`| 落盘 | manifest ${manifestCount} 条记录 ${diskMatch ? '✓' : '⚠ 不一致'} |`);
+		lines.push(``);
+
+		// Detail sections for each category
+		const detailDirs = [
+			[DIR_IMAGE, '图片清单'],
+			[DIR_PROJECT, '项目文件清单'],
+			[DIR_DOC, '文档清单'],
+			[DIR_AUDIO, '音频清单'],
+			[DIR_VIDEO, '视频清单'],
+			[DIR_ARCHIVE, '压缩文件清单'],
+			[DIR_OTHER, '其他文件清单'],
+		];
+		for (const [dirName, title] of detailDirs) {
+			const items = byDir[dirName] || [];
+			if (items.length === 0) continue;
+			lines.push(`## ${title}`);
+			lines.push(``);
+			lines.push(`| # | 发件人 | 主题 | 最终文件名 |`);
+			lines.push(`|---|--------|------|------------|`);
+			items.forEach((t, i) => {
+				const info = mailMap[t.mailid];
+				lines.push(`| ${i + 1} | ${info?.senderEmail || ''} | ${(info?.subject || '').slice(0, 30)} | ${t.filename} |`);
+			});
+			lines.push(``);
+		}
+
+		// Duplicates — grouped comparison table
+		const dups = byDir[DIR_DUP] || [];
+		if (dups.length > 0) {
+			lines.push(`## 重复投稿`);
+			lines.push(``);
+
+			// Group all tasks (kept + dup) by dupGroup
+			const dupGroups = new Map();
+			for (const t of tasks) {
+				if (!t.dupGroup) continue;
+				if (!dupGroups.has(t.dupGroup)) dupGroups.set(t.dupGroup, []);
+				dupGroups.get(t.dupGroup).push(t);
+			}
+
+			const fmtTime = ts => {
+				if (!ts) return '';
+				const d = new Date(ts * 1000);
+				return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+			};
+
+			let groupIdx = 0;
+			for (const [, group] of dupGroups) {
+				// Sort: kept (non-dup dir) first, then by time desc
+				group.sort((a, b) => {
+					if (a.dir !== DIR_DUP && b.dir === DIR_DUP) return -1;
+					if (a.dir === DIR_DUP && b.dir !== DIR_DUP) return 1;
+					const ta = mailMap[a.mailid]?.totime || 0;
+					const tb = mailMap[b.mailid]?.totime || 0;
+					return tb - ta;
+				});
+				groupIdx++;
+				lines.push(`### 重复组 ${groupIdx}`);
+				lines.push(``);
+				lines.push(`| 状态 | 文件名 | 发件人 | 邮箱 | 主题 | 时间 |`);
+				lines.push(`|------|--------|--------|------|------|------|`);
+				for (const t of group) {
+					const info = mailMap[t.mailid] || {};
+					const kept = t.dir !== DIR_DUP ? '● 保留' : '○ 重复';
+					const subject = (info.subject || '').slice(0, 25);
+					lines.push(`| ${kept} | ${t.filename} | ${info.senderNick || ''} | ${info.senderEmail || ''} | ${subject} | ${fmtTime(info.totime)} |`);
+				}
+				lines.push(``);
+			}
+		}
+
+		// Manual
+		const manual = byDir[DIR_MANUAL] || [];
+		if (manual.length > 0) {
+			lines.push(`## 待人工处理`);
+			lines.push(``);
+			lines.push(`| 文件名 | 发件人 | URL |`);
+			lines.push(`|--------|--------|-----|`);
+			for (const t of manual) {
+				const info = mailMap[t.mailid];
+				lines.push(`| ${t.filename} | ${info?.senderEmail || ''} | ${t.url.slice(0, 60)}... |`);
+			}
+			lines.push(``);
+		}
+
+		// Failed
+		if (failed.length > 0) {
+			lines.push(`## 下载失败`);
+			lines.push(``);
+			lines.push(`| 文件名 | 错误 |`);
+			lines.push(`|--------|------|`);
+			for (const t of failed) {
+				lines.push(`| ${t.filename} | ${t.error || 'unknown'} |`);
+			}
+			lines.push(``);
+		}
+
+		const content = lines.join('\n');
+
+		// Write to FSAPI
+		try {
+			const fh = await rootHandle.getFileHandle('report.md', { create: true });
+			const w = await fh.createWritable();
+			await w.write(content);
+			await w.close();
+		} catch (e) {
+			console.error('[QQMail DL] Failed to write report:', e);
+		}
+
+		return { done: done.length, failed: failed.length, total: tasks.length, manifestCount };
+	}
+
+	// ============================================================
+	//  Download engine (with session expiry recovery)
+	// ============================================================
+
+	let sessionExpired = false;
+	let sessionRecoverResolve = null;
+
+	/** Pause engine, show recovery UI, wait for new sid */
+	function waitForSessionRecovery() {
+		sessionExpired = true;
+		return new Promise(resolve => {
+			sessionRecoverResolve = resolve;
+			showSessionExpiredUI();
+		});
+	}
+
+	function showSessionExpiredUI() {
+		const panel = getOrCreatePanel();
+		// Keep existing content but prepend warning banner
+		const banner = document.createElement('div');
+		banner.id = '__dl_session_banner';
+		banner.style.cssText = 'background:#FFF3E0;border:1px solid #FFB74D;border-radius:6px;padding:10px 16px;margin-bottom:10px;display:flex;align-items:center;gap:8px;';
+		banner.innerHTML = `
+      <span style="color:#E65100;font-weight:700;">⚠ 登录态失效</span>
+      <span style="color:#BF360C;font-size:13px;">请刷新页面重新登录，然后回到此文件夹</span>
+      <span style="flex:1;"></span>
+      <button id="__dl_recover" style="background:#0F7AF5;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;">已刷新，继续下载</button>
+    `;
+
+		// Insert banner at top of panel
+		const existing = document.getElementById('__dl_session_banner');
+		if (existing) existing.remove();
+		banner.querySelector('#__dl_recover').addEventListener('click', async () => {
+			const newSid = getSidFromUrl();
+			if (!newSid) {
+				banner.querySelector('span:nth-child(2)').textContent = 'URL 中未找到 sid，请确认已刷新并进入文件夹';
 				return;
 			}
-			const btn = document.createElement("div");
-			btn.className = "xmail-ui-btn ui-btn-size32 ui-btn-border ui-btn-them-clear-gray";
-			btn.setAttribute("data-attachment-manager-btn", "true");
-			btn.setAttribute("data-a11y", "button");
-			btn.style.marginRight = "8px";
-			btn.innerHTML = `
-      <div class="xmail-ui-icon ui-btn-icon" style="width:20px;height:20px">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-        </svg>
-      </div>
-      <div class="ui-btn-text">附件管理</div>
-    `;
-			btn.addEventListener("click", () => manager?.toggle());
-			const totalWrap = rightWrap.querySelector(".mail-list-page-toolbar-mail-total");
-			if (totalWrap) rightWrap.insertBefore(btn, totalWrap);
-			else {
-				const ellipsis = rightWrap.querySelector(".xmail-ui-toolbar-ellipsis");
-				if (ellipsis && ellipsis.nextSibling) rightWrap.insertBefore(btn, ellipsis.nextSibling);
-				else rightWrap.appendChild(btn);
+			// Verify new session works
+			const oldSid = sid;
+			sid = newSid;
+			const check = await verifySession();
+			if (!check) {
+				sid = oldSid;
+				banner.querySelector('span:nth-child(2)').textContent = '新 session 无效，请重新登录';
+				return;
+			}
+			banner.remove();
+			sessionExpired = false;
+			sessionRecoverResolve?.(newSid);
+			sessionRecoverResolve = null;
+		});
+		panel.insertBefore(banner, panel.firstChild);
+	}
+
+	// Also auto-detect: listen for URL changes that bring a new sid
+	let sidRecoveryInterval = null;
+	function setupAutoSidRecovery() {
+		if (sidRecoveryInterval) clearInterval(sidRecoveryInterval);
+		sidRecoveryInterval = setInterval(() => {
+			if (!sessionExpired) return;
+			const newSid = getSidFromUrl();
+			if (newSid && newSid !== sid) {
+				const recoverBtn = document.getElementById('__dl_recover');
+				if (recoverBtn) recoverBtn.click();
+			}
+		}, 2000);
+	}
+
+	async function startEngine(tasks, onProgress) {
+		if (engineRunning) return;
+		engineRunning = true;
+
+		const dirCache = {};
+		async function getDirHandle(name) {
+			if (!dirCache[name]) dirCache[name] = await rootHandle.getDirectoryHandle(name, { create: true });
+			return dirCache[name];
+		}
+
+		async function downloadOne(task) {
+			try {
+				const blob = await new Promise((res, rej) => {
+					const xhr = new XMLHttpRequest();
+					xhr.open('GET', task.url, true);
+					xhr.responseType = 'blob';
+					xhr.onload = () => (xhr.status === 200 ? res(xhr.response) : rej(new Error(`HTTP ${xhr.status}`)));
+					xhr.onerror = () => rej(new Error('network'));
+					xhr.send();
+				});
+
+				// Session expired: QQ Mail returns JSON error instead of file blob
+				if (blob.type === 'application/json' && blob.size < 1000) {
+					const j = JSON.parse(await blob.text());
+					if (j.head?.ret === -20002 || j.ret === -20002) throw new Error('session_expired');
+					if (j.head?.ret !== undefined) throw new Error('api_error');
+				}
+
+				const dh = await getDirHandle(task.dir);
+				const fh = await dh.getFileHandle(task.filename, { create: true });
+				const w = await fh.createWritable();
+				await w.write(blob);
+				await w.close();
+				task.status = 'done';
+				await manifestAppend({ mailid: task.mailid, fileid: task.fileid, dir: task.dir, filename: task.filename, size: blob.size, keptBy: task.keptBy });
+			} catch (e) {
+				if (e.message === 'session_expired') {
+					// Don't mark as failed — will retry after recovery
+					throw e;
+				}
+				task.status = 'failed';
+				task.error = e.message;
+			}
+			if (task.status !== 'pending') await dbPut('tasks', task);
+		}
+
+		// Per-mail completion tracking → mark mail as read once all its attachments finish.
+		const mailTotalCount = new Map();
+		const mailDoneCount = new Map();
+		for (const task of tasks) {
+			mailTotalCount.set(task.mailid, (mailTotalCount.get(task.mailid) || 0) + 1);
+			mailDoneCount.set(task.mailid, 0);
+		}
+
+		const wrappedProgress = task => {
+			onProgress?.(task);
+			if (task.status === 'done' && task.mailid) {
+				const mid = task.mailid;
+				mailDoneCount.set(mid, (mailDoneCount.get(mid) || 0) + 1);
+				if (mailDoneCount.get(mid) >= mailTotalCount.get(mid)) {
+					markMailRead(mid).catch(() => {});
+				}
+			}
+		};
+
+		const queue = [...tasks];
+		const workers = [];
+		for (let i = 0; i < CONCURRENCY; i++) {
+			workers.push(
+				(async () => {
+					while (queue.length > 0 && engineRunning) {
+						const task = queue.shift();
+						try {
+							await downloadOne(task);
+							wrappedProgress(task);
+						} catch (e) {
+							if (e.message === 'session_expired') {
+								// Put task back in queue
+								queue.unshift(task);
+								// Only one worker triggers recovery; others wait
+								if (!sessionExpired) {
+									const newSid = await waitForSessionRecovery();
+									// Update sid in all remaining queue tasks
+									for (const t of queue) {
+										t.url = replaceSid(t.url, newSid);
+									}
+								} else {
+									// Wait for recovery triggered by another worker
+									await new Promise(r => {
+										const iv = setInterval(() => {
+											if (!sessionExpired) {
+												clearInterval(iv);
+												r();
+											}
+										}, 500);
+									});
+								}
+								continue;
+							}
+						}
+					}
+				})()
+			);
+		}
+		await Promise.all(workers);
+		await manifestFlush();
+		engineRunning = false;
+	}
+
+	// ============================================================
+	//  UI
+	// ============================================================
+
+	const ICONS = {
+		download:
+			'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" style="color:#0F7AF5;flex-shrink:0;"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 13a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H2.75Z"/></svg>',
+		check: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#07C160" style="flex-shrink:0;"><path d="M12.03 4.47a.75.75 0 0 1 0 1.06l-5.5 5.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 1 1 1.06-1.06L6 9.44l4.97-4.97a.75.75 0 0 1 1.06 0Z"/></svg>',
+		fail: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#E84C3D" style="flex-shrink:0;"><path d="M4.47 3.47a.75.75 0 0 0-1.06 1.06L6.44 7.5 3.41 10.53a.75.75 0 1 0 1.06 1.06L7.5 8.56l3.03 3.03a.75.75 0 0 0 1.06-1.06L8.56 7.5l3.03-3.03a.75.75 0 0 0-1.06-1.06L7.5 6.44 4.47 3.47Z"/></svg>',
+		mail: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="rgba(20,46,77,0.4)" style="flex-shrink:0;"><path fill-rule="evenodd" d="M2 3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2Zm.22 1.97a.75.75 0 0 0-.44 1.36l3.5 2.5a1.25 1.25 0 0 0 1.44 0l3.5-2.5a.75.75 0 0 0-.44-1.36L6.5 7.22a.75.75 0 0 1-.86 0L2.22 4.97Z"/></svg>',
+		file: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" style="flex-shrink:0;"><rect x="1" y="1" width="10" height="10" rx="2" stroke="rgba(20,46,77,0.2)" stroke-width="1"/></svg>',
+	};
+
+	const CARD_STYLE = `
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    color: #1a2033;
+    line-height: 1.6;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(20,46,77,0.06);
+  `.replace(/\n\s+/g, '');
+
+	const BTN_PRIMARY_STYLE = 'background:#0F7AF5;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:14px;cursor:pointer;font-family:inherit;';
+	const TEXT_MUTED = 'font-size:14px;color:rgba(20,46,77,0.45);';
+
+	// Header row shared by Start/Resume/Progress/Scanning/PickDir/Complete UIs.
+	// `subtitleId` ties the subtitle to updateScanMessage() — only set for UIs that update.
+	function headerRow(subtitle, right = '', subtitleId = '') {
+		const idAttr = subtitleId ? ` id="${subtitleId}"` : '';
+		return `<div style="display:flex;align-items:center;gap:8px;height:32px;">
+			<span style="font-size:16px;font-weight:700;color:rgb(19,24,29);">附件下载</span>
+			<span${idAttr} style="${TEXT_MUTED}">${subtitle}</span>
+			<span style="flex:1;"></span>${right}
+		</div>`;
+	}
+
+	function getOrCreatePanel() {
+		let panel = document.getElementById('__dl_panel');
+		if (!panel) {
+			panel = document.createElement('div');
+			panel.id = '__dl_panel';
+			panel.style.cssText = CARD_STYLE;
+		}
+		return panel;
+	}
+
+	async function mountPanel(panel) {
+		if (panel.parentElement) return;
+		const mailApp = await waitForSelector('.mail_app');
+		if (mailApp?.firstChild) mailApp.insertBefore(panel, mailApp.firstChild);
+	}
+
+	// -- Prompt UI: pick folder + start scan --
+	function showStartUI() {
+		const panel = getOrCreatePanel();
+		panel.innerHTML = headerRow('点击开始扫描当前文件夹', `<button id="__dl_start" style="${BTN_PRIMARY_STYLE}">开始扫描</button>`);
+		panel.querySelector('#__dl_start').onclick = () => runFullPipeline();
+		mountPanel(panel);
+	}
+
+	// -- Resume UI: continue from IndexedDB --
+	function showResumeUI(pendingCount) {
+		const panel = getOrCreatePanel();
+		panel.innerHTML = headerRow(
+			`还有 <strong style="color:rgb(19,24,29);">${pendingCount}</strong> 个待下载`,
+			`<button id="__dl_resume" style="${BTN_PRIMARY_STYLE}">选择目录</button>
+			 <button id="__dl_reset" style="background:none;color:rgba(20,46,77,0.45);border:1px solid rgba(20,46,77,0.1);border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:inherit;">重新扫描</button>`
+		);
+		panel.querySelector('#__dl_resume').onclick = async () => {
+			try {
+				rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+				await resumeDownloads();
+			} catch (e) {
+				// User cancelled
+			}
+		};
+		panel.querySelector('#__dl_reset').onclick = async () => {
+			await dbDeleteByFolder(folderId);
+			runFullPipeline();
+		};
+		mountPanel(panel);
+	}
+
+	// -- Progress UI --
+	function showProgressUI(done, total, failed, mailCount) {
+		const panel = getOrCreatePanel();
+		const pct = total > 0 ? (((done + failed) / total) * 100).toFixed(1) : '0';
+		const mailLabel = mailCount ? `${mailCount} 封邮件` : '';
+		const right = `
+			<span id="__dl_speed_inline" style="font-size:13px;color:rgba(20,46,77,0.45);"></span>
+			<span style="font-size:13px;color:rgba(20,46,77,0.45);"><span id="__dl_done">${done}</span>/${total} 个附件</span>
+			<span id="__dl_pct" style="font-size:13px;color:rgba(20,46,77,0.45);">${pct}%</span>`;
+		panel.innerHTML = `
+			${headerRow(mailLabel, right)}
+			<div style="background:rgba(20,46,77,0.06);border-radius:100px;height:4px;margin:10px 0 12px;">
+				<div id="__dl_bar" style="background:#0F7AF5;height:100%;border-radius:100px;width:${pct}%;transition:width 0.3s;"></div>
+			</div>
+			<div id="__dl_fail_section"></div>
+			<div id="__dl_current_mail" style="font-size:13px;"></div>
+			<div id="__dl_current" style="margin-top:4px;font-size:13px;"></div>
+		`;
+		mountPanel(panel);
+	}
+
+	function createProgressTracker(total) {
+		let done = 0;
+		let failed = 0;
+		const startTime = Date.now();
+		const failedTasks = [];
+		const recentTasks = [];
+
+		// Cache DOM refs once — avoids getElementById on every task completion.
+		const bar = document.getElementById('__dl_bar');
+		const pctEl = document.getElementById('__dl_pct');
+		const doneEl = document.getElementById('__dl_done');
+		const speedEl = document.getElementById('__dl_speed_inline');
+		const mailDiv = document.getElementById('__dl_current_mail');
+		const filesDiv = document.getElementById('__dl_current');
+		const failSection = document.getElementById('__dl_fail_section');
+
+		let lastMailId = null;
+		let lastFailCount = 0;
+
+		function renderMailInfo(mInfo) {
+			const idx = mInfo.mailIdx || '';
+			const email = mInfo.senderEmail || '';
+			const nick = mInfo.senderNick || '';
+			const count = mInfo.attachCount || 0;
+			const subject = mInfo.subject || '';
+			mailDiv.innerHTML = `
+				<div style="display:flex;align-items:center;gap:8px;color:rgba(20,46,77,0.55);margin-bottom:2px;">
+					${ICONS.mail}
+					<span style="color:rgba(20,46,77,0.35);white-space:nowrap;">${idx}</span>
+					<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subject}</span>
+					<span style="color:rgba(20,46,77,0.35);white-space:nowrap;">${email}</span>
+					<span style="white-space:nowrap;">${nick}</span>
+					<span style="color:rgba(20,46,77,0.35);white-space:nowrap;">+${count}</span>
+				</div>`;
+		}
+
+		function renderRecentFiles() {
+			filesDiv.innerHTML = recentTasks
+				.slice(-3)
+				.map(t => {
+					const ai = mailMap[t.mailid + '|' + t.fileid];
+					const name = ai?.origName || t.filename;
+					const idx = ai?.attachIdx || '';
+					const tot = ai?.attachTotal || '';
+					return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;line-height:1.6;color:rgba(20,46,77,0.55);">
+						${ICONS.file}
+						<span style="color:rgba(20,46,77,0.35);font-size:11px;white-space:nowrap;">${idx}/${tot}</span>
+						<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+					</div>`;
+				})
+				.join('');
+		}
+
+		function renderFailSection() {
+			failSection.innerHTML = `
+				<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(20,46,77,0.06);">
+					<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+						${ICONS.fail}
+						<span style="color:#E84C3D;font-weight:700;font-size:14px;">失败 ${failedTasks.length}</span>
+						<span style="flex:1;"></span>
+						<button id="__dl_retry_all" style="background:#0F7AF5;color:#fff;border:none;border-radius:4px;padding:2px 10px;font-size:11px;cursor:pointer;">重试全部</button>
+					</div>
+					${failedTasks
+						.slice(-3)
+						.map(
+							t => `<div style="font-size:12px;color:rgba(20,46,77,0.55);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.filename}</div>`
+						)
+						.join('')}
+				</div>`;
+			const retryBtn = document.getElementById('__dl_retry_all');
+			if (retryBtn) retryBtn.onclick = () => retryFailed(failedTasks);
+		}
+
+		return {
+			onTask(task) {
+				if (task.status === 'done') done++;
+				else if (task.status === 'failed') {
+					failed++;
+					failedTasks.push(task);
+				}
+				recentTasks.push(task);
+				if (recentTasks.length > 5) recentTasks.shift();
+
+				const pct = (((done + failed) / total) * 100).toFixed(1);
+				const el = (Date.now() - startTime) / 1000;
+				const speed = el > 0 ? (done + failed) / el : 0;
+				const rem = total - done - failed;
+				const eta = speed > 0 ? Math.ceil(rem / speed) : 0;
+
+				if (bar) bar.style.width = pct + '%';
+				if (pctEl) pctEl.textContent = pct + '%';
+				if (doneEl) doneEl.textContent = done;
+				if (speedEl) {
+					const etaMin = Math.floor(eta / 60);
+					const etaSec = eta % 60;
+					speedEl.textContent = done + failed >= total ? `已完成 · ${Math.floor(el)}秒` : `${speed.toFixed(1)}/秒 · ${etaMin > 0 ? etaMin + '分' : ''}${etaSec}秒`;
+				}
+
+				// Only rebuild mail header when mailid actually changes.
+				if (mailDiv && task.mailid !== lastMailId) {
+					const mInfo = mailMap[task.mailid];
+					if (mInfo) renderMailInfo(mInfo);
+					lastMailId = task.mailid;
+				}
+				if (filesDiv) renderRecentFiles();
+
+				// Only rebuild fail section when failure count changes.
+				if (failSection && failedTasks.length !== lastFailCount) {
+					lastFailCount = failedTasks.length;
+					if (failedTasks.length > 0) renderFailSection();
+				}
+
+				if (done + failed >= total && bar) {
+					bar.style.background = failed > 0 ? '#E84C3D' : '#07C160';
+				}
+			},
+		};
+	}
+
+	// ============================================================
+	//  Scanning UI
+	// ============================================================
+
+	function showScanningUI(message) {
+		const panel = getOrCreatePanel();
+		panel.innerHTML = headerRow(message, '', '__dl_scan_msg');
+		mountPanel(panel);
+	}
+
+	function updateScanMessage(msg) {
+		const el = document.getElementById('__dl_scan_msg');
+		if (el) el.textContent = msg;
+	}
+
+	// ============================================================
+	//  Pipeline
+	// ============================================================
+
+	async function runFullPipeline() {
+		sid = getSidFromUrl();
+		folderId = getFolderIdFromUrl();
+
+		if (!sid || !folderId) {
+			showScanningUI('请先打开一个邮件文件夹');
+			return;
+		}
+		try {
+			await _runFullPipeline();
+		} catch (e) {
+			console.error('[QQMailDL] pipeline error:', e);
+			showScanningUI(`出错: ${e.message || e}`);
+		}
+	}
+
+	async function _runFullPipeline() {
+		// Verify session
+		showScanningUI('验证登录状态...');
+		const folderData = await verifySession();
+		if (!folderData) {
+			showScanningUI('登录态失效，请刷新页面重新登录');
+			return;
+		}
+
+		// Get folder name + total mail count
+		const allFolders = [...(folderData.body.list.personal_list || []), ...(folderData.body.list.sys_list || [])];
+		const folder = allFolders.find(f => f.dirid === folderId);
+		folderName = folder?.name || `文件夹${folderId}`;
+		const totalMailNum = folder?.total_num || 0;
+
+		if (totalMailNum === 0) {
+			showScanningUI(`${folderName} 中没有邮件`);
+			return;
+		}
+
+		// ── Phase 1: Scan all mails via maillist API ──
+		showScanningUI(`扫描邮件...`);
+		const allMails = await scanAllMails(totalMailNum, (loaded, total) => {
+			updateScanMessage(`扫描邮件 ${loaded}/${total}`);
+		});
+
+		// Extract attachments from mail objects into attach_list-compatible format
+		const attachments = [];
+		let mailTotal = 0;
+		for (const mail of allMails) {
+			const attaches = getAttachments(mail);
+			if (attaches.length === 0) continue;
+			mailTotal++;
+			const email = getSenderEmail(mail);
+			const nick = getSenderNick(mail);
+			for (const a of attaches) {
+				attachments.push({
+					mailid: mail.emailid,
+					fileid: a.fileid,
+					name: a.name,
+					size: a.size,
+					type: a.type || '',
+					download_url: a.download_url || '',
+					ctime: mail.totime,
+					subject: mail.subject,
+					sender: { addr: email, name: nick },
+				});
 			}
 		}
-		/** 回退方案：右下角浮动按钮 */
-		function injectFloatingButton() {
-			const btn = document.createElement("button");
-			btn.id = "attachment-downloader-btn";
-			btn.setAttribute("data-attachment-manager-btn", "true");
-			btn.className = "am-btn am-btn--primary";
-			btn.textContent = "📎 附件管理";
-			btn.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:9998;padding:10px 20px;font-size:14px;border-radius:var(--am-radius-full);box-shadow:var(--am-shadow-lg);";
-			btn.addEventListener("click", () => manager?.toggle());
-			document.body.appendChild(btn);
+
+		// ── Phase 2: Build identity + mailMap ──
+		buildIdentityMap(attachments);
+		buildMailMapFromAttach(attachments);
+
+		// ── Phase 3: Background tasks (run in parallel) ──
+		// 3a: Mark all as unread
+		const markUnreadPromise = (async () => {
+			await markAllUnread();
+		})();
+
+		// 3b: AI enhance identity
+		const aiReady = await initBuiltinAI();
+		let aiEnhancedCount = 0;
+		if (aiReady) {
+			updateScanMessage('AI 增强解析...');
+			aiEnhancedCount = await enhanceIdentityWithAI(allMails, updateScanMessage);
 		}
-		function listenFolderChange() {
-			let currentFolder = downloader.getCurrentFolderId();
-			window.addEventListener("hashchange", () => {
-				const newFolder = downloader.getCurrentFolderId();
-				if (currentFolder !== newFolder) {
-					currentFolder = newFolder;
-					setTimeout(() => injectToolbarButton(), 500);
+
+		// 3c: Process recalled / empty / innerpiclist
+		updateScanMessage(`检查撤回和空邮件...`);
+		const { recalled } = await processRecalledMails(allMails, updateScanMessage);
+
+		const noAttachMails = allMails.filter(m => !hasAttachments(m) && !(m.subject || '').startsWith('发信方已撤回邮件：'));
+		const sendersWithAttach = new Set(attachments.map(a => a.sender?.addr).filter(Boolean));
+
+		let inlineEntries = [];
+		let emptyMails = [];
+		let skippedInlineMails = [];
+		if (noAttachMails.length > 0) {
+			updateScanMessage(`检查 ${noAttachMails.length} 封无附件邮件...`);
+			const innerResult = await processInnerPicList(noAttachMails, sendersWithAttach, updateScanMessage);
+			inlineEntries = innerResult.inlineEntries;
+			emptyMails = innerResult.emptyMails;
+			skippedInlineMails = innerResult.skippedMails;
+		}
+
+		await markUnreadPromise;
+
+		// ── Phase 4: Build download list ──
+		// Build scan summary stats
+		const statParts = [
+			`${totalMailNum} 封邮件`,
+			`${attachments.length} 个附件（${mailTotal} 封有附件）`,
+			recalled.length > 0 ? `${recalled.length} 封已撤回` : '',
+			inlineEntries.length > 0 ? `${inlineEntries.length} 个正文图片` : '',
+			emptyMails.length > 0 ? `${emptyMails.length} 封空邮件` : '',
+			aiEnhancedCount > 0 ? `AI 解析 ${aiEnhancedCount} 封` : '',
+		].filter(Boolean);
+
+		const panel = getOrCreatePanel();
+		panel.innerHTML = `
+			${headerRow('扫描完成', `<button id="__dl_pick" style="${BTN_PRIMARY_STYLE}">选择保存目录</button>`)}
+			<div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:rgba(20,46,77,0.55);">
+				${statParts.map(s => `<span>${s}</span>`).join('')}
+			</div>
+		`;
+		const pickPromise = new Promise(resolve => {
+			panel.querySelector('#__dl_pick').addEventListener('click', async () => {
+				try {
+					const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+					resolve(handle);
+				} catch (e) {
+					// User cancelled — keep waiting
 				}
 			});
-		}
-		const observer = new MutationObserver(() => {
-			if (document.querySelector("#mailMainApp") && !manager) {
-				observer.disconnect();
-				init();
-			}
 		});
-		function start() {
-			if (document.querySelector("#mailMainApp")) init();
-			else observer.observe(document.body, {
-				childList: true,
-				subtree: true
-			});
+		mountPanel(panel);
+		rootHandle = await pickPromise;
+
+		// ── Build download list ──
+		showScanningUI('分析分类...');
+		const downloads = buildDownloadListFromAttach(attachments);
+
+		// Merge inline entries
+		for (const entry of inlineEntries) {
+			entry.id = downloads.length;
+			entry.status = 'pending';
+			downloads.push(entry);
 		}
-		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
-		else start();
-	})();
-	//#endregion
+
+		// ── Compare with local files ──
+		updateScanMessage('对比本地文件...');
+		manifestCache = await readManifest();
+		const manifestKeys = new Set(Object.keys(manifestCache));
+
+		// Scan disk: build a set of existing files per directory
+		const diskFileSet = new Map(); // dirName → Set<filename>
+		const dirNames = new Set(downloads.map(d => d.dir));
+		for (const dirName of dirNames) {
+			const fileSet = new Set();
+			try {
+				const dh = await rootHandle.getDirectoryHandle(dirName, { create: false });
+				for await (const [name, handle] of dh) {
+					if (handle.kind === 'file') fileSet.add(name);
+				}
+			} catch {
+				/* dir doesn't exist yet */
+			}
+			diskFileSet.set(dirName, fileSet);
+		}
+
+		let alreadyDownloaded = 0;
+		let manifestRebuilt = false;
+		for (const task of downloads) {
+			const mKey = `${task.mailid}_${task.fileid}`;
+			const onDisk = diskFileSet.get(task.dir)?.has(task.filename);
+			const inManifest = manifestKeys.has(mKey);
+
+			if (onDisk) {
+				task.status = 'done';
+				alreadyDownloaded++;
+				if (!inManifest) {
+					// Rebuild manifest entry from disk
+					try {
+						const dh = await rootHandle.getDirectoryHandle(task.dir);
+						const fh = await dh.getFileHandle(task.filename);
+						const file = await fh.getFile();
+						manifestCache[mKey] = { dir: task.dir, filename: task.filename, size: file.size, time: Date.now() };
+						manifestRebuilt = true;
+					} catch {
+						/* skip */
+					}
+				}
+			} else if (inManifest) {
+				// In manifest but not on disk — needs re-download
+				delete manifestCache[mKey];
+				manifestRebuilt = true;
+			}
+		}
+		if (manifestRebuilt) await writeManifest(manifestCache);
+
+		const diskTotal = [...diskFileSet.values()].reduce((s, set) => s + set.size, 0);
+		console.log(`[QQMailDL] 本地对比: ${diskTotal} 磁盘文件, ${alreadyDownloaded} 匹配, ${downloads.length - alreadyDownloaded} 待下载`);
+
+		// Pipeline stats
+		const mailCount = mailTotal;
+		const pipelineStats = {
+			recalledCount: recalled.length,
+			emptyCount: emptyMails.length,
+			inlineCount: inlineEntries.length,
+			skippedInlineCount: skippedInlineMails.length,
+			totalScanned: totalMailNum,
+			aiEnhancedCount,
+			alreadyDownloaded,
+		};
+
+		const stats = countByDir(downloads);
+		const renamedCount = downloads.filter(d => {
+			const aInfo = mailMap[d.mailid + '|' + d.fileid];
+			return aInfo && d.filename !== aInfo.origName;
+		}).length;
+		const pending = downloads.filter(t => t.status === 'pending');
+
+		// Save to IndexedDB
+		updateScanMessage('保存下载列表...');
+		await dbDeleteByFolder(folderId);
+		await dbPutBatch('tasks', downloads);
+
+		// ── Stats line ──
+		const dlStatLine = [
+			`${totalMailNum} 封邮件`,
+			`${downloads.length} 个附件`,
+			alreadyDownloaded > 0 ? `已下载 ${alreadyDownloaded}` : '',
+			pending.length > 0 ? `待下载 ${pending.length}` : '',
+			`${DIR_IMAGE} ${stats[DIR_IMAGE] || 0}`,
+			stats[DIR_DOC] ? `${DIR_DOC} ${stats[DIR_DOC]}` : '',
+			stats[DIR_PROJECT] ? `${DIR_PROJECT} ${stats[DIR_PROJECT]}` : '',
+			stats[DIR_AUDIO] ? `${DIR_AUDIO} ${stats[DIR_AUDIO]}` : '',
+			stats[DIR_VIDEO] ? `${DIR_VIDEO} ${stats[DIR_VIDEO]}` : '',
+			stats[DIR_ARCHIVE] ? `${DIR_ARCHIVE} ${stats[DIR_ARCHIVE]}` : '',
+			stats[DIR_DUP] ? `${DIR_DUP} ${stats[DIR_DUP]}` : '',
+			stats[DIR_OTHER] ? `${DIR_OTHER} ${stats[DIR_OTHER]}` : '',
+			stats[DIR_MANUAL] ? `${DIR_MANUAL} ${stats[DIR_MANUAL]}` : '',
+			recalled.length > 0 ? `已撤回 ${recalled.length}` : '',
+			emptyMails.length > 0 ? `空邮件 ${emptyMails.length}` : '',
+			inlineEntries.length > 0 ? `内嵌图 ${inlineEntries.length}` : '',
+			renamedCount > 0 ? `重命名 ${renamedCount}` : '',
+		]
+			.filter(Boolean)
+			.join(' · ');
+
+		if (pending.length === 0) {
+			await syncReadStatus(downloads);
+			await onDownloadComplete(downloads, mailCount, pipelineStats);
+			return;
+		}
+
+		if (alreadyDownloaded > 0) {
+			updateScanMessage(`跳过 ${alreadyDownloaded} 个已有文件，同步已读状态...`);
+			await syncReadStatus(downloads);
+		}
+
+		showProgressUI(alreadyDownloaded, downloads.length, 0, mailCount);
+		const scanMsg = document.getElementById('__dl_scan_msg');
+		if (scanMsg) scanMsg.textContent = dlStatLine;
+
+		const tracker = createProgressTracker(pending.length);
+		await startEngine(pending, task => tracker.onTask(task));
+
+		// Tag downloaded mails
+		updateScanMessage('标记已下载...');
+		const doneMails = [...new Set(downloads.filter(t => t.status === 'done').map(t => t.mailid))];
+		await batchParallel(doneMails, 10, mid => addTag(mid, TAG_DOWNLOADED).catch(() => {}));
+
+		await onDownloadComplete(downloads, mailCount, pipelineStats);
+	}
+
+	/** Mark mails as read when all their attachments are downloaded */
+	async function syncReadStatus(tasks) {
+		const mailAttachCount = new Map();
+		for (const task of tasks) {
+			const mid = task.mailid;
+			if (!mid) continue;
+			if (!mailAttachCount.has(mid)) mailAttachCount.set(mid, { total: 0, done: 0 });
+			const m = mailAttachCount.get(mid);
+			m.total++;
+			if (task.status === 'done') m.done++;
+		}
+		const readPromises = [];
+		for (const [mid, counts] of mailAttachCount) {
+			if (counts.done >= counts.total) {
+				readPromises.push(markMailRead(mid).catch(() => {}));
+			}
+		}
+		for (let i = 0; i < readPromises.length; i += 10) {
+			await Promise.all(readPromises.slice(i, i + 10));
+		}
+	}
+
+	async function onDownloadComplete(tasks, mc, pipelineStats) {
+		showScanningUI('生成审计报告...');
+		const reportStats = await generateReport(tasks, pipelineStats);
+
+		// Show completion UI
+		const panel = getOrCreatePanel();
+		const done = tasks.filter(t => t.status === 'done').length;
+		const failed = tasks.filter(t => t.status === 'failed').length;
+		const total = tasks.length;
+		const stats = countByDir(tasks);
+
+		const summaryParts = [
+			`${done}/${total} 成功`,
+			failed > 0 ? `${failed} 失败` : '',
+			`${DIR_IMAGE} ${stats[DIR_IMAGE] || 0}`,
+			stats[DIR_DOC] ? `${DIR_DOC} ${stats[DIR_DOC]}` : '',
+			stats[DIR_PROJECT] ? `${DIR_PROJECT} ${stats[DIR_PROJECT]}` : '',
+			stats[DIR_AUDIO] ? `${DIR_AUDIO} ${stats[DIR_AUDIO]}` : '',
+			stats[DIR_VIDEO] ? `${DIR_VIDEO} ${stats[DIR_VIDEO]}` : '',
+			stats[DIR_ARCHIVE] ? `${DIR_ARCHIVE} ${stats[DIR_ARCHIVE]}` : '',
+			stats[DIR_DUP] ? `${DIR_DUP} ${stats[DIR_DUP]}` : '',
+			stats[DIR_OTHER] ? `${DIR_OTHER} ${stats[DIR_OTHER]}` : '',
+			stats[DIR_MANUAL] ? `${DIR_MANUAL} ${stats[DIR_MANUAL]}` : '',
+		]
+			.filter(Boolean)
+			.join(' · ');
+
+		const barColor = failed > 0 ? '#E84C3D' : '#07C160';
+
+		panel.innerHTML = `
+			<div style="display:flex;align-items:center;gap:8px;height:32px;">
+				<span style="font-size:16px;font-weight:700;color:rgb(19,24,29);">附件下载</span>
+				${ICONS.check}
+				<span style="${TEXT_MUTED}">${summaryParts}</span>
+				<span style="flex:1;"></span>
+				<span style="font-size:12px;color:rgba(20,46,77,0.35);">report.md 已保存</span>
+			</div>
+			<div style="background:rgba(20,46,77,0.06);border-radius:100px;height:4px;margin:10px 0 0;">
+				<div style="background:${barColor};height:100%;border-radius:100px;width:100%;"></div>
+			</div>
+		`;
+		mountPanel(panel);
+	}
+
+	async function resumeDownloads() {
+		const allStored = await dbGetAll('tasks');
+		const allTasks = allStored.filter(t => t.folderId === folderId);
+		const pending = allTasks.filter(t => t.status === 'pending' || t.status === 'failed');
+		const doneCount = allTasks.filter(t => t.status === 'done').length;
+		const total = allTasks.length;
+
+		// Update sid in URLs
+		const currentSid = getSidFromUrl();
+		if (currentSid) {
+			for (const t of pending) {
+				t.url = replaceSid(t.url, currentSid);
+				t.status = 'pending';
+				t.error = undefined;
+			}
+			await dbPutBatch('tasks', pending);
+			sid = currentSid;
+		}
+
+		// Rebuild mail map if needed
+		let mc = 0;
+		if (Object.keys(mailMap).length === 0) {
+			folderId = getFolderIdFromUrl();
+			if (folderId && sid) {
+				try {
+					const folderData = await verifySession();
+					if (folderData) {
+						const allFolders = [...(folderData.body.list.personal_list || []), ...(folderData.body.list.sys_list || [])];
+						const folder = allFolders.find(f => f.dirid === folderId);
+						const totalNum = folder?.total_num || 0;
+						if (totalNum > 0) {
+							const allMails = await scanAllMails(totalNum);
+							buildIdentityMap(allMails);
+							buildMailMap(allMails);
+							mc = allMails.filter(hasAttachments).length;
+						}
+					}
+				} catch (e) {
+					// Continue without mail map
+				}
+			}
+		}
+
+		// Read manifest to reconcile
+		showScanningUI('读取本地已有文件...');
+		manifestCache = await readManifest();
+		const manifestKeys = new Set(Object.keys(manifestCache));
+
+		showScanningUI('标记全部未读...');
+		await markAllUnread();
+
+		let skipped = 0;
+		for (const task of pending) {
+			const key = `${task.mailid}_${task.fileid}`;
+			if (manifestKeys.has(key)) {
+				task.status = 'done';
+				await dbPut('tasks', task);
+				skipped++;
+			}
+		}
+
+		if (skipped > 0) {
+			updateScanMessage(`跳过 ${skipped} 个已有文件，同步已读状态...`);
+			await syncReadStatus(allTasks);
+		}
+
+		const actualPending = pending.filter(t => t.status === 'pending');
+		const actualDone = total - actualPending.length;
+
+		if (actualPending.length === 0) {
+			showProgressUI(actualDone, total, 0, mc);
+			return;
+		}
+
+		showProgressUI(actualDone, total, 0, mc);
+		const tracker = createProgressTracker(actualPending.length);
+		await startEngine(actualPending, task => tracker.onTask(task));
+	}
+
+	async function retryFailed(failedTasks) {
+		// Need directory handle
+		if (!rootHandle) {
+			try {
+				rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+			} catch (e) {
+				return; // User cancelled
+			}
+		}
+
+		// Update sid
+		const currentSid = getSidFromUrl();
+		for (const t of failedTasks) {
+			t.url = replaceSid(t.url, currentSid);
+			t.status = 'pending';
+			t.error = undefined;
+		}
+		await dbPutBatch('tasks', failedTasks);
+
+		// Refresh full UI with correct totals
+		const allTasks = await dbGetAll('tasks');
+		const doneCount = allTasks.filter(t => t.status === 'done').length;
+		const total = allTasks.length;
+		const mailCount = new Set(allTasks.map(t => t.mailid)).size;
+		showProgressUI(doneCount, total, 0, mailCount);
+
+		let retryDone = 0;
+		const tracker = createProgressTracker(failedTasks.length);
+		const origOnTask = tracker.onTask.bind(tracker);
+		tracker.onTask = function (task) {
+			origOnTask(task);
+			if (task.status === 'done') retryDone++;
+			const doneEl = document.getElementById('__dl_done');
+			if (doneEl) doneEl.textContent = doneCount + retryDone;
+		};
+
+		await startEngine(failedTasks, task => tracker.onTask(task));
+
+		// Clear fail section on completion
+		const section = document.getElementById('__dl_fail_section');
+		if (section) {
+			const remaining = failedTasks.filter(t => t.status === 'failed');
+			if (remaining.length === 0) {
+				section.innerHTML = '';
+			}
+		}
+	}
+
+	// ============================================================
+	//  Init
+	// ============================================================
+
+	async function init() {
+		if (!window.showDirectoryPicker) return; // FSAPI required
+		sid = getSidFromUrl();
+		folderId = getFolderIdFromUrl();
+		folderName = '';
+		if (!sid || !folderId) return;
+
+		db = await openDB();
+		setupAutoSidRecovery();
+
+		// Check for existing tasks for THIS folder
+		const existing = await dbGetAll('tasks');
+		const folderTasks = existing.filter(t => t.folderId === folderId);
+		if (folderTasks.length > 0) {
+			const pending = folderTasks.filter(t => t.status === 'pending' || t.status === 'failed');
+			if (pending.length > 0) {
+				showResumeUI(pending.length);
+				return;
+			}
+		}
+
+		showStartUI();
+	}
+
+	// Handle SPA navigation (QQ Mail uses hash-based routing)
+	window.addEventListener('hashchange', () => {
+		const newFolderId = getFolderIdFromUrl();
+		if (newFolderId && newFolderId !== folderId) {
+			folderId = newFolderId;
+			sid = getSidFromUrl();
+			const old = document.getElementById('__dl_panel');
+			if (old) old.remove();
+			init();
+		}
+	});
+
+	// @run-at document-idle guarantees DOM is ready
+	setTimeout(init, 1000);
 })();
