@@ -154,7 +154,7 @@
 	// A "convention-compliant" filename has 6+ consecutive digits (QQ/phone) with clean boundaries
 	// on both sides — separator / CJK / edge / QQ-prefix marker. This rejects digit runs embedded
 	// in hex/hash strings like "6992751ddbd0..." that would otherwise pollute identity extraction.
-	const CONV_BOUNDARY_RE = /[-_\s+·()（）【】\[\]、，\u4e00-\u9fa5QqＱ]/;
+	const CONV_BOUNDARY_RE = /[-_\s+·()（）【】\[\]、，\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaffQqＱｑ]/;
 	const CONV_TRAIL_SEP_RE = /[-_\s+·]/;
 
 	function isConventionBoundary(ch) {
