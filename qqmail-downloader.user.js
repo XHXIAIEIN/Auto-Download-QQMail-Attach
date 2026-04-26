@@ -99,8 +99,31 @@
 		});
 	}
 
+	// Filename sanitizer for cross-platform FS writes (NTFS / APFS / ext4 via FSA).
+	// Beyond the obvious reserved char list, three Windows footguns matter:
+	//   - control chars (\x00-\x1F) inside a mail subject silently fail getFileHandle
+	//   - trailing dots / spaces are stripped silently → file created != name asked for
+	//   - device names (CON, PRN, NUL, COM1-9, LPT1-9) are reserved with or without ext
+	// NFC normalization keeps QQ-side NFC and macOS NFD entries dedup-equivalent.
 	function sanitizeFilename(name) {
-		return name.replace(/[<>:"|?*]/g, '_').replace(/\//g, '_');
+		let s = String(name ?? '').normalize('NFC')
+			.replace(/[<>:"|?*\/\\]/g, '_')
+			.replace(/[\x00-\x1F\x7F]/g, '');
+		s = s.replace(/^\s+/, '').replace(/[.\s]+$/, '');
+
+		const MAX = 200;
+		if (s.length > MAX) {
+			const dot = s.lastIndexOf('.');
+			const extLen = (dot > 0 && s.length - dot <= 12) ? s.length - dot : 0;
+			let cut = MAX - extLen;
+			// Don't strand a high surrogate without its low counterpart.
+			const cu = s.charCodeAt(cut - 1);
+			if (cu >= 0xD800 && cu <= 0xDBFF) cut--;
+			s = s.slice(0, cut) + (extLen ? s.slice(s.length - extLen) : '');
+		}
+
+		if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(s)) s = '_' + s;
+		return s || 'unnamed';
 	}
 
 	// HTML-escape before writing to innerHTML. Mail subject / sender nick / attachment name
