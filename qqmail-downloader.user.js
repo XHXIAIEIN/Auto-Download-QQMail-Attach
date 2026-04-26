@@ -158,7 +158,23 @@
 	const CONV_TRAIL_SEP_RE = /[-_\s+·]/;
 
 	function isConventionBoundary(ch) {
-		return ch === '' || CONV_BOUNDARY_RE.test(ch);
+		if (ch === '') return true;
+		// Surrogate pair returned by getBoundaryChar — emoji or CJK Extension B+ char.
+		// Neither can be part of a digit run, so treat as a non-alphanumeric boundary.
+		if (ch.length === 2) return true;
+		return CONV_BOUNDARY_RE.test(ch);
+	}
+
+	// Read the char at position i as a full Unicode scalar. Bare s[i] returns one
+	// UTF-16 code unit, so an emoji (or CJK Ext B+ char) sitting against a digit run
+	// gives back an orphan low/high surrogate that fails the boundary test, dropping
+	// otherwise-valid QQ numbers like "🎨123456".
+	function getBoundaryChar(s, i) {
+		if (i < 0 || i >= s.length) return '';
+		const cu = s.charCodeAt(i);
+		if (cu >= 0xDC00 && cu <= 0xDFFF && i > 0) return s.slice(i - 1, i + 1);
+		if (cu >= 0xD800 && cu <= 0xDBFF && i + 1 < s.length) return s.slice(i, i + 2);
+		return s[i];
 	}
 
 	function findBoundedDigitRuns(s, re) {
@@ -168,8 +184,8 @@
 		while ((m = re.exec(s)) !== null) {
 			const start = m.index;
 			const end = start + m[0].length;
-			const before = start > 0 ? s[start - 1] : '';
-			const after = end < s.length ? s[end] : '';
+			const before = getBoundaryChar(s, start - 1);
+			const after = getBoundaryChar(s, end);
 			if (isConventionBoundary(before) && isConventionBoundary(after)) {
 				runs.push({ start, end, text: m[0] });
 			}
