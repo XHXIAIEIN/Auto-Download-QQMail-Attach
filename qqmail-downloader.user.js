@@ -143,6 +143,14 @@
 		return String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
 	}
 
+	// Truncate by Unicode code point, not UTF-16 code unit. String.slice cuts surrogate
+	// pairs in half — an emoji or CJK Extension B char at the boundary becomes a lone
+	// surrogate that renders as � in the markdown report.
+	function truncate(s, n) {
+		const arr = [...(s ?? '')];
+		return arr.length <= n ? String(s ?? '') : arr.slice(0, n).join('') + '…';
+	}
+
 	// A "convention-compliant" filename has 6+ consecutive digits (QQ/phone) with clean boundaries
 	// on both sides — separator / CJK / edge / QQ-prefix marker. This rejects digit runs embedded
 	// in hex/hash strings like "6992751ddbd0..." that would otherwise pollute identity extraction.
@@ -946,7 +954,7 @@
 			lines.push(`|---|--------|------|------------|`);
 			items.forEach((t, i) => {
 				const info = mailMap[t.mailid];
-				lines.push(`| ${i + 1} | ${escapeMd(info?.senderEmail)} | ${escapeMd((info?.subject || '').slice(0, 30))} | ${escapeMd(t.filename)} |`);
+				lines.push(`| ${i + 1} | ${escapeMd(info?.senderEmail)} | ${escapeMd(truncate(info?.subject, 30))} | ${escapeMd(t.filename)} |`);
 			});
 			lines.push(``);
 		}
@@ -986,7 +994,7 @@
 				for (const t of group) {
 					const info = mailMap[t.mailid] || {};
 					const kept = t.dir !== DIR_DUP ? '● 保留' : '○ 重复';
-					const subject = (info.subject || '').slice(0, 25);
+					const subject = truncate(info.subject, 25);
 					lines.push(`| ${kept} | ${escapeMd(t.filename)} | ${escapeMd(info.senderNick)} | ${escapeMd(info.senderEmail)} | ${escapeMd(subject)} | ${fmtTime(info.totime)} |`);
 				}
 				lines.push(``);
