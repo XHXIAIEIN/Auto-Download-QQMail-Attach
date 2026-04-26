@@ -800,19 +800,26 @@
 			downloads.push(task);
 		}
 
-		const nameCount = new Map();
+		// Two-fold dedup: (1) Windows + macOS default FS are case-insensitive, so
+		// "Photo.jpg" and "photo.jpg" race for the same slot — fold to lowercase.
+		// (2) A counter that ignores the renamed name lets a real attachment
+		// already called "file (2).jpg" collide with the rename of a duplicate
+		// "file.jpg". Track every assigned name in a Set and probe forward.
+		const taken = new Set();
+		const dirKey = (n, d) => `${d}/${n}`.toLowerCase();
 		for (const task of downloads) {
-			const key = `${task.dir}/${task.filename}`;
-			const count = (nameCount.get(key) || 0) + 1;
-			nameCount.set(key, count);
-			if (count > 1) {
-				const dot = task.filename.lastIndexOf('.');
-				if (dot > 0) {
-					task.filename = `${task.filename.slice(0, dot)} (${count})${task.filename.slice(dot)}`;
-				} else {
-					task.filename = `${task.filename} (${count})`;
-				}
+			if (!taken.has(dirKey(task.filename, task.dir))) {
+				taken.add(dirKey(task.filename, task.dir));
+				continue;
 			}
+			const dot = task.filename.lastIndexOf('.');
+			const stem = dot > 0 ? task.filename.slice(0, dot) : task.filename;
+			const ext  = dot > 0 ? task.filename.slice(dot) : '';
+			let n = 2;
+			let cand;
+			do { cand = `${stem} (${n++})${ext}`; } while (taken.has(dirKey(cand, task.dir)));
+			task.filename = cand;
+			taken.add(dirKey(cand, task.dir));
 		}
 
 		return downloads;
