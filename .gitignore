@@ -1,3 +1,8 @@
 node_modules/
 dist/
 .superpowers/
+.tmp/
+__pycache__/
+*.pyc
+.trash/
+.remember/
