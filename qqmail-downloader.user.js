@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QQ Mail 附件批量下载
 // @namespace    https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
-// @version      3.0.1
+// @version      3.0.2
 // @description  批量下载QQ邮箱附件，提取全部附件，智能分类命名
 // @author       XHXIAIEIN
 // @match        https://wx.mail.qq.com/*
@@ -26,6 +26,10 @@
 	const DB_NAME = 'mail_downloader_db';
 	const DB_VERSION = 30000;
 	const CONCURRENCY = 10;
+
+	// Recurse into subfolders when scanning for already-downloaded files. Turn off if
+	// the chosen root contains unrelated trees and a flat scan is more predictable.
+	const SCAN_SUBFOLDERS = true;
 
 	const DIR_IMAGE   = '图片';
 	const DIR_PROJECT = '项目文件';
@@ -1609,15 +1613,16 @@
 			const fileMap = new Map();
 			try {
 				const dh = await rootHandle.getDirectoryHandle(dirName, { create: false });
-				// Walk subfolders too — users often archive into 已寄出/2026-03/ etc.
-				// Match by bare filename so a moved file still counts as already-downloaded.
+				// Walk subfolders too when SCAN_SUBFOLDERS is on — users often archive
+				// into 图片/2026-03/ etc. Match by bare filename so a moved file still
+				// counts as already-downloaded.
 				const stack = [dh];
 				while (stack.length > 0) {
 					const cur = stack.pop();
 					for await (const [name, handle] of cur) {
 						if (handle.kind === 'file') {
 							if (!fileMap.has(name)) fileMap.set(name, handle);
-						} else if (handle.kind === 'directory') {
+						} else if (handle.kind === 'directory' && SCAN_SUBFOLDERS) {
 							stack.push(handle);
 						}
 					}
