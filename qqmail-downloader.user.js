@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QQ Mail 附件批量下载
 // @namespace    https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
-// @version      3.0.2
+// @version      3.1.0
 // @description  批量下载QQ邮箱附件，提取全部附件，智能分类命名
 // @author       XHXIAIEIN
 // @match        https://wx.mail.qq.com/*
@@ -543,7 +543,7 @@
 	}
 
 	async function enhanceIdentityWithAI(allMails, onProgress) {
-		if (!aiAvailable) return 0;
+		if (!aiAvailable) return { count: 0, items: [] };
 
 		const needAI = [];
 		for (const mail of allMails) {
@@ -555,9 +555,11 @@
 			}
 		}
 
-		if (needAI.length === 0) return 0;
+		if (needAI.length === 0) return { count: 0, items: [] };
 
-		let enhanced = 0;
+		// items: full record of every successful subject parse — surfaced in the panel
+		// and report so the user can audit what the on-device LM actually pulled out.
+		const items = [];
 		const seen = new Set();
 		for (let i = 0; i < needAI.length; i++) {
 			const mail = needAI[i];
@@ -570,15 +572,34 @@
 			if (!parsed) continue;
 
 			const id = identityMap.get(email);
+			const accepted = { name: '', qq: '', phone: '', work: parsed.work || '' };
 			if (parsed.name) {
 				id.names.add(parsed.name);
-				enhanced++;
+				accepted.name = parsed.name;
 			}
-			if (parsed.qq && /^\d{5,11}$/.test(parsed.qq)) id.qqs.add(parsed.qq);
-			if (parsed.phone && /^1[3-9]\d{9}$/.test(parsed.phone)) id.phones.add(parsed.phone);
+			if (parsed.qq && /^\d{5,11}$/.test(parsed.qq)) {
+				id.qqs.add(parsed.qq);
+				accepted.qq = parsed.qq;
+			}
+			if (parsed.phone && /^1[3-9]\d{9}$/.test(parsed.phone)) {
+				id.phones.add(parsed.phone);
+				accepted.phone = parsed.phone;
+			}
+
+			if (accepted.name || accepted.qq || accepted.phone || accepted.work) {
+				items.push({
+					email,
+					nick: mail.senders?.item?.[0]?.nick || '',
+					subject: mail.subject,
+					parsed: accepted,
+				});
+			}
 		}
 
-		return enhanced;
+		// count = emails whose name field was filled — kept for backward compat with
+		// downstream stats. items.length may be larger (work-only / qq-only matches).
+		const count = items.filter(it => it.parsed.name).length;
+		return { count, items };
 	}
 
 	// ============================================================
@@ -977,6 +998,22 @@
 		lines.push(`| 落盘 | manifest ${manifestCount} 条记录 ${diskMatch ? '✓' : '⚠ 不一致'} |`);
 		lines.push(``);
 
+		const aiItems = pipelineStats?.aiEnhancedItems || [];
+		if (aiItems.length > 0) {
+			lines.push(`## AI 主题解析`);
+			lines.push(``);
+			lines.push(`> 用 Chrome 内置 LanguageModel 从邮件主题里提取投稿信息，仅对发件人姓名缺失的邮件触发。`);
+			lines.push(``);
+			lines.push(`| # | 发件人 | 主题 | 姓名 | QQ | 手机 | 作品 |`);
+			lines.push(`|---|--------|------|------|----|------|------|`);
+			aiItems.forEach((it, i) => {
+				const sender = escapeMd(it.nick || it.email);
+				const subject = escapeMd(truncate(it.subject || '', 36));
+				lines.push(`| ${i + 1} | ${sender} | ${subject} | ${escapeMd(it.parsed.name || '')} | ${escapeMd(it.parsed.qq || '')} | ${escapeMd(it.parsed.phone || '')} | ${escapeMd(truncate(it.parsed.work || '', 24))} |`);
+			});
+			lines.push(``);
+		}
+
 		// DIRs without `detailTitle` (DUP, MANUAL) get their own custom sections below.
 		for (const { name, detailTitle } of DIR_META) {
 			if (!detailTitle) continue;
@@ -1276,6 +1313,33 @@
 		</div>`;
 	}
 
+	// AI 解析结果折叠块。每条记录展示发件人 + 主题片段 + 提取到的字段，回答
+	// "AI 到底解析了什么"——空字段不渲染，避免噪声。
+	function renderAIEnhanceDetails(items) {
+		if (!items || items.length === 0) return '';
+		const fmtField = (label, val) => val
+			? `<span style="display:inline-block;margin-right:10px;"><span style="color:rgba(20,46,77,0.45);">${label}</span>${escapeHtml(val)}</span>`
+			: '';
+		const rows = items.map(it => {
+			const fields = [
+				fmtField('姓名 ', it.parsed.name),
+				fmtField('QQ ', it.parsed.qq),
+				fmtField('手机 ', it.parsed.phone),
+				fmtField('作品 ', it.parsed.work && truncate(it.parsed.work, 18)),
+			].filter(Boolean).join('');
+			const sender = escapeHtml(it.nick || it.email.split('@')[0]);
+			const subject = escapeHtml(truncate(it.subject || '', 36));
+			return `<div style="padding:6px 0;border-top:1px solid rgba(20,46,77,0.06);">
+				<div style="font-size:12px;color:rgba(20,46,77,0.5);">${sender} · ${subject}</div>
+				<div style="font-size:12px;color:rgba(20,46,77,0.75);margin-top:2px;">${fields || '<span style="color:rgba(20,46,77,0.35);">未提取到字段</span>'}</div>
+			</div>`;
+		}).join('');
+		return `<details style="margin-top:8px;font-size:13px;">
+			<summary style="cursor:pointer;color:rgba(20,46,77,0.55);user-select:none;">AI 解析 ${items.length} 条记录（点开查看详情）</summary>
+			<div style="margin:4px 0 0;">${rows}</div>
+		</details>`;
+	}
+
 	function getOrCreatePanel() {
 		let panel = document.getElementById('__dl_panel');
 		if (!panel) {
@@ -1543,9 +1607,12 @@
 
 		const aiReady = await initBuiltinAI();
 		let aiEnhancedCount = 0;
+		let aiEnhancedItems = [];
 		if (aiReady) {
 			updateScanMessage('AI 增强解析...');
-			aiEnhancedCount = await enhanceIdentityWithAI(allMails, updateScanMessage);
+			const result = await enhanceIdentityWithAI(allMails, updateScanMessage);
+			aiEnhancedCount = result.count;
+			aiEnhancedItems = result.items;
 		}
 
 		updateScanMessage(`检查撤回和空邮件...`);
@@ -1571,7 +1638,6 @@
 			recalled.length > 0 ? `${recalled.length} 封已撤回` : '',
 			inlineEntries.length > 0 ? `${inlineEntries.length} 个正文图片` : '',
 			emptyMails.length > 0 ? `${emptyMails.length} 封空邮件` : '',
-			aiEnhancedCount > 0 ? `AI 解析 ${aiEnhancedCount} 封` : '',
 		].filter(Boolean);
 
 		const panel = getOrCreatePanel();
@@ -1580,6 +1646,7 @@
 			<div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:rgba(20,46,77,0.55);">
 				${statParts.map(s => `<span>${s}</span>`).join('')}
 			</div>
+			${renderAIEnhanceDetails(aiEnhancedItems)}
 		`;
 		const pickPromise = new Promise(resolve => {
 			panel.querySelector('#__dl_pick').addEventListener('click', async () => {
@@ -1667,6 +1734,7 @@
 			inlineCount: inlineEntries.length,
 			totalScanned: totalMailNum,
 			aiEnhancedCount,
+			aiEnhancedItems,
 			alreadyDownloaded,
 		};
 
