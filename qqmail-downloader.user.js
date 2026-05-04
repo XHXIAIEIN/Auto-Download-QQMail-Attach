@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QQ Mail 附件批量下载
 // @namespace    https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
-// @version      3.0.0
+// @version      3.0.1
 // @description  批量下载QQ邮箱附件，提取全部附件，智能分类命名
 // @author       XHXIAIEIN
 // @match        https://wx.mail.qq.com/*
@@ -186,7 +186,7 @@
 			const end = start + m[0].length;
 			const before = getBoundaryChar(s, start - 1);
 			const after = getBoundaryChar(s, end);
-			if (isConventionBoundary(before) && isConventionBoundary(after)) {
+			if (isConventionBoundary(before) && isConventionBoundary(after) && !isTimestampDigitRun(m[0])) {
 				runs.push({ start, end, text: m[0] });
 			}
 		}
@@ -261,6 +261,20 @@
 	// Accepts 19xx/20xx so it doesn't silently break in 2030.
 	const DATE8_RE = /^(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/;
 	const DATE6_RE = /^\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/;
+	// HHMMSS — for camera filenames like IMG_<date>_<time>, the trailing 6 digits are a
+	// timestamp not an identity. Without this, IMG_20260307_145804.jpg gets treated as
+	// already conventional and skips sender-prefix renaming.
+	const TIME6_RE = /^(?:[01]\d|2[0-3])[0-5]\d[0-5]\d$/;
+	// 13-digit Unix ms timestamps (~2014–2033). Matches WeChat/QQ camera dumps like
+	// mmexport1709870404123.jpg without colliding with 11-digit phone numbers.
+	const TS13_RE = /^1[3-9]\d{11}$/;
+	function isTimestampDigitRun(text) {
+		const len = text.length;
+		if (len === 8) return DATE8_RE.test(text);
+		if (len === 6) return DATE6_RE.test(text) || TIME6_RE.test(text);
+		if (len === 13) return TS13_RE.test(text);
+		return false;
+	}
 	function cleanQQs(qqs) {
 		return qqs.filter(q => {
 			if (DATE8_RE.test(q)) return false;
@@ -1587,24 +1601,38 @@
 		manifestCache = await readManifest();
 		const manifestKeys = new Set(Object.keys(manifestCache));
 
+		// Map<dirName, Map<filename, FileSystemFileHandle>> — keep handles so the manifest
+		// rebuild below can read file size without re-walking the tree.
 		const diskFileSet = new Map();
 		const dirNames = new Set(downloads.map(d => d.dir));
 		for (const dirName of dirNames) {
-			const fileSet = new Set();
+			const fileMap = new Map();
 			try {
 				const dh = await rootHandle.getDirectoryHandle(dirName, { create: false });
-				for await (const [name, handle] of dh) {
-					if (handle.kind === 'file') fileSet.add(name);
+				// Walk subfolders too — users often archive into 已寄出/2026-03/ etc.
+				// Match by bare filename so a moved file still counts as already-downloaded.
+				const stack = [dh];
+				while (stack.length > 0) {
+					const cur = stack.pop();
+					for await (const [name, handle] of cur) {
+						if (handle.kind === 'file') {
+							if (!fileMap.has(name)) fileMap.set(name, handle);
+						} else if (handle.kind === 'directory') {
+							stack.push(handle);
+						}
+					}
 				}
 			} catch {}
-			diskFileSet.set(dirName, fileSet);
+			diskFileSet.set(dirName, fileMap);
 		}
 
 		let alreadyDownloaded = 0;
 		let manifestRebuilt = false;
 		for (const task of downloads) {
 			const mKey = `${task.mailid}_${task.fileid}`;
-			const onDisk = diskFileSet.get(task.dir)?.has(task.filename);
+			const fileMap = diskFileSet.get(task.dir);
+			const fileHandle = fileMap?.get(task.filename);
+			const onDisk = !!fileHandle;
 			const inManifest = manifestKeys.has(mKey);
 
 			if (onDisk) {
@@ -1612,9 +1640,7 @@
 				alreadyDownloaded++;
 				if (!inManifest) {
 					try {
-						const dh = await rootHandle.getDirectoryHandle(task.dir);
-						const fh = await dh.getFileHandle(task.filename);
-						const file = await fh.getFile();
+						const file = await fileHandle.getFile();
 						manifestCache[mKey] = { dir: task.dir, filename: task.filename, size: file.size, time: Date.now() };
 						manifestRebuilt = true;
 					} catch {}
@@ -1626,7 +1652,7 @@
 		}
 		if (manifestRebuilt) await writeManifest(manifestCache);
 
-		const diskTotal = [...diskFileSet.values()].reduce((s, set) => s + set.size, 0);
+		const diskTotal = [...diskFileSet.values()].reduce((s, m) => s + m.size, 0);
 		console.log(`[QQMailDL] 本地对比: ${diskTotal} 磁盘文件, ${alreadyDownloaded} 匹配, ${downloads.length - alreadyDownloaded} 待下载`);
 
 		const mailCount = mailTotal;
