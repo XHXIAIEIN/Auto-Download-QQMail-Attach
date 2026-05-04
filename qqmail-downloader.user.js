@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         QQ Mail 附件批量下载
-// @namespace    https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
-// @version      3.1.1
 // @description  批量下载QQ邮箱附件，提取全部附件，智能分类命名
+// @version      3.1.1
 // @author       XHXIAIEIN
+// @namespace    https://greasyfork.org/zh-CN/scripts/535160
+// @supportURL   https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
 // @match        https://wx.mail.qq.com/*
 // @grant        none
 // @run-at       document-idle
@@ -31,27 +32,27 @@
 	// the chosen root contains unrelated trees and a flat scan is more predictable.
 	const SCAN_SUBFOLDERS = true;
 
-	const DIR_IMAGE   = '图片';
+	const DIR_IMAGE = '图片';
 	const DIR_PROJECT = '项目文件';
-	const DIR_DOC     = '文档';
-	const DIR_AUDIO   = '音频';
-	const DIR_VIDEO   = '视频';
+	const DIR_DOC = '文档';
+	const DIR_AUDIO = '音频';
+	const DIR_VIDEO = '视频';
 	const DIR_ARCHIVE = '压缩文件';
-	const DIR_DUP     = '重复';
-	const DIR_OTHER   = '其他';
-	const DIR_MANUAL  = '转人工';
+	const DIR_DUP = '重复';
+	const DIR_OTHER = '其他';
+	const DIR_MANUAL = '转人工';
 
 	// `detailTitle` absent → category has a custom report section (DUP / MANUAL) instead of a plain listing.
 	const DIR_META = [
-		{ name: DIR_IMAGE,   desc: 'jpg/png/webp/heic/ 等', detailTitle: '图片清单' },
-		{ name: DIR_PROJECT, desc: 'psd/ai/sketch/xd 等',   detailTitle: '项目文件清单' },
-		{ name: DIR_DOC,     desc: 'pdf/doc/xls/ppt 等',    detailTitle: '文档清单' },
-		{ name: DIR_AUDIO,   desc: 'mp3/wav/flac 等',       detailTitle: '音频清单' },
-		{ name: DIR_VIDEO,   desc: 'mp4/mov/avi 等',        detailTitle: '视频清单' },
-		{ name: DIR_ARCHIVE, desc: 'zip/rar/7z 等',         detailTitle: '压缩文件清单' },
-		{ name: DIR_DUP,     desc: '已保留最新' },
-		{ name: DIR_OTHER,   desc: '未归类格式',            detailTitle: '其他文件清单' },
-		{ name: DIR_MANUAL,  desc: '第三方链接' },
+		{ name: DIR_IMAGE, desc: 'jpg/png/webp/heic/ 等', detailTitle: '图片清单' },
+		{ name: DIR_PROJECT, desc: 'psd/ai/sketch/xd 等', detailTitle: '项目文件清单' },
+		{ name: DIR_DOC, desc: 'pdf/doc/xls/ppt 等', detailTitle: '文档清单' },
+		{ name: DIR_AUDIO, desc: 'mp3/wav/flac 等', detailTitle: '音频清单' },
+		{ name: DIR_VIDEO, desc: 'mp4/mov/avi 等', detailTitle: '视频清单' },
+		{ name: DIR_ARCHIVE, desc: 'zip/rar/7z 等', detailTitle: '压缩文件清单' },
+		{ name: DIR_DUP, desc: '已保留最新' },
+		{ name: DIR_OTHER, desc: '未归类格式', detailTitle: '其他文件清单' },
+		{ name: DIR_MANUAL, desc: '第三方链接' },
 	];
 
 	const TAG_NO_ATTACH = 4001;
@@ -118,7 +119,8 @@
 	//   - device names (CON, PRN, NUL, COM1-9, LPT1-9) are reserved with or without ext
 	// NFC normalization keeps QQ-side NFC and macOS NFD entries dedup-equivalent.
 	function sanitizeFilename(name) {
-		let s = String(name ?? '').normalize('NFC')
+		let s = String(name ?? '')
+			.normalize('NFC')
 			.replace(/[<>:"|?*\/\\]/g, '_')
 			.replace(/[\x00-\x1F\x7F]/g, '');
 		s = s.replace(/^\s+/, '').replace(/[.\s]+$/, '');
@@ -126,11 +128,11 @@
 		const MAX = 200;
 		if (s.length > MAX) {
 			const dot = s.lastIndexOf('.');
-			const extLen = (dot > 0 && s.length - dot <= 12) ? s.length - dot : 0;
+			const extLen = dot > 0 && s.length - dot <= 12 ? s.length - dot : 0;
 			let cut = MAX - extLen;
 			// Don't strand a high surrogate without its low counterpart.
 			const cu = s.charCodeAt(cut - 1);
-			if (cu >= 0xD800 && cu <= 0xDBFF) cut--;
+			if (cu >= 0xd800 && cu <= 0xdbff) cut--;
 			s = s.slice(0, cut) + (extLen ? s.slice(s.length - extLen) : '');
 		}
 
@@ -152,7 +154,9 @@
 
 	// Escape for markdown table cells: pipe would break table structure, newline would split row.
 	function escapeMd(s) {
-		return String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+		return String(s ?? '')
+			.replace(/\|/g, '\\|')
+			.replace(/\r?\n/g, ' ');
 	}
 
 	// Truncate by Unicode code point, not UTF-16 code unit. String.slice cuts surrogate
@@ -184,8 +188,8 @@
 	function getBoundaryChar(s, i) {
 		if (i < 0 || i >= s.length) return '';
 		const cu = s.charCodeAt(i);
-		if (cu >= 0xDC00 && cu <= 0xDFFF && i > 0) return s.slice(i - 1, i + 1);
-		if (cu >= 0xD800 && cu <= 0xDBFF && i + 1 < s.length) return s.slice(i, i + 2);
+		if (cu >= 0xdc00 && cu <= 0xdfff && i > 0) return s.slice(i - 1, i + 1);
+		if (cu >= 0xd800 && cu <= 0xdbff && i + 1 < s.length) return s.slice(i, i + 2);
 		return s[i];
 	}
 
@@ -248,9 +252,7 @@
 	}
 
 	function formatDirStats(stats) {
-		return DIR_META.map(({ name }) =>
-			name === DIR_IMAGE ? `${name} ${stats[name] || 0}` : stats[name] ? `${name} ${stats[name]}` : ''
-		).filter(Boolean);
+		return DIR_META.map(({ name }) => (name === DIR_IMAGE ? `${name} ${stats[name] || 0}` : stats[name] ? `${name} ${stats[name]}` : '')).filter(Boolean);
 	}
 
 	async function batchParallel(items, concurrency, fn) {
@@ -803,7 +805,7 @@
 				if (!p) continue;
 				const email = a.sender?.addr || '';
 				let counts = prefixCounts.get(email);
-				if (!counts) prefixCounts.set(email, counts = new Map());
+				if (!counts) prefixCounts.set(email, (counts = new Map()));
 				counts.set(p, (counts.get(p) || 0) + 1);
 			}
 			for (const [email, counts] of prefixCounts) {
@@ -885,10 +887,12 @@
 			}
 			const dot = task.filename.lastIndexOf('.');
 			const stem = dot > 0 ? task.filename.slice(0, dot) : task.filename;
-			const ext  = dot > 0 ? task.filename.slice(dot) : '';
+			const ext = dot > 0 ? task.filename.slice(dot) : '';
 			let n = 2;
 			let cand;
-			do { cand = `${stem} (${n++})${ext}`; } while (taken.has(dirKey(cand, task.dir)));
+			do {
+				cand = `${stem} (${n++})${ext}`;
+			} while (taken.has(dirKey(cand, task.dir)));
 			task.filename = cand;
 			taken.add(dirKey(cand, task.dir));
 		}
@@ -1325,23 +1329,18 @@
 	// "AI 到底解析了什么"——空字段不渲染，避免噪声。
 	function renderAIEnhanceDetails(items) {
 		if (!items || items.length === 0) return '';
-		const fmtField = (label, val) => val
-			? `<span style="display:inline-block;margin-right:10px;"><span style="color:rgba(20,46,77,0.45);">${label}</span>${escapeHtml(val)}</span>`
-			: '';
-		const rows = items.map(it => {
-			const fields = [
-				fmtField('姓名 ', it.parsed.name),
-				fmtField('QQ ', it.parsed.qq),
-				fmtField('手机 ', it.parsed.phone),
-				fmtField('作品 ', it.parsed.work && truncate(it.parsed.work, 18)),
-			].filter(Boolean).join('');
-			const sender = escapeHtml(it.nick || it.email.split('@')[0]);
-			const subject = escapeHtml(truncate(it.subject || '', 36));
-			return `<div style="padding:6px 0;border-top:1px solid rgba(20,46,77,0.06);">
+		const fmtField = (label, val) => (val ? `<span style="display:inline-block;margin-right:10px;"><span style="color:rgba(20,46,77,0.45);">${label}</span>${escapeHtml(val)}</span>` : '');
+		const rows = items
+			.map(it => {
+				const fields = [fmtField('姓名 ', it.parsed.name), fmtField('QQ ', it.parsed.qq), fmtField('手机 ', it.parsed.phone), fmtField('作品 ', it.parsed.work && truncate(it.parsed.work, 18))].filter(Boolean).join('');
+				const sender = escapeHtml(it.nick || it.email.split('@')[0]);
+				const subject = escapeHtml(truncate(it.subject || '', 36));
+				return `<div style="padding:6px 0;border-top:1px solid rgba(20,46,77,0.06);">
 				<div style="font-size:12px;color:rgba(20,46,77,0.5);">${sender} · ${subject}</div>
 				<div style="font-size:12px;color:rgba(20,46,77,0.75);margin-top:2px;">${fields || '<span style="color:rgba(20,46,77,0.35);">未提取到字段</span>'}</div>
 			</div>`;
-		}).join('');
+			})
+			.join('');
 		return `<details style="margin-top:8px;font-size:13px;">
 			<summary style="cursor:pointer;color:rgba(20,46,77,0.55);user-select:none;">AI 解析 ${items.length} 条记录（点开查看详情）</summary>
 			<div style="margin:4px 0 0;">${rows}</div>
@@ -1478,9 +1477,7 @@
 					</div>
 					${failedTasks
 						.slice(-3)
-						.map(
-							t => `<div style="font-size:12px;color:rgba(20,46,77,0.55);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.filename)}</div>`
-						)
+						.map(t => `<div style="font-size:12px;color:rgba(20,46,77,0.55);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.filename)}</div>`)
 						.join('')}
 				</div>`;
 			const retryBtn = document.getElementById('__dl_retry_all');
@@ -1835,13 +1832,7 @@
 		const total = tasks.length;
 		const stats = countByDir(tasks);
 
-		const summaryParts = [
-			`${done}/${total} 成功`,
-			failed > 0 ? `${failed} 失败` : '',
-			...formatDirStats(stats),
-		]
-			.filter(Boolean)
-			.join(' · ');
+		const summaryParts = [`${done}/${total} 成功`, failed > 0 ? `${failed} 失败` : '', ...formatDirStats(stats)].filter(Boolean).join(' · ');
 
 		const barColor = failed > 0 ? '#E84C3D' : '#07C160';
 
