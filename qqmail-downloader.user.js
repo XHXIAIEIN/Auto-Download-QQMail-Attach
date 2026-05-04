@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QQ Mail 附件批量下载
 // @namespace    https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
-// @version      3.1.0
+// @version      3.1.1
 // @description  批量下载QQ邮箱附件，提取全部附件，智能分类命名
 // @author       XHXIAIEIN
 // @match        https://wx.mail.qq.com/*
@@ -85,21 +85,29 @@
 		return m ? parseInt(m[1]) : null;
 	}
 
-	function waitForSelector(selector, timeout = 5000) {
+	// MutationObserver-based wait. The previous setInterval(250ms, 5s) was too short for
+	// QQ Mail's first paint when the user lands directly on a folder URL — `.mail_app`
+	// can take 6-10s to render, so the panel silently failed to mount until the user
+	// switched folders (which re-triggered init after the DOM had stabilized). 30s
+	// timeout + observer reacts the moment the node appears.
+	function waitForSelector(selector, timeout = 30000) {
 		return new Promise(resolve => {
-			const el = document.querySelector(selector);
-			if (el) return resolve(el);
-			const iv = setInterval(() => {
+			const initial = document.querySelector(selector);
+			if (initial) return resolve(initial);
+			let settled = false;
+			const finish = (val, observer, timer) => {
+				if (settled) return;
+				settled = true;
+				observer.disconnect();
+				clearTimeout(timer);
+				resolve(val);
+			};
+			const observer = new MutationObserver(() => {
 				const el = document.querySelector(selector);
-				if (el) {
-					clearInterval(iv);
-					resolve(el);
-				}
-			}, 250);
-			setTimeout(() => {
-				clearInterval(iv);
-				resolve(null);
-			}, timeout);
+				if (el) finish(el, observer, timer);
+			});
+			observer.observe(document.documentElement, { childList: true, subtree: true });
+			const timer = setTimeout(() => finish(null, observer, timer), timeout);
 		});
 	}
 
@@ -1403,9 +1411,13 @@
 		mountPanel(panel);
 	}
 
-	function createProgressTracker(total) {
-		let done = 0;
-		let failed = 0;
+	// total / baseDone / baseFailed all use the OUTER scope — i.e. all attachments in
+	// this folder, including those already downloaded. The tracker increments from the
+	// base counts so the panel stays in sync with showProgressUI's initial render even
+	// when the engine only processes a partial pending slice.
+	function createProgressTracker(total, baseDone = 0, baseFailed = 0) {
+		let done = baseDone;
+		let failed = baseFailed;
 		const startTime = Date.now();
 		const failedTasks = [];
 		const recentTasks = [];
@@ -1487,7 +1499,11 @@
 
 				const pct = (((done + failed) / total) * 100).toFixed(1);
 				const el = (Date.now() - startTime) / 1000;
-				const speed = el > 0 ? (done + failed) / el : 0;
+				// Speed/ETA are session-relative — only this run's progress, not the
+				// already-downloaded base. Otherwise speed inflates wildly on resume.
+				const sessionDone = done - baseDone;
+				const sessionFailed = failed - baseFailed;
+				const speed = el > 0 ? (sessionDone + sessionFailed) / el : 0;
 				const rem = total - done - failed;
 				const eta = speed > 0 ? Math.ceil(rem / speed) : 0;
 
@@ -1778,7 +1794,7 @@
 		const scanMsg = document.getElementById('__dl_scan_msg');
 		if (scanMsg) scanMsg.textContent = dlStatLine;
 
-		const tracker = createProgressTracker(pending.length);
+		const tracker = createProgressTracker(downloads.length, alreadyDownloaded);
 		await startEngine(pending, task => tracker.onTask(task));
 
 		updateScanMessage('标记已下载...');
@@ -1913,7 +1929,7 @@
 		}
 
 		showProgressUI(actualDone, total, 0, mc);
-		const tracker = createProgressTracker(actualPending.length);
+		const tracker = createProgressTracker(total, actualDone);
 		await startEngine(actualPending, task => tracker.onTask(task));
 	}
 
@@ -1942,16 +1958,8 @@
 		const mailCount = new Set(allTasks.map(t => t.mailid)).size;
 		showProgressUI(doneCount, total, 0, mailCount);
 
-		let retryDone = 0;
-		const tracker = createProgressTracker(failedTasks.length);
-		const origOnTask = tracker.onTask.bind(tracker);
-		tracker.onTask = function (task) {
-			origOnTask(task);
-			if (task.status === 'done') retryDone++;
-			const doneEl = document.getElementById('__dl_done');
-			if (doneEl) doneEl.textContent = doneCount + retryDone;
-		};
-
+		// Tracker now handles base-offset internally — drop the old onTask hack.
+		const tracker = createProgressTracker(total, doneCount);
 		await startEngine(failedTasks, task => tracker.onTask(task));
 
 		const section = document.getElementById('__dl_fail_section');
