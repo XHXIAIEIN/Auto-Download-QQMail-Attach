@@ -524,7 +524,14 @@
 			const caps = await window.LanguageModel.availability();
 			if (caps === 'unavailable') return false;
 			aiSession = await window.LanguageModel.create({
-				systemPrompt: '你是一个邮件主题解析器。从投稿邮件的主题中提取信息。只输出 JSON，不要其他文字。',
+				systemPrompt: [
+					'You extract entrant info from photo-contest submission email subjects. Output JSON only, no prose.',
+					'',
+					"`name` is the submitter's personal name or handle — a natural person (typically 2–4 Chinese characters or a short English alias).",
+					'NEVER place a contest / event / organization / work title into `name`. If the subject contains only an event name and no real entrant identity, leave `name` empty.',
+					'Reject any candidate `name` that contains digits or the substrings 大赛 / 比赛 / 赛事 / 活动 / 征集 / 杯 / 节 / 展 / 工作室 / 公司 / 集团.',
+					'Subjects typically follow the pattern: <ContestName> <separator> <EntrantName> <separator> <QQ> <separator> <Phone> [<separator> <WorkTitle>]. Separators include `-`, ` `, `_`, `➕`, `+`.',
+				].join('\n'),
 			});
 			aiAvailable = true;
 			return true;
@@ -533,10 +540,50 @@
 		}
 	}
 
+	// Reject AI-returned names that are clearly not personal names — competition/activity titles
+	// otherwise pollute identityMap and every filename prefix collapses to the same value.
+	const NAME_BLOCKLIST_RE = /(大赛|比赛)/;
+	function looksLikePersonName(s) {
+		if (!s) return false;
+		if (s.length > 6) return false;
+		if (/\d/.test(s)) return false;
+		if (NAME_BLOCKLIST_RE.test(s)) return false;
+		return true;
+	}
+
 	async function aiParseSubject(subject) {
 		if (!aiSession || !subject) return null;
+		// Few-shot anchors the on-device model on the recurring `<contest> <entrant> <qq> <phone> [<work>]` layout.
+		// Subjects stay in their native Chinese; instructions are English so the model does not echo Chinese boilerplate.
+		const prompt = [
+			'Task: Extract submission-entrant info from the subject. Return JSON: {"name":"","qq":"","phone":"","work":""}.',
+			"- name: the submitter's personal name/handle. NOT the contest/event name. Empty if absent.",
+			'- qq: 5–11 digits.',
+			'- phone: 11-digit mainland China mobile, starting with 1.',
+			'- work: title of the submitted work. Empty if absent.',
+			'Leave any field empty if not clearly present.',
+			'',
+			'Example 1',
+			'Subject: 城市摄影大赛2026-张三-QQ12345-13800000001',
+			'Output: {"name":"张三","qq":"12345","phone":"13800000001","work":""}',
+			'',
+			'Example 2',
+			'Subject: 城市摄影大赛2026 小李 87654321 13900000002',
+			'Output: {"name":"小李","qq":"87654321","phone":"13900000002","work":""}',
+			'',
+			'Example 3',
+			'Subject: 投稿➕Alice➕Q1234567890➕18800000003➕山海',
+			'Output: {"name":"Alice","qq":"1234567890","phone":"18800000003","work":"山海"}',
+			'',
+			'Example 4 (no entrant identity)',
+			'Subject: 城市摄影大赛2026投稿',
+			'Output: {"name":"","qq":"","phone":"","work":""}',
+			'',
+			`Subject: ${subject}`,
+			'Output:',
+		].join('\n');
 		try {
-			const result = await aiSession.prompt(`从这个邮件主题中提取投稿人信息，返回 JSON：{"name":"姓名","qq":"QQ号","phone":"手机号","work":"作品名"}。提取不到的字段留空字符串。\n\n主题：${subject}`, {
+			const result = await aiSession.prompt(prompt, {
 				responseConstraint: {
 					type: 'object',
 					properties: {
@@ -585,7 +632,7 @@
 
 			const id = identityMap.get(email);
 			const accepted = { name: '', qq: '', phone: '', work: parsed.work || '' };
-			if (parsed.name) {
+			if (looksLikePersonName(parsed.name)) {
 				id.names.add(parsed.name);
 				accepted.name = parsed.name;
 			}
@@ -669,9 +716,7 @@
 				const idSegs = buildIdentitySegs(identity);
 				// Identity-empty fallback: use sender's local-part so we never produce
 				// nameless files like "内嵌1.jpg". Last resort is mailIdx.
-				const baseSegs = idSegs.length > 0
-					? idSegs
-					: [(senderEmail.split('@')[0] || `mail${mailIdx}`)];
+				const baseSegs = idSegs.length > 0 ? idSegs : [senderEmail.split('@')[0] || `mail${mailIdx}`];
 
 				for (let pi = 0; pi < picList.length; pi++) {
 					const pic = picList[pi];
@@ -682,9 +727,7 @@
 
 					// mailIdx keeps multiple no-attach mails from the same sender from
 					// colliding on disk; picIdx splits multi-pic mails further.
-					const picSeg = picList.length > 1
-						? `内嵌${mailIdx}-${pi + 1}`
-						: `内嵌${mailIdx}`;
+					const picSeg = picList.length > 1 ? `内嵌${mailIdx}-${pi + 1}` : `内嵌${mailIdx}`;
 					const filename = sanitizeFilename([...baseSegs, picSeg].join('_') + '.' + ext);
 
 					inlineEntries.push({
