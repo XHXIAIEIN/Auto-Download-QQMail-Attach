@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QQ Mail 附件批量下载
 // @description  批量下载QQ邮箱附件，提取全部附件，智能分类命名
-// @version      3.1.1
+// @version      3.1.2
 // @author       XHXIAIEIN
 // @namespace    https://greasyfork.org/zh-CN/scripts/535160
 // @supportURL   https://github.com/xhxiaiein/Auto-Download-QQMail-Attach
@@ -33,6 +33,7 @@
 	const SCAN_SUBFOLDERS = true;
 
 	const DIR_IMAGE = '图片';
+	const DIR_INLINE = '内嵌图片';
 	const DIR_PROJECT = '项目文件';
 	const DIR_DOC = '文档';
 	const DIR_AUDIO = '音频';
@@ -45,6 +46,7 @@
 	// `detailTitle` absent → category has a custom report section (DUP / MANUAL) instead of a plain listing.
 	const DIR_META = [
 		{ name: DIR_IMAGE, desc: 'jpg/png/webp/heic/ 等', detailTitle: '图片清单' },
+		{ name: DIR_INLINE, desc: '正文嵌入图片', detailTitle: '内嵌图片清单' },
 		{ name: DIR_PROJECT, desc: 'psd/ai/sketch/xd 等', detailTitle: '项目文件清单' },
 		{ name: DIR_DOC, desc: 'pdf/doc/xls/ppt 等', detailTitle: '文档清单' },
 		{ name: DIR_AUDIO, desc: 'mp3/wav/flac 等', detailTitle: '音频清单' },
@@ -596,7 +598,9 @@
 				accepted.phone = parsed.phone;
 			}
 
-			if (accepted.name || accepted.qq || accepted.phone || accepted.work) {
+			// Skip work-only rows — a parsed work title without any identity field
+			// doesn't change the filename, so surfacing it in the panel only adds noise.
+			if (accepted.name || accepted.qq || accepted.phone) {
 				items.push({
 					email,
 					nick: mail.senders?.item?.[0]?.nick || '',
@@ -607,7 +611,7 @@
 		}
 
 		// count = emails whose name field was filled — kept for backward compat with
-		// downstream stats. items.length may be larger (work-only / qq-only matches).
+		// downstream stats. items.length may be larger (qq-only / phone-only matches).
 		const count = items.filter(it => it.parsed.name).length;
 		return { count, items };
 	}
@@ -639,7 +643,7 @@
 		const emptyMails = [];
 		let processed = 0;
 
-		async function processOne(mail) {
+		async function processOne(mail, mailIdx) {
 			try {
 				const data = await fetchReadMail(mail.emailid);
 				onProgress?.(`检查内嵌图片 ${++processed}/${noAttachMails.length}`);
@@ -661,6 +665,14 @@
 				// Only TAG_NO_ATTACH here — TAG_DOWNLOADED is applied after all its inline pics download.
 				await addTag(mail.emailid, TAG_NO_ATTACH);
 
+				const identity = getIdentity(senderEmail);
+				const idSegs = buildIdentitySegs(identity);
+				// Identity-empty fallback: use sender's local-part so we never produce
+				// nameless files like "内嵌1.jpg". Last resort is mailIdx.
+				const baseSegs = idSegs.length > 0
+					? idSegs
+					: [(senderEmail.split('@')[0] || `mail${mailIdx}`)];
+
 				for (let pi = 0; pi < picList.length; pi++) {
 					const pic = picList[pi];
 					let ext = 'jpg';
@@ -668,15 +680,17 @@
 					const nameMatch = (pic.name || '').match(/\.([a-zA-Z0-9]{2,5})$/);
 					if (nameMatch) ext = nameMatch[1].toLowerCase();
 
-					const identity = getIdentity(senderEmail);
-					const segs = buildIdentitySegs(identity);
-					if (picList.length > 1) segs.push(`内嵌${pi + 1}`);
-					const filename = sanitizeFilename((segs.length ? segs.join('_') : 'unnamed') + '.' + ext);
+					// mailIdx keeps multiple no-attach mails from the same sender from
+					// colliding on disk; picIdx splits multi-pic mails further.
+					const picSeg = picList.length > 1
+						? `内嵌${mailIdx}-${pi + 1}`
+						: `内嵌${mailIdx}`;
+					const filename = sanitizeFilename([...baseSegs, picSeg].join('_') + '.' + ext);
 
 					inlineEntries.push({
 						url: ensureAbsoluteUrl(pic.downloadurl || ''),
 						folderId,
-						dir: DIR_IMAGE,
+						dir: DIR_INLINE,
 						filename,
 						mailid: mail.emailid,
 						fileid: pic.fileid || `inline_${pi}`,
@@ -690,7 +704,11 @@
 			}
 		}
 
-		await batchParallel(noAttachMails, 5, processOne);
+		// Pass 1-based mailIdx so it shows up in filenames as 内嵌1, 内嵌2, ...
+		for (let i = 0; i < noAttachMails.length; i += 5) {
+			const slice = noAttachMails.slice(i, i + 5);
+			await Promise.all(slice.map((m, j) => processOne(m, i + j + 1)));
+		}
 		return { inlineEntries, emptyMails };
 	}
 
